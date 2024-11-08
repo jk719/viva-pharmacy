@@ -56,8 +56,11 @@ export default function AuthButtons() {
                     </button>
                     {dropdownOpen && (
                         <div
-                            className="absolute right-0 top-full mt-2 w-64 bg-white shadow-md rounded-md p-4 border border-gray-200 z-10"
-                            style={{ animation: "slideDown 0.3s ease-out" }}
+                            className="absolute right-0 top-full mt-2 w-64 bg-primary-color shadow-md rounded-md p-4 z-10 text-white"
+                            style={{
+                                animation: "slideDown 0.3s ease-out",
+                                backgroundColor: "#003366" // Ensures solid dark blue background
+                            }}
                         >
                             <h2 className="text-lg font-bold mb-3">{isSignUp ? "Sign Up" : "Sign In"}</h2>
                             <input
@@ -65,7 +68,7 @@ export default function AuthButtons() {
                                 placeholder="Email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="w-full mb-2 p-2 border rounded"
+                                className="w-full mb-2 p-2 border rounded text-primary-color placeholder-primary-color"
                                 required
                             />
                             <input
@@ -73,7 +76,7 @@ export default function AuthButtons() {
                                 placeholder="Password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full mb-2 p-2 border rounded"
+                                className="w-full mb-2 p-2 border rounded text-primary-color placeholder-primary-color"
                                 required
                             />
                             <button
@@ -87,7 +90,7 @@ export default function AuthButtons() {
                                     setIsSignUp(!isSignUp);
                                     setMessage(""); // Clear messages on toggle
                                 }}
-                                className="text-blue-700 underline mt-2 text-sm"
+                                className="text-white underline mt-2 text-sm"
                             >
                                 {isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up"}
                             </button>
