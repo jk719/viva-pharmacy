@@ -47,7 +47,6 @@ export default function FeaturedProducts() {
                   width={250}
                   height={250}
                   priority
-                  layout="responsive"
                   className="object-contain"
                 />
               </div>
