@@ -1,5 +1,5 @@
 // src/context/CartContext.js
-"use client";  // Ensure this runs on the client side
+"use client";
 
 import { createContext, useContext, useState, useEffect } from 'react';
 
@@ -25,7 +25,6 @@ export function CartProvider({ children }) {
         localStorage.setItem('cartItems', JSON.stringify(cartItems));
     }, [cartItems]);
 
-    // Add to cart function with quantity management
     const addToCart = (item) => {
         setCartItems((prevItems) => {
             const existingItem = prevItems.find((i) => i.id === item.id);
@@ -39,7 +38,6 @@ export function CartProvider({ children }) {
         });
     };
 
-    // Remove from cart function
     const removeFromCart = (itemId) => {
         setCartItems((prevItems) => prevItems.filter((item) => item.id !== itemId));
     };

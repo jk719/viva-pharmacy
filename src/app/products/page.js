@@ -1,18 +1,11 @@
-// src/app/products/page.js
+// src/products/page.js
 "use client"; // Ensures this component is treated as a client component
 
-import { useCart } from '../../context/CartContext'; // Ensures correct path for CartContext
+import { useCart } from '../../context/CartContext'; // Importing from CartContext
+import products from '../../data/products'; // Importing the products data
 
 export default function ProductsPage() {
-  const { addToCart } = useCart();  // Destructure addToCart from useCart to handle adding products
-
-  // List of products for display
-  const products = [
-    { id: 1, name: 'Vitamin C', price: 12.99, description: 'Boost your immunity with Vitamin C supplements.' },
-    { id: 2, name: 'Omega-3 Fish Oil', price: 19.99, description: 'Heart health support with Omega-3 fish oil.' },
-    { id: 3, name: 'Multivitamins', price: 24.99, description: 'Daily multivitamins for overall health.' },
-    { id: 4, name: 'Calcium Tablets', price: 14.99, description: 'Calcium tablets for bone health.' },
-  ];
+  const { addToCart } = useCart(); // Destructuring addToCart from useCart
 
   return (
     <div className="min-h-screen p-8 bg-gray-50">
@@ -27,7 +20,7 @@ export default function ProductsPage() {
               className="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700"
               onClick={() => {
                 console.log(`Add to Cart clicked for: ${product.name}`);  // Debugging log
-                addToCart(product);  // Call addToCart from CartContext
+                addToCart(product);  // Call addToCart
               }}
             >
               Add to Cart
