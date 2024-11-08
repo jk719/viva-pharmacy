@@ -1,41 +1,52 @@
-"use client";  // Ensure this file is marked as a Client Component
+// src/context/CartContext.js
+"use client";  // Ensure this runs on the client side
 
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 
-// Create Cart Context
 const CartContext = createContext();
 
-// Custom hook to use the Cart Context
 export function useCart() {
-  return useContext(CartContext);
+    return useContext(CartContext);
 }
 
-// CartProvider component to provide the Cart context
 export function CartProvider({ children }) {
-  const [cartItems, setCartItems] = useState([]);
+    const [cartItems, setCartItems] = useState([]);
 
-  const addToCart = (product) => {
-    setCartItems((prevItems) => {
-      const existingItem = prevItems.find(item => item.id === product.id);
-      if (existingItem) {
-        return prevItems.map(item =>
-          item.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
-      } else {
-        return [...prevItems, { ...product, quantity: 1 }];
-      }
-    });
-  };
+    // Load cart items from localStorage on initial render
+    useEffect(() => {
+        const storedCart = localStorage.getItem('cartItems');
+        if (storedCart) {
+            setCartItems(JSON.parse(storedCart));
+        }
+    }, []);
 
-  const removeFromCart = (id) => {
-    setCartItems((prevItems) => prevItems.filter(item => item.id !== id));
-  };
+    // Update localStorage whenever cartItems change
+    useEffect(() => {
+        localStorage.setItem('cartItems', JSON.stringify(cartItems));
+    }, [cartItems]);
 
-  return (
-    <CartContext.Provider value={{ cartItems, addToCart, removeFromCart }}>
-      {children}
-    </CartContext.Provider>
-  );
+    // Add to cart function with quantity management
+    const addToCart = (item) => {
+        setCartItems((prevItems) => {
+            const existingItem = prevItems.find((i) => i.id === item.id);
+            if (existingItem) {
+                return prevItems.map((i) =>
+                    i.id === item.id ? { ...i, quantity: (i.quantity || 1) + 1 } : i
+                );
+            } else {
+                return [...prevItems, { ...item, quantity: 1 }];
+            }
+        });
+    };
+
+    // Remove from cart function
+    const removeFromCart = (itemId) => {
+        setCartItems((prevItems) => prevItems.filter((item) => item.id !== itemId));
+    };
+
+    return (
+        <CartContext.Provider value={{ cartItems, addToCart, removeFromCart }}>
+            {children}
+        </CartContext.Provider>
+    );
 }

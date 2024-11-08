@@ -1,32 +1,45 @@
-"use client";  // Marking this as a Client Component
+// src/app/cart/page.js
+"use client"; // Ensures this page is treated as a client component
 
 import { useCart } from '../../context/CartContext';
+import Link from 'next/link';
 
-export default function Cart() {
-  const { cartItems, removeFromCart } = useCart();
+export default function CartPage() {
+    const { cartItems, removeFromCart } = useCart();
 
-  return (
-    <div className="min-h-screen p-8 bg-gray-50">
-      <h1 className="text-3xl font-bold mb-6">Your Cart</h1>
-      <div className="grid grid-cols-1 gap-6">
-        {cartItems.length > 0 ? (
-          cartItems.map((item) => (
-            <div key={item.id} className="bg-white p-6 shadow rounded">
-              <h2 className="text-2xl font-bold">{item.name}</h2>
-              <p className="text-gray-700">Price: ${item.price}</p>
-              <p className="text-gray-700">Quantity: {item.quantity}</p>
-              <button
-                onClick={() => removeFromCart(item.id)}
-                className="mt-4 bg-red-500 text-white px-4 py-2 rounded"
-              >
-                Remove
-              </button>
-            </div>
-          ))
-        ) : (
-          <p className="text-gray-600">Your cart is empty</p>
-        )}
-      </div>
-    </div>
-  );
+    return (
+        <div className="container mx-auto p-6 bg-white min-h-screen">
+            <h1 className="text-2xl font-bold mb-6">Your Cart</h1>
+            {cartItems.length === 0 ? (
+                <p>Your cart is empty</p>
+            ) : (
+                <ul className="divide-y divide-gray-200">
+                    {cartItems.map((item) => (
+                        <li key={item.id} className="flex justify-between items-center py-4">
+                            <div>
+                                <h2 className="text-lg font-bold">{item.name}</h2>
+                                <p>Price: ${item.price.toFixed(2)}</p>
+                                <p>Quantity: {item.quantity}</p>
+                            </div>
+                            <button
+                                className="bg-red-500 text-white py-1 px-3 rounded hover:bg-red-600"
+                                onClick={() => removeFromCart(item.id)}
+                            >
+                                Remove
+                            </button>
+                        </li>
+                    ))}
+                </ul>
+            )}
+            {cartItems.length > 0 && (
+                <div className="mt-6 flex justify-end">
+                    <Link href="/checkout">
+                        <button className="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">
+                            Proceed to Checkout
+                        </button>
+                    </Link>
+                </div>
+            )}
+        </div>
+    );
 }

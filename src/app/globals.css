@@ -2,20 +2,131 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Define custom colors and styles */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: #ffffff; /* Light mode background */
+  --foreground: #171717; /* Text color for light mode */
+  --primary-color: #003366; /* Dark blue for headers, navbar, and footer */
+  --accent-color: #ff4a4a; /* Red accent for buttons and highlights */
+  --secondary-color: #f1f5f9; /* Light gray for backgrounds */
+  --text-color: #003366; /* Dark blue text color */
+  --button-blue: #003366; /* Blue for main buttons */
+  --button-green: #28a745; /* Green for Sign In */
+  --button-red: #dc3545; /* Red for Sign Out */
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--text-color);
+  background-color: var(--background);
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* Navbar styling */
+nav {
+  background-color: var(--primary-color);
+  color: white;
+  padding: 1rem;
+}
+
+nav a {
+  color: white;
+  margin-right: 1.5rem;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+nav a:hover {
+  text-decoration: underline;
+}
+
+/* General Button Styles */
+button {
+  background-color: var(--button-blue);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.375rem;
+  font-weight: 600;
+  transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background-color: #00224d; /* Darker blue on hover */
+}
+
+/* Updated Button Styling */
+.button-primary {
+  background: linear-gradient(135deg, #00509e, #003366); /* Gradient blue */
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem; /* Slightly more rounded */
+  font-weight: 600;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.15); /* Soft shadow */
+  transition: background 0.3s ease, transform 0.2s ease; /* Smooth transition */
+}
+
+.button-primary:hover {
+  background: linear-gradient(135deg, #003366, #00224d); /* Darker gradient on hover */
+  transform: translateY(-2px); /* Lift on hover */
+}
+
+/* Styling for the Sign Out button */
+.button-danger {
+  background-color: #dc3545; /* Red for Sign Out */
+  color: white;
+}
+
+.button-danger:hover {
+  background-color: #c82333; /* Darker red on hover */
+}
+
+/* Card styles */
+.card {
+  background-color: var(--secondary-color);
+  padding: 2rem;
+  border-radius: 0.5rem;
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px); /* Lift effect */
+}
+
+/* Footer styles */
+.footer {
+  background-color: var(--primary-color);
+  color: white;
+  padding: 1rem 0;
+  font-size: 0.875rem; /* Slightly smaller font for compact layout */
+}
+
+.footer .container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap; /* Ensures wrap on smaller screens */
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Footer Social Media Icons Styling */
+.footer .container a {
+  color: white;
+  transition: color 0.3s ease;
+}
+
+.footer .container a:hover {
+  color: #ccc; /* Slightly lighter color on hover */
+}
+
+/* Ensure responsive layout */
+@media (max-width: 768px) {
+  .footer .container {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .footer .container div {
+    margin-bottom: 0.5rem;
+  }
 }
