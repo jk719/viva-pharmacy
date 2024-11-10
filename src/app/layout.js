@@ -20,13 +20,15 @@ export default function RootLayout({ children }) {
                         <nav className="p-4 bg-primary-color text-white">
                             <div className="container mx-auto flex justify-between items-center">
                                 {/* Logo */}
-                                <Link href="/" className="flex items-center">
-                                    <Image
-                                        src="/images/viva-online-logo.png"
-                                        alt="VIVA Pharmacy & Wellness Logo"
-                                        width={180}
-                                        height={60}
-                                    />
+                                <Link href="/" legacyBehavior>
+                                    <a className="flex items-center">
+                                        <Image
+                                            src="/images/viva-online-logo.png"
+                                            alt="VIVA Pharmacy & Wellness Logo"
+                                            width={180}
+                                            height={60}
+                                        />
+                                    </a>
                                 </Link>
                                 {/* Search Bar */}
                                 <div className="flex-grow mx-4">
@@ -38,8 +40,10 @@ export default function RootLayout({ children }) {
                                 </div>
                                 {/* Cart and Auth */}
                                 <div className="flex items-center space-x-6">
-                                    <Link href="/cart" className="hover:underline flex items-center text-white">
-                                        <ClientCartIcon />
+                                    <Link href="/cart" legacyBehavior>
+                                        <a className="hover:underline flex items-center text-white">
+                                            <ClientCartIcon />
+                                        </a>
                                     </Link>
                                     <AuthButtons emailColor="text-red-600" />
                                 </div>
@@ -68,8 +72,10 @@ export default function RootLayout({ children }) {
 
                                 {/* Social Media and Products Link */}
                                 <div className="flex space-x-4 items-center justify-center">
-                                    <Link href="/products" className="hover:underline text-white text-sm md:text-base">
-                                        Products
+                                    <Link href="/products" legacyBehavior>
+                                        <a className="hover:underline text-white text-sm md:text-base">
+                                            Products
+                                        </a>
                                     </Link>
                                     <a href="https://www.instagram.com/yourbusiness" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="hover:text-gray-300">
                                         <FaInstagram size={20} />

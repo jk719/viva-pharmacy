@@ -6,9 +6,6 @@ import { useEffect, useRef } from 'react';
 import { useCart } from '../context/CartContext';
 import products from '../data/products';
 
-// Use base path environment variable if set (typically for GitHub Pages)
-const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
-
 export default function FeaturedProducts() {
   const { addToCart } = useCart();
   const featuredProducts = products.filter((product) => product.isFeatured);
@@ -45,7 +42,7 @@ export default function FeaturedProducts() {
             <div className="flex flex-col items-center">
               <div className="relative h-64 w-full mb-4 flex items-center justify-center overflow-hidden rounded-lg">
                 <Image
-                  src={`${basePath}${product.image}`} // Add basePath dynamically
+                  src={product.image} // No basePath, images are directly in public folder
                   alt={product.name}
                   width={250}
                   height={250}

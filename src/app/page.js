@@ -12,11 +12,10 @@ export default function Home() {
 
       {/* View All Products Button */}
       <section className="my-8 text-center">
-        <Link
-          href="/products"
-          className="inline-block mt-4 px-6 py-2 bg-primary-color text-white rounded-lg hover:bg-blue-700 transition-colors duration-300"
-        >
-          View All Products
+        <Link href="/products" legacyBehavior>
+          <a className="inline-block mt-4 px-6 py-2 bg-primary-color text-white rounded-lg hover:bg-blue-700 transition-colors duration-300">
+            View All Products
+          </a>
         </Link>
       </section>
     </div>

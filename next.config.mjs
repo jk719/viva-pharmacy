@@ -1,4 +1,3 @@
-// next.config.mjs
 import { fileURLToPath } from 'url';
 import path from 'path';
 
@@ -11,10 +10,11 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  basePath: '/viva-pharmacy',
-  webpack: (config) => {
-    config.cache = false;
-    return config;
+  env: {
+    NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'http://localhost:3000', // Ensure NEXTAUTH_URL is accessible
+  },
+  experimental: {
+    turbo: false, // Disable Turbopack to use Webpack instead
   },
 };
 
