@@ -13,6 +13,7 @@
   --button-blue: #003366;
   --button-green: #28a745;
   --button-red: #dc3545;
+  --placeholder-color: #6b7280;
 }
 
 body {
@@ -40,6 +41,44 @@ nav a {
 nav a:hover {
   text-decoration: underline;
 }
+
+/* Search bar adjustments */
+nav input[type="text"] {
+  color: var(--text-color);
+}
+
+nav input[type="text"]::placeholder {
+  color: var(--placeholder-color);
+}
+
+/* Styles for autocomplete dropdown in search bar */
+.autocomplete-dropdown {
+  position: absolute;
+  top: 100%; /* Position below the search input */
+  left: 0;
+  width: 100%;
+  max-height: 200px;
+  overflow-y: auto;
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+  z-index: 20;
+}
+
+.autocomplete-item {
+  padding: 0.5rem 1rem;
+  color: #003366; /* Set a dark text color */
+  background-color: #ffffff; /* Ensure background is white */
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.autocomplete-item:hover {
+  background-color: #e0f2ff; /* Light blue on hover */
+  color: #003366; /* Dark text on hover */
+}
+
 
 /* General Button Styles */
 button {
@@ -74,9 +113,9 @@ button:hover {
 /* Mobile-specific adjustments for the button-primary class */
 @media (max-width: 768px) {
   .button-primary {
-    padding: 0.5rem 1rem; /* Reduce padding on mobile */
-    font-size: 0.875rem; /* Slightly smaller font */
-    white-space: nowrap; /* Prevents text wrapping */
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    white-space: nowrap;
   }
 }
 
@@ -141,13 +180,10 @@ button:hover {
   transition: transform 0.3s ease;
   overflow: hidden;
   position: relative;
-
-  /* Add initial hidden state for animation */
   opacity: 0;
   animation: fadeInUp 0.6s ease forwards;
 }
 
-/* Larger image styling */
 .card img {
   height: 200px;
   object-fit: contain;
@@ -155,7 +191,6 @@ button:hover {
   transition: transform 0.3s ease;
 }
 
-/* Truncated product name */
 .card .product-name {
   white-space: nowrap;
   overflow: hidden;
@@ -171,12 +206,10 @@ button:hover {
   border-radius: 0.25rem;
 }
 
-/* Button styling to keep it at the bottom */
 .card button {
   margin-top: auto;
 }
 
-/* Product name truncation with ellipsis and expansion on hover */
 .product-name {
   white-space: nowrap;
   overflow: hidden;
@@ -190,7 +223,6 @@ button:hover {
   overflow: visible;
 }
 
-/* Fade-in and slide-up animation */
 @keyframes fadeInUp {
   0% {
     opacity: 0;
@@ -202,7 +234,6 @@ button:hover {
   }
 }
 
-/* Apply staggered animation delay to each card */
 .card:nth-child(1) {
   animation-delay: 0.1s;
 }
@@ -216,7 +247,6 @@ button:hover {
   animation-delay: 0.4s;
 }
 
-/* Footer styles */
 .footer {
   background-color: var(--primary-color);
   color: white;
@@ -233,7 +263,6 @@ button:hover {
   margin: 0 auto;
 }
 
-/* Footer Social Media Icons Styling */
 .footer .container a {
   color: white;
   transition: color 0.3s ease;
@@ -243,7 +272,6 @@ button:hover {
   color: #ccc;
 }
 
-/* Ensure responsive layout */
 @media (max-width: 768px) {
   .footer .container {
     flex-direction: column;
