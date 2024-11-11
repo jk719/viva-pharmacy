@@ -6,15 +6,19 @@ const __dirname = path.dirname(__filename);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  trailingSlash: true,
+  trailingSlash: true, // Enable trailing slashes for routes
   images: {
-    unoptimized: true,
+    unoptimized: true, // Disable image optimization if needed for static exports
   },
   env: {
-    NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'http://localhost:3000', // Ensure NEXTAUTH_URL is accessible
+    NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'http://localhost:3000', // Use the appropriate NEXTAUTH_URL for your environment
   },
   experimental: {
-    turbo: false, // Disable Turbopack to use Webpack instead
+    turbo: false, // Disable TurboPack for stable Webpack usage
+  },
+  webpack: (config) => {
+    config.cache = false; // Turn off caching to prevent potential stale builds
+    return config;
   },
 };
 

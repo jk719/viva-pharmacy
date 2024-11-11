@@ -2,17 +2,29 @@
 "use client";
 
 import Image from 'next/image';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useCart } from '../context/CartContext';
 import products from '../data/products';
 
 export default function FeaturedProducts() {
   const { addToCart } = useCart();
-  const featuredProducts = products.filter((product) => product.isFeatured);
   const scrollContainerRef = useRef(null);
+
+  // Categories state
+  const categories = ['All', ...new Set(products.map((product) => product.category))];
+  const [selectedCategory, setSelectedCategory] = useState('All');
+
+  // Filter products based on selected category
+  const filteredProducts = selectedCategory === 'All'
+    ? products.filter((product) => product.isFeatured)
+    : products.filter((product) => product.isFeatured && product.category === selectedCategory);
 
   const handleAddToCart = (product) => {
     addToCart(product);
+  };
+
+  const handleCategoryChange = (event) => {
+    setSelectedCategory(event.target.value);
   };
 
   useEffect(() => {
@@ -29,12 +41,33 @@ export default function FeaturedProducts() {
 
   return (
     <section className="py-8">
-      <h2 className="text-3xl font-bold mb-6 text-primary">Featured Products</h2>
+      {/* Dynamic Heading */}
+      <h2 className="text-3xl font-bold mb-6 text-primary">
+        {selectedCategory === 'All' ? 'Featured Products' : selectedCategory}
+      </h2>
+
+      {/* Category Filter */}
+      <div className="mb-6">
+        <label htmlFor="category" className="mr-4 text-lg font-semibold">Filter by Category:</label>
+        <select
+          id="category"
+          value={selectedCategory}
+          onChange={handleCategoryChange}
+          className="p-2 border rounded-lg bg-white text-primary-color"
+        >
+          {categories.map((category) => (
+            <option key={category} value={category}>
+              {category}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <div
         ref={scrollContainerRef}
         className="flex overflow-x-auto gap-6 scroll-snap-x mx-2"
       >
-        {featuredProducts.map((product) => (
+        {filteredProducts.map((product) => (
           <div
             key={product.id}
             className="card bg-white shadow-lg rounded-lg p-4 hover:shadow-xl transition-all duration-300 min-w-[250px] w-1/4 scroll-snap-align transform hover:scale-105"
@@ -42,7 +75,7 @@ export default function FeaturedProducts() {
             <div className="flex flex-col items-center">
               <div className="relative h-64 w-full mb-4 flex items-center justify-center overflow-hidden rounded-lg">
                 <Image
-                  src={product.image} // No basePath, images are directly in public folder
+                  src={product.image}
                   alt={product.name}
                   width={250}
                   height={250}

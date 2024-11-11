@@ -4,15 +4,15 @@
 
 /* Define custom colors and styles */
 :root {
-  --background: #ffffff; /* Light mode background */
-  --foreground: #171717; /* Text color for light mode */
-  --primary-color: #003366; /* Dark blue for headers, navbar, and footer */
-  --accent-color: #ff4a4a; /* Red accent for buttons and highlights */
-  --secondary-color: #f1f5f9; /* Light gray for backgrounds */
-  --text-color: #003366; /* Dark blue text color */
-  --button-blue: #003366; /* Blue for main buttons */
-  --button-green: #28a745; /* Green for Sign In */
-  --button-red: #dc3545; /* Red for Sign Out */
+  --background: #ffffff;
+  --foreground: #171717;
+  --primary-color: #003366;
+  --accent-color: #ff4a4a;
+  --secondary-color: #f1f5f9;
+  --text-color: #003366;
+  --button-blue: #003366;
+  --button-green: #28a745;
+  --button-red: #dc3545;
 }
 
 body {
@@ -23,11 +23,11 @@ body {
 
 /* Navbar styling */
 nav {
-  background-color: var(--primary-color); /* Ensures this color is applied */
+  background-color: var(--primary-color);
   color: white;
   padding: 1rem;
   position: relative;
-  z-index: 10; /* Ensures it stays on top of other elements */
+  z-index: 10;
 }
 
 nav a {
@@ -52,33 +52,42 @@ button {
 }
 
 button:hover {
-  background-color: #00224d; /* Darker blue on hover */
+  background-color: #00224d;
 }
 
 /* Updated Button Styling */
 .button-primary {
-  background: linear-gradient(135deg, #00509e, #003366); /* Gradient blue */
+  background: linear-gradient(135deg, #00509e, #003366);
   color: white;
   padding: 0.75rem 1.5rem;
-  border-radius: 0.5rem; /* Slightly more rounded */
+  border-radius: 0.5rem;
   font-weight: 600;
-  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.15); /* Soft shadow */
-  transition: background 0.3s ease, transform 0.2s ease; /* Smooth transition */
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.15);
+  transition: background 0.3s ease, transform 0.2s ease;
 }
 
 .button-primary:hover {
-  background: linear-gradient(135deg, #003366, #00224d); /* Darker gradient on hover */
-  transform: translateY(-2px); /* Lift on hover */
+  background: linear-gradient(135deg, #003366, #00224d);
+  transform: translateY(-2px);
+}
+
+/* Mobile-specific adjustments for the button-primary class */
+@media (max-width: 768px) {
+  .button-primary {
+    padding: 0.5rem 1rem; /* Reduce padding on mobile */
+    font-size: 0.875rem; /* Slightly smaller font */
+    white-space: nowrap; /* Prevents text wrapping */
+  }
 }
 
 /* Styling for the Sign Out button */
 .button-danger {
-  background-color: #dc3545; /* Red for Sign Out */
+  background-color: #dc3545;
   color: white;
 }
 
 .button-danger:hover {
-  background-color: #c82333; /* Darker red on hover */
+  background-color: #c82333;
 }
 
 /* Scrollable container styling */
@@ -154,11 +163,10 @@ button:hover {
   transition: color 0.3s ease;
 }
 
-/* Reveal full name on hover */
 .card:hover .product-name {
   white-space: normal;
   overflow: visible;
-  background: var(--secondary-color); /* Optional background for readability */
+  background: var(--secondary-color);
   padding: 0.25rem;
   border-radius: 0.25rem;
 }
@@ -173,13 +181,13 @@ button:hover {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 100%; /* Ensures text fits in one line */
+  max-width: 100%;
   transition: max-width 0.3s ease;
 }
 
 .card:hover .product-name {
-  white-space: normal; /* Allows wrapping */
-  overflow: visible;   /* Removes ellipsis */
+  white-space: normal;
+  overflow: visible;
 }
 
 /* Fade-in and slide-up animation */
@@ -213,14 +221,14 @@ button:hover {
   background-color: var(--primary-color);
   color: white;
   padding: 1rem 0;
-  font-size: 0.875rem; /* Slightly smaller font for compact layout */
+  font-size: 0.875rem;
 }
 
 .footer .container {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap; /* Ensures wrap on smaller screens */
+  flex-wrap: wrap;
   max-width: 1200px;
   margin: 0 auto;
 }
@@ -232,7 +240,7 @@ button:hover {
 }
 
 .footer .container a:hover {
-  color: #ccc; /* Slightly lighter color on hover */
+  color: #ccc;
 }
 
 /* Ensure responsive layout */

@@ -12,6 +12,7 @@
   "dependencies": {
     "@headlessui/react": "^2.2.0",
     "@heroicons/react": "^2.1.5",
+    "bcryptjs": "^2.4.3",
     "cloudinary": "^2.5.1",
     "next": "^15.0.3",
     "next-auth": "^4.24.10",
