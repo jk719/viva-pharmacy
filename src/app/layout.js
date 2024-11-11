@@ -3,30 +3,30 @@
 
 import { SessionProvider } from "next-auth/react";
 import { CartProvider } from "../context/CartContext";
-import Navbar from "../components/Navbar"; // Import Navbar component
-import Image from "next/image"; // Make sure Image is imported
-import Link from "next/link"; // Import Link for internal navigation
+import Navbar from "../components/Navbar";
+import Image from "next/image";
+import Link from "next/link";
 import { FaInstagram, FaFacebook, FaTiktok } from "react-icons/fa";
 import "./globals.css";
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body>
+      <body className="bg-white text-primary-color">
         <SessionProvider>
           <CartProvider>
             {/* Navbar */}
-            <Navbar /> {/* Use Navbar component here */}
+            <Navbar />
 
             {/* Main Content */}
-            <main className="p-6 bg-white min-h-screen">
+            <main className="p-6 min-h-screen">
               <div className="container mx-auto">
                 {children}
               </div>
             </main>
 
             {/* Footer */}
-            <footer className="footer bg-primary-color text-white p-4">
+            <footer className="footer bg-primary text-white p-4">
               <div className="container mx-auto flex justify-between items-center flex-wrap space-y-2 md:space-y-0 text-center md:text-left">
                 {/* Footer Logo */}
                 <div className="flex items-center">

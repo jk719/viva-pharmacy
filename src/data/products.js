@@ -47,7 +47,7 @@ const products = [
       },
       { 
         id: 6, 
-        name: 'BAND-AID BANDAGES KIDS HELLO KITTY ASSORTED 20CT', 
+        name: 'Band-Aid Bandages Kids Hello Kitty Assorted 20ct',
         image: '/images/products/band-aid-bandages-kids-hello-kitty-assorted-20ct.png', 
         price: 5.99, 
         description: 'Fun Hello Kitty-themed bandages for kids.', 
