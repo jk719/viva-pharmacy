@@ -226,13 +226,11 @@ nav img {
   display: flex;
   align-items: center;
   justify-content: center;
-  position: absolute;
-  top: 10px;
-  right: 10px;
   background-color: var(--primary-color); /* Blue background */
   color: white;
   border-radius: 20px;
   padding: 0.5rem 1rem;
+  margin-bottom: 0.5rem; /* Position it above the image */
 }
 
 .add-button {

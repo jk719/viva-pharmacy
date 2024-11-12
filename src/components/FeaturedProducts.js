@@ -63,9 +63,40 @@ export default function FeaturedProducts() {
                   return (
                     <div
                       key={product.id}
-                      className="card bg-white shadow-lg rounded-lg p-4 hover:shadow-xl transition-all duration-300 min-w-[70%] max-w-[70%] sm:w-1/4 scroll-snap-align transform hover:scale-105 relative"
+                      className="card bg-white shadow-lg rounded-lg p-4 hover:shadow-xl transition-all duration-300 min-w-[70%] max-w-[70%] sm:w-1/4 scroll-snap-align transform hover:scale-105"
                     >
                       <div className="flex flex-col items-center">
+                        {/* Quantity Controls - Positioned Above Image */}
+                        <div className="quantity-controls mb-2" role="group" aria-label="Quantity controls">
+                          {quantity === 0 ? (
+                            <button
+                              onClick={() => handleAddToCart(product)}
+                              className="add-button"
+                              aria-label="Add to cart"
+                            >
+                              Add +
+                            </button>
+                          ) : (
+                            <div className="flex items-center">
+                              <button
+                                onClick={() => handleDecrement(product)}
+                                className="quantity-button"
+                                aria-label="Decrease quantity"
+                              >
+                                -
+                              </button>
+                              <span className="quantity-display">{quantity}</span>
+                              <button
+                                onClick={() => handleAddToCart(product)}
+                                className="quantity-button"
+                                aria-label="Increase quantity"
+                              >
+                                +
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
                         {/* Product Image */}
                         <div className="relative h-40 w-full mb-2 flex items-center justify-center overflow-hidden rounded-lg">
                           <Image
@@ -76,35 +107,6 @@ export default function FeaturedProducts() {
                             priority
                             className="object-contain"
                           />
-                          <div className="quantity-controls" role="group" aria-label="Quantity controls">
-                            {quantity === 0 ? (
-                              <button
-                                onClick={() => handleAddToCart(product)}
-                                className="add-button"
-                                aria-label="Add to cart"
-                              >
-                                Add +
-                              </button>
-                            ) : (
-                              <div className="flex items-center">
-                                <button
-                                  onClick={() => handleDecrement(product)}
-                                  className="quantity-button"
-                                  aria-label="Decrease quantity"
-                                >
-                                  -
-                                </button>
-                                <span className="quantity-display">{quantity}</span>
-                                <button
-                                  onClick={() => handleAddToCart(product)}
-                                  className="quantity-button"
-                                  aria-label="Increase quantity"
-                                >
-                                  +
-                                </button>
-                              </div>
-                            )}
-                          </div>
                         </div>
 
                         {/* Product Price */}
