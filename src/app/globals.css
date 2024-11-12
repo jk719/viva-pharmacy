@@ -11,7 +11,6 @@
   --secondary-color: #f1f5f9;
   --text-color: #003366;
   --button-blue: #003366;
-  --button-green: #28a745;
   --button-red: #dc3545;
   --placeholder-color: #6b7280;
 }
@@ -137,6 +136,28 @@ nav img {
   box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
 }
 
+/* Adjust styling for the category select dropdown */
+#category {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--primary-color);
+  border-radius: 0.5rem;
+  background-color: var(--background);
+  color: var(--text-color);
+  font-size: 1rem;
+  width: 100%;
+  box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 768px) {
+  .sticky-filter {
+    padding: 1rem 1.5rem; /* Add extra padding on mobile for better alignment */
+  }
+
+  #category {
+    margin-top: 0.5rem;
+  }
+}
+
 /* Horizontal scroll styling for category rows */
 .scroll-snap-x {
   display: flex;
@@ -168,15 +189,15 @@ nav img {
 
 @media (max-width: 768px) {
   .card {
-    min-width: 70%; /* Show 2.5 products on mobile */
-    max-width: 70%;
+    min-width: 40%;
+    max-width: 40%;
   }
 }
 
 .card img {
   height: 150px;
   object-fit: contain;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
   transition: transform 0.3s ease;
 }
 
@@ -197,20 +218,27 @@ nav img {
   margin-bottom: 0.5rem;
 }
 
-.product-description {
-  display: none;
-  font-size: 0.875rem;
-  line-height: 1.2;
-  text-align: center;
-  margin-bottom: 0.5rem;
-}
+/* Mobile view only - Disable description and show full name on hover */
+@media (max-width: 768px) {
+  .product-description {
+    display: none;
+  }
 
-.card:hover .product-description {
-  display: block;
-}
+  .product-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    transition: all 0.3s ease;
+  }
 
-.card:hover .product-name {
-  display: none;
+  .card:hover .product-name {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    max-height: none; /* Allow full height */
+    display: block;   /* Ensure full display of text */
+  }
 }
 
 .price {
@@ -218,7 +246,7 @@ nav img {
   font-weight: bold;
   color: var(--text-color);
   text-align: center;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
 }
 
 /* Quantity Controls Styling */
@@ -226,37 +254,37 @@ nav img {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--primary-color); /* Blue background */
+  background-color: var(--primary-color);
   color: white;
-  border-radius: 20px;
-  padding: 0.5rem 1rem;
-  margin-bottom: 0.5rem; /* Position it above the image */
+  border-radius: 12px;
+  padding: 0.2rem 0.6rem;
+  margin-top: 0.5rem;
 }
 
 .add-button {
-  font-size: 1rem;
+  font-size: 0.85rem;
   font-weight: bold;
   cursor: pointer;
   transition: background-color 0.3s ease;
   color: white;
   background-color: var(--primary-color);
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
 }
 
 .add-button:hover {
-  background-color: #00224d; /* Darker blue on hover */
+  background-color: #00224d;
 }
 
 .quantity-button {
-  background-color: var(--primary-color); /* Blue background */
+  background-color: var(--primary-color);
   color: white;
-  font-size: 1.2rem;
+  font-size: 1rem;
   font-weight: bold;
   border: none;
   border-radius: 50%;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -266,7 +294,7 @@ nav img {
 }
 
 .quantity-button:hover {
-  background-color: #00224d; /* Darker blue on hover */
+  background-color: #00224d;
 }
 
 .quantity-display {
@@ -281,6 +309,6 @@ nav img {
 
 /* Footer Styling */
 .footer {
-  background-color: var(--primary-color); /* Blue background */
+  background-color: var(--primary-color);
   color: white;
 }

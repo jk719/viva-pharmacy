@@ -66,7 +66,20 @@ export default function FeaturedProducts() {
                       className="card bg-white shadow-lg rounded-lg p-4 hover:shadow-xl transition-all duration-300 min-w-[70%] max-w-[70%] sm:w-1/4 scroll-snap-align transform hover:scale-105"
                     >
                       <div className="flex flex-col items-center">
-                        {/* Quantity Controls - Positioned Above Image */}
+
+                        {/* Product Image */}
+                        <div className="relative h-40 w-full mb-2 flex items-center justify-center overflow-hidden rounded-lg">
+                          <Image
+                            src={product.image}
+                            alt={product.name}
+                            width={250}
+                            height={250}
+                            priority
+                            className="object-contain"
+                          />
+                        </div>
+
+                        {/* Quantity Controls - Positioned Below Image */}
                         <div className="quantity-controls mb-2" role="group" aria-label="Quantity controls">
                           {quantity === 0 ? (
                             <button
@@ -95,18 +108,6 @@ export default function FeaturedProducts() {
                               </button>
                             </div>
                           )}
-                        </div>
-
-                        {/* Product Image */}
-                        <div className="relative h-40 w-full mb-2 flex items-center justify-center overflow-hidden rounded-lg">
-                          <Image
-                            src={product.image}
-                            alt={product.name}
-                            width={250}
-                            height={250}
-                            priority
-                            className="object-contain"
-                          />
                         </div>
 
                         {/* Product Price */}
