@@ -10,6 +10,7 @@
     "deploy": "npm run build && mv .next/standalone docs && git add . && git commit -m 'Deploy to GitHub Pages' && git push origin main"
   },
   "dependencies": {
+    "@fortawesome/fontawesome-free": "^6.6.0",
     "@headlessui/react": "^2.2.0",
     "@heroicons/react": "^2.1.5",
     "bcryptjs": "^2.4.3",

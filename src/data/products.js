@@ -7,7 +7,7 @@ const products = [
       price: 19.99, 
       description: 'Discover fast and effective relief with Monistat 3 Vaginal Antifungal Prefilled Cream 3x5gm. Treats and cures pesky yeast infections while soothing irritation and discomfort. Get back to feeling confident and comfortable with this trusted and convenient solution.', 
       category: 'Feminine Care', 
-      isFeatured: true 
+      isFeatured: false 
   },
   { 
       id: 2, 
@@ -16,7 +16,7 @@ const products = [
       price: 24.99, 
       description: 'Get fast and effective relief with Monistat 7 Vaginal Antifungal Cream. This powerful combination pack includes a triple-strength cream and soothing wipes for a complete solution to yeast infections. Trust Monistat 7 to provide maximum strength and comfort in just 7 days.', 
       category: 'Feminine Care', 
-      isFeatured: true 
+      isFeatured: false 
   },
   { 
       id: 3, 

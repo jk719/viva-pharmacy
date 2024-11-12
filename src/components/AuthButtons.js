@@ -15,13 +15,11 @@ export default function AuthButtons() {
 
     const handleAuthAction = async () => {
         if (isSignUp) {
-            // Placeholder for account creation logic
             setMessage("Account created successfully! Please sign in.");
             setIsSignUp(false);
             setEmail("");
             setPassword("");
         } else {
-            // Attempt to sign in
             const result = await signIn("credentials", {
                 redirect: false,
                 email,
@@ -51,6 +49,10 @@ export default function AuthButtons() {
                     <button
                         onClick={toggleDropdown}
                         className="button-primary py-1 px-3 rounded"
+                        style={{
+                            whiteSpace: "nowrap",   // Prevent text from wrapping
+                            width: "fit-content"    // Fit content width
+                        }}
                     >
                         {isSignUp ? "Sign Up" : "Sign In"}
                     </button>
@@ -59,7 +61,7 @@ export default function AuthButtons() {
                             className="absolute right-0 top-full mt-2 w-64 bg-primary-color shadow-md rounded-md p-4 z-10 text-white"
                             style={{
                                 animation: "slideDown 0.3s ease-out",
-                                backgroundColor: "#003366" // Ensures solid dark blue background
+                                backgroundColor: "#003366"
                             }}
                         >
                             <h2 className="text-lg font-bold mb-3">{isSignUp ? "Sign Up" : "Sign In"}</h2>
@@ -88,7 +90,7 @@ export default function AuthButtons() {
                             <button
                                 onClick={() => {
                                     setIsSignUp(!isSignUp);
-                                    setMessage(""); // Clear messages on toggle
+                                    setMessage("");
                                 }}
                                 className="text-white underline mt-2 text-sm"
                             >
@@ -102,7 +104,6 @@ export default function AuthButtons() {
                 </>
             )}
 
-            {/* Slide-down effect for the dropdown */}
             <style jsx>{`
                 @keyframes slideDown {
                     from {
