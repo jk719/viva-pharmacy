@@ -22,8 +22,9 @@ export default function Cart() {
                                 alt={item.name}
                                 width={96}
                                 height={96}
+                                layout="responsive" // Ensure responsive layout
+                                priority
                                 className="object-contain rounded"
-                                priority // Only use priority if this image is above the fold
                             />
                         </div>
                         <div className="cart-item-info flex-grow">
