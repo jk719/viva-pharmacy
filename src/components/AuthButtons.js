@@ -15,19 +15,23 @@ export default function AuthButtons() {
 
     const handleAuthAction = async () => {
         if (isSignUp) {
+            // Placeholder for account creation logic
             setMessage("Account created successfully! Please sign in.");
             setIsSignUp(false);
             setEmail("");
             setPassword("");
         } else {
+            // Placeholder for sign-in logic
             const result = await signIn("credentials", {
                 redirect: false,
                 email,
                 password
             });
 
-            if (result.error) {
+            if (result?.error) {
                 setMessage("Sign in failed. Please check your credentials.");
+            } else {
+                setMessage(""); // Clear any previous messages on successful sign-in
             }
         }
     };
