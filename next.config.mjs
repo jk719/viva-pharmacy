@@ -20,6 +20,7 @@ const nextConfig = {
     config.cache = false; // Turn off caching to prevent potential stale builds
     return config;
   },
+  productionBrowserSourceMaps: true, // Enable source maps for production builds
 };
 
 export default nextConfig;
