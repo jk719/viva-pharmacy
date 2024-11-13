@@ -21,7 +21,7 @@ export default function ClientProductView({ product }) {
 
   return (
     <div className="fixed inset-0 bg-gray-800 bg-opacity-75 z-50 flex items-center justify-center p-4">
-      <div className="bg-white max-w-4xl w-full md:w-3/4 lg:w-2/3 rounded-lg shadow-lg relative overflow-y-auto p-6">
+      <div className="bg-white w-full max-w-xs sm:max-w-md md:max-w-3/4 lg:max-w-2/3 rounded-lg shadow-lg relative overflow-y-auto p-4 md:p-6">
         
         {/* Back Button */}
         <button
@@ -39,40 +39,34 @@ export default function ClientProductView({ product }) {
             <Image
               src={product.image}
               alt={product.name}
-              width={300}
-              height={300}
-              className="object-contain max-w-full max-h-[400px]"
+              width={200} // Smaller image width for mobile
+              height={200} // Smaller image height for mobile
+              className="object-contain max-w-full max-h-[300px] md:max-h-[400px]" // Smaller height for mobile
             />
           </div>
 
           {/* Product Details */}
-          <div className="flex-1 px-6">
-            <h1 className="text-2xl font-bold mb-2">{product.name}</h1>
-            <div className="flex items-center text-yellow-500 mb-4">
+          <div className="flex-1 px-4 md:px-6">
+            <h1 className="text-xl md:text-2xl font-bold mb-2">{product.name}</h1>
+            <div className="flex items-center text-yellow-500 mb-2 md:mb-4">
               <span className="text-sm">★★★★☆</span>
               <span className="text-sm text-gray-600 ml-2">(2415)</span>
             </div>
 
-            <p className="text-2xl font-bold mb-4">${product.price.toFixed(2)}</p>
+            <p className="text-xl md:text-2xl font-bold mb-2 md:mb-4">${product.price.toFixed(2)}</p>
 
-            <div className="flex items-center mb-4">
-              {/* <select className="border border-gray-300 rounded px-2 py-1 mr-4">
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-              </select> */}
+            <div className="flex items-center mb-2 md:mb-4">
               <button
                 onClick={() => addToCart(product)}
                 aria-label={`Add ${product.name} to cart`}
                 style={{ backgroundColor: 'var(--primary-color)' }}
-                className="text-white px-6 py-2 rounded hover:opacity-90 font-semibold"
+                className="text-white px-4 md:px-6 py-2 rounded hover:opacity-90 font-semibold"
               >
                 Add to Cart
               </button>
             </div>
 
-            <div className="border-t pt-4">
+            <div className="border-t pt-2 md:pt-4">
               <h3 className="font-semibold mb-2 cursor-pointer text-gray-800">Details</h3>
               <h3 className="font-semibold mb-2 cursor-pointer text-gray-800">Ingredients</h3>
               <h3 className="font-semibold mb-2 cursor-pointer text-gray-800">Directions</h3>
