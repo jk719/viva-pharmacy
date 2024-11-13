@@ -1,4 +1,3 @@
-// src/components/FeaturedProducts.js
 "use client";
 
 import Image from 'next/image';
@@ -12,7 +11,6 @@ export default function FeaturedProducts() {
   const { addToCart, decrement, cartItems } = useCart();
   const [selectedCategory, setSelectedCategory] = useState('All');
 
-  // Get unique categories with counts
   const categoriesWithCounts = [...new Set(products.map((product) => product.category))]
     .map((category) => ({
       name: category,
@@ -41,7 +39,6 @@ export default function FeaturedProducts() {
 
   return (
     <section className="py-8">
-      {/* Sticky Filter */}
       <ProductFilter
         categories={categories}
         selectedCategory={selectedCategory}
@@ -54,7 +51,6 @@ export default function FeaturedProducts() {
           <div key={category.name} className="mb-8">
             <h2 className="text-2xl font-bold mb-4 text-primary">{category.name}</h2>
 
-            {/* Products List - Horizontal Scroll */}
             <div className="flex overflow-x-auto gap-4 scroll-snap-x px-2">
               {products
                 .filter((product) => product.category === category.name)
@@ -67,7 +63,6 @@ export default function FeaturedProducts() {
                       className="card bg-white shadow-lg rounded-lg p-4 hover:shadow-xl transition-all duration-300 min-w-[70%] max-w-[70%] sm:w-1/4 scroll-snap-align transform hover:scale-105"
                     >
                       <div className="flex flex-col items-center">
-                        {/* Product Image with Link */}
                         <Link href={`/products/${product.id}`}>
                           <div className="relative h-40 w-full mb-2 flex items-center justify-center overflow-hidden rounded-lg cursor-pointer">
                             <Image
@@ -81,12 +76,11 @@ export default function FeaturedProducts() {
                           </div>
                         </Link>
 
-                        {/* Quantity Controls - Positioned Below Image */}
                         <div className="quantity-controls mb-2" role="group" aria-label="Quantity controls">
                           {quantity === 0 ? (
                             <button
                               onClick={() => handleAddToCart(product)}
-                              className="add-button"
+                              className="add-button inactive"
                               aria-label="Add to cart"
                             >
                               Add +
@@ -103,7 +97,7 @@ export default function FeaturedProducts() {
                               <span className="quantity-display">{quantity}</span>
                               <button
                                 onClick={() => handleAddToCart(product)}
-                                className="quantity-button"
+                                className={`add-button ${quantity > 0 ? 'active' : 'inactive'}`} // Updated class
                                 aria-label="Increase quantity"
                               >
                                 +
@@ -112,23 +106,19 @@ export default function FeaturedProducts() {
                           )}
                         </div>
 
-                        {/* Product Price */}
                         <p className="text-lg font-bold text-secondary text-center mb-1">${product.price.toFixed(2)}</p>
                         
-                        {/* Product Name */}
                         <h3 className="product-name text-md font-semibold text-primary text-center mb-1 line-clamp-2">
                           {product.name}
                         </h3>
 
-                        {/* Product Description (Expandable on Hover) */}
                         <p className="product-description text-gray-600 text-center line-clamp-2 hover:line-clamp-none transition-all duration-200 mb-2">
                           {product.description}
                         </p>
 
-                        {/* Rating */}
                         <div className="flex justify-center items-center text-yellow-500">
-                          <span className="text-sm">★★★★★</span> {/* Replace with dynamic rating */}
-                          <span className="text-xs text-gray-500 ml-1">(20)</span> {/* Replace with actual reviews */}
+                          <span className="text-sm">★★★★★</span>
+                          <span className="text-xs text-gray-500 ml-1">(20)</span>
                         </div>
                       </div>
                     </div>

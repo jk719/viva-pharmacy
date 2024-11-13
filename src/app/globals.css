@@ -12,6 +12,7 @@
   --text-color: #003366;
   --button-blue: #003366;
   --button-red: #dc3545;
+  --button-green: #28a745; /* New color for active Add button */
   --placeholder-color: #6b7280;
 }
 
@@ -267,9 +268,17 @@ nav img {
   cursor: pointer;
   transition: background-color 0.3s ease;
   color: white;
-  background-color: var(--primary-color);
   padding: 0.2rem 0.6rem;
   border-radius: 12px;
+}
+
+/* Conditional styling for the add-button */
+.add-button.inactive {
+  background-color: var(--primary-color);
+}
+
+.add-button.active {
+  background-color: var(--button-green); /* Apply green background when active */
 }
 
 .add-button:hover {
