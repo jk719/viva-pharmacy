@@ -75,7 +75,7 @@ export default function FeaturedProducts() {
                             width={250}
                             height={250}
                             priority
-                            className="object-contain"
+                            className="object-contain w-auto h-auto"
                           />
                         </div>
 

@@ -36,6 +36,8 @@ export default function RootLayout({ children }) {
                     alt="VIVA Pharmacy & Wellness Logo"
                     width={150}
                     height={50}
+                    priority
+                    className="object-contain w-auto h-auto"
                   />
                 </div>
 
