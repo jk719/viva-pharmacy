@@ -2,6 +2,7 @@
 "use client";
 
 import Image from 'next/image';
+import Link from 'next/link';
 import { useCart } from '../context/CartContext';
 import products from '../data/products';
 import { useState } from 'react';
@@ -66,18 +67,19 @@ export default function FeaturedProducts() {
                       className="card bg-white shadow-lg rounded-lg p-4 hover:shadow-xl transition-all duration-300 min-w-[70%] max-w-[70%] sm:w-1/4 scroll-snap-align transform hover:scale-105"
                     >
                       <div className="flex flex-col items-center">
-
-                        {/* Product Image */}
-                        <div className="relative h-40 w-full mb-2 flex items-center justify-center overflow-hidden rounded-lg">
-                          <Image
-                            src={product.image}
-                            alt={product.name}
-                            width={250}
-                            height={250}
-                            priority
-                            className="object-contain w-auto h-auto"
-                          />
-                        </div>
+                        {/* Product Image with Link */}
+                        <Link href={`/products/${product.id}`}>
+                          <div className="relative h-40 w-full mb-2 flex items-center justify-center overflow-hidden rounded-lg cursor-pointer">
+                            <Image
+                              src={product.image}
+                              alt={product.name}
+                              width={250}
+                              height={250}
+                              priority
+                              className="object-contain w-auto h-auto"
+                            />
+                          </div>
+                        </Link>
 
                         {/* Quantity Controls - Positioned Below Image */}
                         <div className="quantity-controls mb-2" role="group" aria-label="Quantity controls">

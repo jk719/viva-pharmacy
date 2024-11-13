@@ -3,14 +3,14 @@
 import products from '../../../data/products';
 import ClientProductView from './ClientProductView';
 
-export function generateStaticParams() {
-  return products.map((product) => ({
-    id: product.id.toString(),
-  }));
-}
+export default async function ProductPage({ params }) {
+  // Destructure `params.id` using await as an async operation
+  const { id } = await params;
+  
+  // Parse `id` as an integer
+  const productId = parseInt(id, 10);
 
-export default function ProductPage({ params }) {
-  const productId = parseInt(params.id, 10);
+  // Search for the product
   const product = products.find((prod) => prod.id === productId);
 
   if (!product) {
