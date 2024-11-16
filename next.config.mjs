@@ -6,21 +6,18 @@ const __dirname = path.dirname(__filename);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  trailingSlash: true, // Enable trailing slashes for routes
+  trailingSlash: true,
   images: {
-    unoptimized: true, // Disable image optimization if needed for static exports
+    unoptimized: true,
   },
   env: {
-    NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'http://localhost:3000', // Use the appropriate NEXTAUTH_URL for your environment
-  },
-  experimental: {
-    turbo: false, // Disable TurboPack for stable Webpack usage
+    NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'http://localhost:3000',
   },
   webpack: (config) => {
-    config.cache = false; // Turn off caching to prevent potential stale builds
+    config.cache = false;
     return config;
   },
-  productionBrowserSourceMaps: true, // Enable source maps for production builds
+  productionBrowserSourceMaps: true,
 };
 
 export default nextConfig;

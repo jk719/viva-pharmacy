@@ -1,0 +1,45 @@
+{
+	"info": {
+		"_postman_id": "032c8a0a-2bdf-48a0-9478-79f126949958",
+		"name": "UserCreationTest",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "39749332"
+	},
+	"item": [
+		{
+			"name": "http://localhost:3000/api/testUser",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"username\": \"testuser\",\n  \"email\": \"testuser@example.com\",\n  \"password\": \"password123\"\n}\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:3000/api/testUser",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"api",
+						"testUser"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

@@ -1,40 +1,72 @@
+// src/pages/api/auth/[...nextauth].js
+
 import NextAuth from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import dbConnect from '../../../lib/dbConnect';
+import User from '../../../models/User';
 
 export default NextAuth({
   providers: [
     CredentialsProvider({
       name: "Credentials",
       credentials: {
-        email: { label: "Email", type: "text" },
+        identifier: { label: "Username or Email", type: "text" },
         password: { label: "Password", type: "password" }
       },
       authorize: async (credentials) => {
-        // Make a POST request to your custom local authentication endpoint
-        const res = await fetch(`${process.env.NEXTAUTH_URL}/api/auth/local`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(credentials),
-        });
+        console.log("Authorize function called with credentials:", credentials);
 
-        const user = await res.json();
-
-        // If authentication is successful, return the user object
-        if (res.ok && user) {
-          return user;
-        } else {
+        // Check for missing credentials
+        if (!credentials.identifier || !credentials.password) {
+          console.log("Missing identifier or password in credentials:", credentials);
           return null;
         }
+
+        await dbConnect(); // Ensure database is connected
+        console.log("Database connected");
+
+        // Find the user by either email or username
+        const user = await User.findOne({
+          $or: [{ email: credentials.identifier }, { username: credentials.identifier }]
+        });
+
+        if (!user) {
+          console.log("User not found with provided identifier:", credentials.identifier);
+          return null;
+        }
+
+        // Verify password
+        const isValidPassword = await user.comparePassword(credentials.password);
+        console.log("Password match result for user:", isValidPassword);
+
+        if (!isValidPassword) {
+          console.log("Invalid password for user:", credentials.identifier);
+          return null;
+        }
+
+        console.log("User authenticated successfully:", user.username);
+        return { id: user._id, email: user.email, name: user.username };
       }
     })
   ],
   callbacks: {
+    async jwt({ token, user }) {
+      console.log("JWT callback triggered with token:", token, "and user:", user);
+      if (user) {
+        token.id = user.id;
+      }
+      return token;
+    },
     async session({ session, token }) {
-      session.user.id = token.sub;
+      console.log("Session callback triggered with session:", session, "and token:", token);
+      if (token?.id) {
+        session.user.id = token.id;
+      }
       return session;
     },
   },
   pages: {
-    signIn: '/auth/signin', // Optional: specify a custom sign-in page route
+    signIn: '/auth/signin',
   },
+  debug: true, // Enable debugging mode for NextAuth
 });
