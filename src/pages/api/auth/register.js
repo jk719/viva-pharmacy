@@ -20,13 +20,16 @@ export default async function handler(req, res) {
         return res.status(400).json({ message: 'Username or email already taken' });
       }
 
-      // Create a new user (password will be hashed by the pre-save hook in User model)
+      // Create a new user (password will be hashed by User model's pre-save hook)
       const newUser = new User({ username, email, password });
       await newUser.save();
 
+      // Log the hashed password and the newly created user
+      console.log("User registered successfully with hashed password:", newUser.password);
+
       res.status(201).json({ message: 'User registered successfully' });
     } catch (error) {
-      console.error("Registration error:", error);
+      console.error("Registration error:", error.message); // Log specific error message
       res.status(500).json({ message: 'Something went wrong during registration' });
     }
   } else {
