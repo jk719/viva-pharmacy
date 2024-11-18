@@ -1,4 +1,4 @@
- "use client";
+"use client";
 
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useState } from "react";
@@ -17,7 +17,6 @@ export default function AuthButtons() {
 
   const handleAuthAction = async () => {
     if (isSignUp) {
-      // Registration Logic
       try {
         console.log("Registration attempt with payload:", { username, email: identifier, password });
         const response = await axios.post('/api/auth/register', { username, email: identifier, password }, {
@@ -33,7 +32,6 @@ export default function AuthButtons() {
         setMessage(error.response?.data.message || "Registration failed.");
       }
     } else {
-      // Login Logic using NextAuth's signIn function
       try {
         console.log("Login attempt with payload:", { identifier, password });
         const result = await signIn("credentials", {
@@ -78,7 +76,9 @@ export default function AuthButtons() {
           </button>
           {dropdownOpen && (
             <div className="absolute right-0 top-full mt-2 w-64 bg-primary-color shadow-md rounded-md p-4 z-10" style={{ backgroundColor: "#003366", color: "var(--text-color)" }}>
-              <h2 className="text-lg font-bold mb-3">{isSignUp ? "Sign Up" : "Sign In"}</h2>
+              <h2 className="text-lg font-bold mb-3" style={{ color: "white" }}>
+                {isSignUp ? "Sign Up" : "Sign In"}
+              </h2>
               {isSignUp && (
                 <input
                   type="text"
@@ -118,6 +118,7 @@ export default function AuthButtons() {
                   setMessage("");
                 }}
                 className="underline mt-2 text-sm"
+                style={{ color: "#ffffff" }} // Set link color explicitly to white
               >
                 {isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up"}
               </button>
