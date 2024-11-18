@@ -3,13 +3,21 @@ import dbConnect from '../../../lib/dbConnect';
 import User from '../../../models/User';
 
 export default async function handler(req, res) {
-  await dbConnect();
+  // Connect to MongoDB
+  try {
+    await dbConnect();
+    console.log("Connected to MongoDB");
+  } catch (error) {
+    console.error("Database connection error:", error.message);
+    return res.status(500).json({ message: 'Database connection failed' });
+  }
 
+  // Ensure request method is POST
   if (req.method === 'POST') {
     const { username, email, password } = req.body;
 
     try {
-      // Check if username, email, and password are provided
+      // Validate input
       if (!username || !email || !password) {
         return res.status(400).json({ message: 'Username, email, and password are required' });
       }
@@ -20,19 +28,20 @@ export default async function handler(req, res) {
         return res.status(400).json({ message: 'Username or email already taken' });
       }
 
-      // Create a new user (password will be hashed by User model's pre-save hook)
+      // Create a new user (password will be hashed by the User model's pre-save hook)
       const newUser = new User({ username, email, password });
       await newUser.save();
 
-      // Log the hashed password and the newly created user
-      console.log("User registered successfully with hashed password:", newUser.password);
+      // Log successful registration (avoid logging sensitive data)
+      console.log("User registered successfully with email:", newUser.email);
 
       res.status(201).json({ message: 'User registered successfully' });
     } catch (error) {
-      console.error("Registration error:", error.message); // Log specific error message
+      console.error("Registration error:", error.message);
       res.status(500).json({ message: 'Something went wrong during registration' });
     }
   } else {
+    // Respond with 405 if the method is not allowed
     res.status(405).json({ message: 'Method not allowed' });
   }
 }

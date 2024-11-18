@@ -6,18 +6,21 @@ const __dirname = path.dirname(__filename);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  trailingSlash: true,
+  trailingSlash: true, // Set this to false if you don’t need trailing slashes
   images: {
-    unoptimized: true,
+    unoptimized: true, // Useful if image optimization is not needed or handled externally
   },
   env: {
-    NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'http://localhost:3000',
+    // Set NEXTAUTH_URL based on environment
+    NEXTAUTH_URL: process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : 'http://localhost:3000',
   },
   webpack: (config) => {
-    config.cache = false;
+    config.cache = false; // Only needed if caching issues arise
     return config;
   },
-  productionBrowserSourceMaps: true,
+  productionBrowserSourceMaps: true, // Helps with debugging in production if needed
 };
 
 export default nextConfig;
