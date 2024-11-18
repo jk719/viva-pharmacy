@@ -22,18 +22,29 @@ async function dbConnect() {
 
   if (!cached.promise) {
     console.log("Attempting to connect to MongoDB...");
-    cached.promise = mongoose.connect(MONGODB_URI)
-      .then((mongoose) => {
-        console.log("Connected to MongoDB");
-        return mongoose;
-      })
-      .catch((error) => {
-        console.error("Error connecting to MongoDB:", error.message); // Log the specific error message
-        throw new Error("Failed to connect to MongoDB");
-      });
+
+    cached.promise = mongoose.connect(MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 5000, // Set a timeout of 5 seconds
+    })
+    .then((mongoose) => {
+      console.log("Connected to MongoDB");
+      return mongoose;
+    })
+    .catch((error) => {
+      console.error("Error connecting to MongoDB:", error.message); // Log specific error message
+      throw new Error("Failed to connect to MongoDB");
+    });
   }
 
-  cached.conn = await cached.promise;
+  try {
+    cached.conn = await cached.promise;
+  } catch (error) {
+    console.error("MongoDB connection failed:", error);
+    throw error; // Re-throw the error after logging
+  }
+
   return cached.conn;
 }
 

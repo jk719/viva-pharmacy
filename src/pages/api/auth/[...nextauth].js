@@ -14,59 +14,53 @@ export default NextAuth({
         password: { label: "Password", type: "password" }
       },
       authorize: async (credentials) => {
-        console.log("Authorize function called with credentials:", credentials);
+        try {
+          console.log("Authorize function called with credentials:", credentials);
 
-        // Check for missing credentials
-        if (!credentials.identifier || !credentials.password) {
-          console.log("Missing identifier or password in credentials:", credentials);
-          return null;
+          // Ensure credentials are present
+          if (!credentials.identifier || !credentials.password) {
+            throw new Error("Missing identifier or password");
+          }
+
+          await dbConnect(); // Connect to MongoDB
+          console.log("Database connected");
+
+          const user = await User.findOne({
+            $or: [{ email: credentials.identifier }, { username: credentials.identifier }]
+          });
+
+          if (!user) {
+            console.log("User not found for identifier:", credentials.identifier);
+            throw new Error("No user found with provided identifier");
+          }
+
+          const isValidPassword = await user.comparePassword(credentials.password);
+          console.log("Password match result for user:", isValidPassword);
+
+          if (!isValidPassword) {
+            throw new Error("Incorrect password");
+          }
+
+          return { id: user._id, email: user.email, name: user.username };
+        } catch (error) {
+          console.error("Authorization error:", error);
+          return null; // Returning null will show an error message to the client
         }
-
-        await dbConnect(); // Ensure database is connected
-        console.log("Database connected");
-
-        // Find the user by either email or username
-        const user = await User.findOne({
-          $or: [{ email: credentials.identifier }, { username: credentials.identifier }]
-        });
-
-        if (!user) {
-          console.log("User not found with provided identifier:", credentials.identifier);
-          return null;
-        }
-
-        // Verify password
-        const isValidPassword = await user.comparePassword(credentials.password);
-        console.log("Password match result for user:", isValidPassword);
-
-        if (!isValidPassword) {
-          console.log("Invalid password for user:", credentials.identifier);
-          return null;
-        }
-
-        console.log("User authenticated successfully:", user.username);
-        return { id: user._id, email: user.email, name: user.username };
       }
     })
   ],
   callbacks: {
     async jwt({ token, user }) {
-      console.log("JWT callback triggered with token:", token, "and user:", user);
-      if (user) {
-        token.id = user.id;
-      }
+      if (user) token.id = user.id;
       return token;
     },
     async session({ session, token }) {
-      console.log("Session callback triggered with session:", session, "and token:", token);
-      if (token?.id) {
-        session.user.id = token.id;
-      }
+      if (token?.id) session.user.id = token.id;
       return session;
     },
   },
   pages: {
     signIn: '/auth/signin',
   },
-  debug: true, // Enable debugging mode for NextAuth
+  debug: process.env.NODE_ENV === "development", // Debug mode only in development
 });
