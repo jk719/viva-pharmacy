@@ -57,20 +57,15 @@ export default function AuthButtons() {
     <div className="relative">
       {session ? (
         <div className="flex items-center space-x-4">
-          <span style={{ color: "var(--text-color)" }}>{session.user.email}</span>
-          <button
-            onClick={() => signOut()}
-            className="button-danger py-1 px-3 rounded"
-          >
-            Sign Out
-          </button>
+          <span className="text-white">{session.user.email}</span>
+          <button onClick={() => signOut()} className="text-white px-3 py-1 rounded transition-colors whitespace-nowrap" style={{ backgroundColor: 'var(--button-red)' }}>Sign Out</button>
         </div>
       ) : (
         <>
           <button
             onClick={toggleDropdown}
-            className="button-primary py-1 px-3 rounded"
-            style={{ whiteSpace: "nowrap", width: "fit-content" }}
+            className="text-white px-3 py-1 rounded transition-colors whitespace-nowrap"
+            style={{ backgroundColor: 'var(--button-green)' }}
           >
             {isSignUp ? "Sign Up" : "Sign In"}
           </button>

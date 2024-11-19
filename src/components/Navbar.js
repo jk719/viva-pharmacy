@@ -8,11 +8,13 @@ import AuthButtons from "./AuthButtons";
 import { useState } from "react";
 import products from "../data/products";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 export default function Navbar() {
   const [query, setQuery] = useState("");
   const [filteredProducts, setFilteredProducts] = useState([]);
   const router = useRouter();
+  const { data: session } = useSession();
 
   const handleInputChange = (e) => {
     const input = e.target.value;
@@ -38,9 +40,9 @@ export default function Navbar() {
 
   return (
     <nav className="bg-primary-color text-white py-4 fixed top-0 w-full z-20">
-      <div className="container mx-auto flex flex-col items-center md:flex-row md:justify-between">
+      <div className="container mx-auto px-4">
         {/* Logo */}
-        <div className="mb-2 md:mb-0">
+        <div className="flex justify-center md:justify-between mb-2">
           <Link href="/" legacyBehavior>
             <a>
               <Image
@@ -53,8 +55,13 @@ export default function Navbar() {
           </Link>
         </div>
 
-        {/* Search Bar, Cart Icon, and Sign-In Button */}
-        <div className="relative flex items-center justify-between w-full max-w-2xl md:flex-row md:justify-end md:space-x-4">
+        {/* Auth */}
+        <div className="flex justify-center mb-2">
+          <AuthButtons />
+        </div>
+
+        {/* Search Bar and Cart Icon - Third line on mobile when signed in */}
+        <div className={`relative flex items-center space-x-2 ${session ? 'mt-2' : ''} md:mt-0`}>
           <input
             type="text"
             value={query}
@@ -62,8 +69,12 @@ export default function Navbar() {
             placeholder="Search products..."
             className="w-full p-2 rounded-lg bg-white text-blue-900 placeholder-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 md:max-w-sm"
           />
+          <Link href="/cart" legacyBehavior>
+            <a className="text-white">
+              <ClientCartIcon />
+            </a>
+          </Link>
 
-          {/* Autocomplete Dropdown */}
           {filteredProducts.length > 0 && (
             <ul className="absolute top-full mt-1 w-full bg-white text-blue-900 rounded-lg shadow-lg overflow-hidden max-h-60 overflow-y-auto z-30">
               {filteredProducts.map((product) => (
@@ -77,13 +88,13 @@ export default function Navbar() {
               ))}
             </ul>
           )}
+        </div>
 
-          <Link href="/cart" legacyBehavior>
-            <a className="mx-4 text-white">
-              <ClientCartIcon />
-            </a>
-          </Link>
-          <AuthButtons />
+        {/* Desktop Layout */}
+        <div className="hidden md:flex md:justify-between md:items-center">
+          <div className="relative flex items-center space-x-4">
+            {/* Desktop content if needed */}
+          </div>
         </div>
       </div>
     </nav>
