@@ -76,28 +76,31 @@ export default function FeaturedProducts() {
                           </div>
                         </Link>
 
-                        <div className="quantity-controls mb-2" role="group" aria-label="Quantity controls">
+                        <div className="flex items-center space-x-2 mt-2">
                           {quantity === 0 ? (
                             <button
                               onClick={() => handleAddToCart(product)}
-                              className="add-button inactive"
+                              className="text-white px-4 py-1 rounded transition-colors"
+                              style={{ backgroundColor: 'var(--primary-color)' }}
                               aria-label="Add to cart"
                             >
                               Add +
                             </button>
                           ) : (
-                            <div className="flex items-center">
+                            <div className="flex items-center space-x-2">
                               <button
                                 onClick={() => handleDecrement(product)}
-                                className="quantity-button"
+                                className="text-white px-3 py-1 rounded transition-colors"
+                                style={{ backgroundColor: 'var(--button-red)' }}
                                 aria-label="Decrease quantity"
                               >
                                 -
                               </button>
-                              <span className="quantity-display">{quantity}</span>
+                              <span className="w-8 text-center">{quantity}</span>
                               <button
                                 onClick={() => handleAddToCart(product)}
-                                className={`add-button ${quantity > 0 ? 'active' : 'inactive'}`} // Updated class
+                                className="text-white px-3 py-1 rounded transition-colors"
+                                style={{ backgroundColor: 'var(--button-green)' }}
                                 aria-label="Increase quantity"
                               >
                                 +
@@ -106,7 +109,9 @@ export default function FeaturedProducts() {
                           )}
                         </div>
 
-                        <p className="text-lg font-bold text-secondary text-center mb-1">${product.price.toFixed(2)}</p>
+                        <p className="text-lg font-bold text-secondary text-center mb-1">
+                          ${product.price.toFixed(2)}
+                        </p>
                         
                         <h3 className="product-name text-md font-semibold text-primary text-center mb-1 line-clamp-2">
                           {product.name}

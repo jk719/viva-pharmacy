@@ -1,4 +1,3 @@
-// src/context/CartContext.js
 "use client";
 
 import { createContext, useContext, useState, useEffect } from 'react';
@@ -42,6 +41,18 @@ export function CartProvider({ children }) {
         });
     };
 
+    // New updateQuantity function
+    const updateQuantity = (itemId, newQuantity) => {
+        if (newQuantity < 1) return;
+        
+        setCartItems(prevItems => {
+            const updatedItems = prevItems.map(item =>
+                item.id === itemId ? { ...item, quantity: newQuantity } : item
+            );
+            return updatedItems;
+        });
+    };
+
     // Function to decrement item quantity or remove item if quantity is 0
     const decrement = (itemId) => {
         setCartItems((prevItems) => {
@@ -59,7 +70,13 @@ export function CartProvider({ children }) {
     };
 
     return (
-        <CartContext.Provider value={{ cartItems, addToCart, decrement, removeFromCart }}>
+        <CartContext.Provider value={{ 
+            cartItems, 
+            addToCart, 
+            decrement, 
+            removeFromCart,
+            updateQuantity // Added the new function to the context value
+        }}>
             {children}
         </CartContext.Provider>
     );

@@ -1,4 +1,3 @@
-// src/app/products/[id]/ClientProductView.js
 "use client";
 
 import { useCart } from '../../../context/CartContext';
@@ -9,12 +8,10 @@ export default function ClientProductView({ product }) {
   const { addToCart, decrement, cartItems } = useCart();
   const router = useRouter();
 
-  // Function to handle the back button
   const handleBack = () => {
     router.back();
   };
 
-  // Retrieve the current quantity of the product in the cart
   const getItemQuantity = (productId) => {
     const item = cartItems.find((item) => item.id === productId);
     return item ? item.quantity : 0;
@@ -22,7 +19,6 @@ export default function ClientProductView({ product }) {
 
   const quantity = getItemQuantity(product.id);
 
-  // Optional error handling if `product` is missing
   if (!product) {
     return <p>Product details are not available.</p>;
   }
@@ -47,8 +43,8 @@ export default function ClientProductView({ product }) {
             <Image
               src={product.image}
               alt={product.name}
-              width={200} // Mobile width
-              height={200} // Mobile height
+              width={200}
+              height={200}
               className="object-contain max-w-full max-h-[300px] md:max-h-[400px] lg:max-h-[500px]"
             />
           </div>
@@ -64,28 +60,31 @@ export default function ClientProductView({ product }) {
             <p className="text-xl md:text-2xl font-bold mb-2 md:mb-4">${product.price.toFixed(2)}</p>
 
             {/* Add to Cart Button */}
-            <div className="quantity-controls mb-2" role="group" aria-label="Quantity controls">
+            <div className="flex items-center space-x-2 mt-2 mb-4">
               {quantity === 0 ? (
                 <button
                   onClick={() => addToCart(product)}
-                  className="add-button inactive"
+                  className="text-white px-4 py-1 rounded transition-colors"
+                  style={{ backgroundColor: 'var(--primary-color)' }}
                   aria-label="Add to cart"
                 >
                   Add +
                 </button>
               ) : (
-                <div className="flex items-center">
+                <div className="flex items-center space-x-2">
                   <button
                     onClick={() => decrement(product.id)}
-                    className="quantity-button"
+                    className="text-white px-3 py-1 rounded transition-colors"
+                    style={{ backgroundColor: 'var(--button-red)' }}
                     aria-label="Decrease quantity"
                   >
                     -
                   </button>
-                  <span className="quantity-display">{quantity}</span>
+                  <span className="w-8 text-center">{quantity}</span>
                   <button
                     onClick={() => addToCart(product)}
-                    className={`add-button ${quantity > 0 ? 'active' : 'inactive'}`}
+                    className="text-white px-3 py-1 rounded transition-colors"
+                    style={{ backgroundColor: 'var(--button-green)' }}
                     aria-label="Increase quantity"
                   >
                     +
