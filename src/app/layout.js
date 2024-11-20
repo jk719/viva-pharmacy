@@ -23,6 +23,9 @@ function Providers({ children }) {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
+      <head>
+        <meta name="source-map-support" content="false" />
+      </head>
       <body className="bg-white text-primary-color">
         <Providers>
           {/* Navbar */}

@@ -1,11 +1,16 @@
 "use client";
 
 import { useCart } from '../../context/CartContext';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useState } from 'react';
+import AuthButtons from '../../components/AuthButtons';
 
 export default function CartPage() {
     const { cartItems, removeFromCart, updateQuantity } = useCart();
+    const { data: session } = useSession();
+    const [showAuth, setShowAuth] = useState(false);
 
     const calculateTotal = () => {
         return cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
@@ -13,6 +18,17 @@ export default function CartPage() {
 
     const getCleanImagePath = (imagePath) => {
         return imagePath.replace('images/products/', '');
+    };
+
+    const handleCheckoutClick = (e) => {
+        if (!session) {
+            e.preventDefault();
+            setShowAuth(true);
+            // Scroll to auth section smoothly
+            setTimeout(() => {
+                document.getElementById('auth-section')?.scrollIntoView({ behavior: 'smooth' });
+            }, 100);
+        }
     };
 
     return (
@@ -85,16 +101,45 @@ export default function CartPage() {
                             </span>
                         </div>
                         <div className="flex justify-end">
-                            <Link href="/checkout">
+                            {session ? (
+                                <Link href="/checkout">
+                                    <button 
+                                        className="text-white py-2 px-6 rounded transition-colors hover:bg-opacity-90"
+                                        style={{ backgroundColor: '#003366' }}
+                                    >
+                                        Proceed to Checkout
+                                    </button>
+                                </Link>
+                            ) : (
                                 <button 
-                                    className="text-white py-2 px-6 rounded transition-colors"
-                                    style={{ backgroundColor: '#003366', hover: { backgroundColor: '#004080' } }}
+                                    onClick={handleCheckoutClick}
+                                    className="text-white py-2 px-6 rounded transition-colors hover:bg-opacity-90"
+                                    style={{ backgroundColor: '#003366' }}
                                 >
                                     Proceed to Checkout
                                 </button>
-                            </Link>
+                            )}
                         </div>
                     </div>
+
+                    {showAuth && !session && (
+                        <div 
+                            id="auth-section"
+                            className="mt-8 border-t pt-8"
+                        >
+                            <div className="max-w-md mx-auto">
+                                <h2 className="text-xl font-semibold mb-4 text-center">
+                                    Please Sign In to Continue
+                                </h2>
+                                <p className="text-gray-600 mb-6 text-center">
+                                    Sign in to your account or create a new one to complete your purchase
+                                </p>
+                                <div className="bg-gray-50 p-6 rounded-lg shadow-sm">
+                                    <AuthButtons />
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
         </div>
