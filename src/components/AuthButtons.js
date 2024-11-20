@@ -54,7 +54,7 @@ export default function AuthButtons() {
   };
 
   return (
-    <div className="relative">
+    <div className="relative flex flex-col items-center">
       {session ? (
         <div className="flex items-center space-x-4">
           <span className="text-white">{session.user.email}</span>
@@ -70,7 +70,7 @@ export default function AuthButtons() {
             {isSignUp ? "Sign Up" : "Sign In"}
           </button>
           {dropdownOpen && (
-            <div className="absolute right-0 top-full mt-2 w-64 bg-primary-color shadow-md rounded-md p-4 z-10" style={{ backgroundColor: "#003366", color: "var(--text-color)" }}>
+            <div className="absolute top-full mt-2 w-64 bg-primary-color shadow-md rounded-md p-4 z-10 left-1/2 transform -translate-x-1/2 md:left-auto md:right-0 md:transform-none" style={{ backgroundColor: "#003366", color: "var(--text-color)" }}>
               <h2 className="text-lg font-bold mb-3" style={{ color: "white" }}>
                 {isSignUp ? "Sign Up" : "Sign In"}
               </h2>
