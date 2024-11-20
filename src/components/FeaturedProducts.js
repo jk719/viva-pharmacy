@@ -48,7 +48,7 @@ export default function FeaturedProducts() {
       {categoriesWithCounts
         .filter(category => selectedCategory === 'All' || category.name === selectedCategory)
         .map((category) => (
-          <div key={category.name} className="mb-8">
+          <div key={category.name} className="mb-8 md:mt-0 mt-20">
             <h2 className="text-2xl font-bold mb-4 text-primary">{category.name}</h2>
 
             <div className="flex overflow-x-auto gap-4 scroll-snap-x px-2">
