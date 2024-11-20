@@ -1,47 +1,101 @@
-// src/pages/api/auth/register.js
 import dbConnect from '../../../lib/dbConnect';
 import User from '../../../models/User';
+import crypto from 'crypto';
+import nodemailer from 'nodemailer';
+
+// Create email transporter
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD
+  }
+});
 
 export default async function handler(req, res) {
-  // Connect to MongoDB
-  try {
-    await dbConnect();
-    console.log("Connected to MongoDB");
-  } catch (error) {
-    console.error("Database connection error:", error.message);
-    return res.status(500).json({ message: 'Database connection failed' });
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Ensure request method is POST
-  if (req.method === 'POST') {
+  try {
+    await dbConnect();
+    console.log('Connected to MongoDB');
+
     const { username, email, password } = req.body;
+    console.log('Received registration request for:', email);
 
-    try {
-      // Validate input
-      if (!username || !email || !password) {
-        return res.status(400).json({ message: 'Username, email, and password are required' });
-      }
+    // Check if user exists
+    const existingUser = await User.findOne({
+      $or: [
+        { email: email.toLowerCase() },
+        { username: username.toLowerCase() }
+      ]
+    });
 
-      // Check if the username or email already exists
-      const existingUser = await User.findOne({ $or: [{ username }, { email }] });
-      if (existingUser) {
-        return res.status(400).json({ message: 'Username or email already taken' });
-      }
-
-      // Create a new user (password will be hashed by the User model's pre-save hook)
-      const newUser = new User({ username, email, password });
-      await newUser.save();
-
-      // Log successful registration (avoid logging sensitive data)
-      console.log("User registered successfully with email:", newUser.email);
-
-      res.status(201).json({ message: 'User registered successfully' });
-    } catch (error) {
-      console.error("Registration error:", error.message);
-      res.status(500).json({ message: 'Something went wrong during registration' });
+    if (existingUser) {
+      return res.status(400).json({
+        error: 'Username or email already exists'
+      });
     }
-  } else {
-    // Respond with 405 if the method is not allowed
-    res.status(405).json({ message: 'Method not allowed' });
+
+    // Generate verification token
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    console.log('Generated verification token');
+
+    // Create user with verification token
+    const user = await User.create({
+      username: username.toLowerCase(),
+      email: email.toLowerCase(),
+      password,
+      emailVerificationToken: verificationToken,
+      isVerified: false,
+      verificationExpires: new Date(Date.now() + 24*60*60*1000) // 24 hours
+    });
+
+    console.log('User created, sending verification email');
+
+    // Send verification email
+    const verificationUrl = `${process.env.NEXTAUTH_URL}/verify-email?token=${verificationToken}`;
+    
+    try {
+      await transporter.sendMail({
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: 'Verify your Viva Pharmacy account',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h1 style="color: #2C5282;">Welcome to Viva Pharmacy!</h1>
+            <p>Thank you for signing up. Please verify your email address by clicking the button below:</p>
+            <a href="${verificationUrl}" 
+               style="display: inline-block; background-color: #4299E1; color: white; 
+                      padding: 12px 24px; text-decoration: none; border-radius: 5px; 
+                      margin: 20px 0;">
+              Verify Email
+            </a>
+            <p style="color: #666;">If you didn't create an account, you can safely ignore this email.</p>
+            <p style="color: #666;">This verification link will expire in 24 hours.</p>
+          </div>
+        `
+      });
+      console.log('Verification email sent successfully');
+    } catch (emailError) {
+      console.error('Error sending verification email:', emailError);
+      return res.status(201).json({
+        success: true,
+        message: 'Account created but verification email failed to send. Please contact support.'
+      });
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Please check your email to verify your account'
+    });
+
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({ 
+      error: 'Failed to create account',
+      details: error.message 
+    });
   }
 }
