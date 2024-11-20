@@ -24,6 +24,14 @@ export default async function handler(req, res) {
     const { username, email, password } = req.body;
     console.log('Received registration request for:', email);
 
+    // Validate input
+    if (!username || !email || !password) {
+      console.log('Missing required fields:', { username: !!username, email: !!email, password: !!password });
+      return res.status(400).json({
+        error: 'All fields are required'
+      });
+    }
+
     // Check if user exists
     const existingUser = await User.findOne({
       $or: [
@@ -33,6 +41,10 @@ export default async function handler(req, res) {
     });
 
     if (existingUser) {
+      console.log('User already exists:', {
+        existingEmail: existingUser.email === email.toLowerCase(),
+        existingUsername: existingUser.username === username.toLowerCase()
+      });
       return res.status(400).json({
         error: 'Username or email already exists'
       });
@@ -52,10 +64,15 @@ export default async function handler(req, res) {
       verificationExpires: new Date(Date.now() + 24*60*60*1000) // 24 hours
     });
 
-    console.log('User created, sending verification email');
+    console.log('User created successfully:', {
+      userId: user._id,
+      username: user.username,
+      isVerified: user.isVerified
+    });
 
     // Send verification email
     const verificationUrl = `${process.env.NEXTAUTH_URL}/verify-email?token=${verificationToken}`;
+    console.log('Verification URL:', verificationUrl);
     
     try {
       await transporter.sendMail({
@@ -74,15 +91,25 @@ export default async function handler(req, res) {
             </a>
             <p style="color: #666;">If you didn't create an account, you can safely ignore this email.</p>
             <p style="color: #666;">This verification link will expire in 24 hours.</p>
+            <p style="color: #666;">If the button doesn't work, copy and paste this link into your browser:</p>
+            <p style="color: #666; word-break: break-all;">${verificationUrl}</p>
           </div>
         `
       });
-      console.log('Verification email sent successfully');
+      console.log('Verification email sent successfully to:', email);
     } catch (emailError) {
       console.error('Error sending verification email:', emailError);
+      // Log the error details
+      console.error('Email error details:', {
+        code: emailError.code,
+        command: emailError.command,
+        response: emailError.response
+      });
+      
       return res.status(201).json({
         success: true,
-        message: 'Account created but verification email failed to send. Please contact support.'
+        message: 'Account created but verification email failed to send. Please contact support.',
+        error: process.env.NODE_ENV === 'development' ? emailError.message : undefined
       });
     }
 
@@ -93,9 +120,17 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Registration error:', error);
+    // Log detailed error information
+    console.error('Error details:', {
+      name: error.name,
+      message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+    
     res.status(500).json({ 
       error: 'Failed to create account',
-      details: error.message 
+      message: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 }

@@ -41,10 +41,15 @@ export const authOptions = {
             throw new Error("Incorrect password");
           }
 
-          return { id: user._id, email: user.email, name: user.username };
+          return { 
+            id: user._id, 
+            email: user.email, 
+            name: user.username,
+            isVerified: user.isVerified
+          };
         } catch (error) {
           console.error("Authorization error:", error);
-          return null; // Returning null will show an error message to the client
+          return null;
         }
       }
     })
@@ -55,11 +60,27 @@ export const authOptions = {
   },
   callbacks: {
     async jwt({ token, user }) {
-      if (user) token.id = user.id;
+      if (user) {
+        token.id = user.id;
+        token.isVerified = user.isVerified;
+      }
       return token;
     },
     async session({ session, token }) {
-      if (token?.id) session.user.id = token.id;
+      if (token?.id) {
+        session.user.id = token.id;
+        session.user.isVerified = token.isVerified;
+
+        try {
+          await dbConnect();
+          const currentUser = await User.findById(token.id);
+          if (currentUser) {
+            session.user.isVerified = currentUser.isVerified;
+          }
+        } catch (error) {
+          console.error('Error checking verification status:', error);
+        }
+      }
       return session;
     },
   },
@@ -67,7 +88,7 @@ export const authOptions = {
     signIn: '/auth/signin',
   },
   secret: process.env.NEXTAUTH_SECRET,
-  debug: process.env.NODE_ENV === "development", // Debug mode only in development
+  debug: process.env.NODE_ENV === "development",
 };
 
 export default NextAuth(authOptions);

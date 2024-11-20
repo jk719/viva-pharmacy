@@ -1,0 +1,93 @@
+// Validation requirements
+const VALIDATION_REQUIREMENTS = {
+    phone: {
+      pattern: /^\+?[1-9]\d{1,14}$/,
+      message: 'Must be a valid phone number (e.g., +1234567890)'
+    },
+    email: {
+      pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+      message: 'Must be a valid email address'
+    },
+    username: {
+      minLength: 3,
+      maxLength: 20,
+      pattern: /^[a-zA-Z0-9_]+$/,
+      message: 'Must be 3-20 characters long and contain only letters, numbers, and underscores'
+    }
+  };
+  
+  // Validate phone number
+  export const validatePhone = (phone) => {
+    const requirements = {
+      isValid: VALIDATION_REQUIREMENTS.phone.pattern.test(phone)
+    };
+  
+    const passed = Object.values(requirements).every(Boolean);
+  
+    return {
+      passed,
+      requirements,
+      messages: passed ? [] : [VALIDATION_REQUIREMENTS.phone.message]
+    };
+  };
+  
+  // Validate email
+  export const validateEmail = (email) => {
+    const requirements = {
+      isValid: VALIDATION_REQUIREMENTS.email.pattern.test(email)
+    };
+  
+    const passed = Object.values(requirements).every(Boolean);
+  
+    return {
+      passed,
+      requirements,
+      messages: passed ? [] : [VALIDATION_REQUIREMENTS.email.message]
+    };
+  };
+  
+  // Validate username
+  export const validateUsername = (username) => {
+    const requirements = {
+      length: username.length >= VALIDATION_REQUIREMENTS.username.minLength && 
+              username.length <= VALIDATION_REQUIREMENTS.username.maxLength,
+      pattern: VALIDATION_REQUIREMENTS.username.pattern.test(username)
+    };
+  
+    const passed = Object.values(requirements).every(Boolean);
+  
+    const messages = [];
+    if (!requirements.length) {
+      messages.push(`Username must be between ${VALIDATION_REQUIREMENTS.username.minLength} and ${VALIDATION_REQUIREMENTS.username.maxLength} characters`);
+    }
+    if (!requirements.pattern) {
+      messages.push('Username can only contain letters, numbers, and underscores');
+    }
+  
+    return {
+      passed,
+      requirements,
+      messages
+    };
+  };
+  
+  // Validate form fields
+  export const validateField = (field, value) => {
+    switch (field) {
+      case 'phone':
+        return validatePhone(value);
+      case 'email':
+        return validateEmail(value);
+      case 'username':
+        return validateUsername(value);
+      case 'password':
+        return validatePassword(value); // Using your existing password validation
+      default:
+        return { passed: true, messages: [] };
+    }
+  };
+  
+  // Export constants
+  export const VALIDATION_RULES = {
+    requirements: VALIDATION_REQUIREMENTS
+  };
