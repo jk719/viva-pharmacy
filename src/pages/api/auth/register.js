@@ -1,16 +1,8 @@
 import dbConnect from '../../../lib/dbConnect';
 import User from '../../../models/User';
 import crypto from 'crypto';
-import nodemailer from 'nodemailer';
-
-// Create email transporter
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD
-  }
-});
+import { sendEmail } from '../../../lib/email';
+import bcrypt from 'bcryptjs';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -54,11 +46,14 @@ export default async function handler(req, res) {
     const verificationToken = crypto.randomBytes(32).toString('hex');
     console.log('Generated verification token');
 
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
     // Create user with verification token
     const user = await User.create({
       username: username.toLowerCase(),
       email: email.toLowerCase(),
-      password,
+      password: hashedPassword,
       emailVerificationToken: verificationToken,
       isVerified: false,
       verificationExpires: new Date(Date.now() + 24*60*60*1000) // 24 hours
@@ -75,8 +70,7 @@ export default async function handler(req, res) {
     console.log('Verification URL:', verificationUrl);
     
     try {
-      await transporter.sendMail({
-        from: process.env.EMAIL_USER,
+      await sendEmail({
         to: email,
         subject: 'Verify your Viva Pharmacy account',
         html: `
