@@ -28,7 +28,11 @@ export const sendEmail = async ({ to, subject, html }) => {
 // Specific verification email function
 export const sendVerificationEmail = async (email, token) => {
   try {
-    const verificationUrl = `${process.env.NEXTAUTH_URL}/verify-email?token=${token}`;
+    // Force use of production URL regardless of environment
+    const verificationUrl = `https://viva-pharmacy.vercel.app/verify-email?token=${token}`;
+    
+    // Log the URL for debugging
+    console.log('Sending verification email with URL:', verificationUrl);
     
     const mailOptions = {
       to: email,

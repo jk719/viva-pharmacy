@@ -56,12 +56,6 @@ export default async function handler(req, res) {
     const verificationToken = crypto.randomBytes(32).toString('hex');
     console.log('Generated verification token');
 
-    // Log password state before user creation
-    console.log('REGISTER - Password state before User.create:', {
-      passwordLength: password.length,
-      isPasswordHashed: password.startsWith('$2a$')
-    });
-
     // Create user
     const user = await User.create({
       username: username.toLowerCase(),
@@ -72,22 +66,20 @@ export default async function handler(req, res) {
       verificationExpires: new Date(Date.now() + 24*60*60*1000)
     });
 
-    // Log password state after user creation
     console.log('REGISTER - User created:', {
       userId: user._id,
       username: user.username,
-      isVerified: user.isVerified,
-      finalPasswordLength: user.password.length,
-      isFinalPasswordHashed: user.password.startsWith('$2a$')
+      isVerified: user.isVerified
     });
 
-    // Rest of your email sending code...
-    const verificationUrl = `${process.env.NEXTAUTH_URL}/verify-email?token=${verificationToken}`;
-    
+    // Use the production URL directly
+    const verificationUrl = `https://viva-pharmacy.vercel.app/verify-email?token=${verificationToken}`;
+    console.log('Generated verification URL:', verificationUrl);
+
     try {
       await sendEmail({
         to: email,
-        subject: 'Verify your Viva Pharmacy account',
+        subject: 'Verify your VIVA Pharmacy & Wellness account',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h1 style="color: #2C5282;">Welcome to Viva Pharmacy!</h1>

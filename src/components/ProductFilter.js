@@ -1,7 +1,7 @@
 // src/components/ProductFilter.js
 export default function ProductFilter({ categories, selectedCategory, onChange }) {
     return (
-      <div className="sticky top-16 z-10 mb-4 bg-white p-4 shadow-md rounded-lg"> {/* Adjust top to be below navbar */}
+      <div className="sticky top-[150px] md:top-16 z-10 mb-4 bg-white p-4 shadow-md rounded-lg">
         <label htmlFor="category" className="mr-4 text-lg font-semibold text-primary-color">Filter by Category:</label>
         <select
           id="category"

@@ -1,5 +1,5 @@
-import { connectDB } from '@/lib/dbConnect';
-import User from '@/models/User';
+import dbConnect from '../../../lib/dbConnect';
+import User from '../../../models/User';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -7,7 +7,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    await connectDB();
+    await dbConnect();
 
     const { userId, code } = req.body;
 
