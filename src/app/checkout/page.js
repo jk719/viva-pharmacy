@@ -262,9 +262,18 @@ export default function CheckoutPage() {
                                         onClick={() => setSelectedTime(time)}
                                         className={`p-2 text-sm border rounded-lg transition-colors ${
                                             selectedTime === time
-                                                ? 'bg-primary-color text-white border-primary-color'
+                                                ? 'bg-green-600 text-white border-green-600'
                                                 : 'bg-white text-gray-600 border-gray-300 hover:border-primary-color'
                                         }`}
+                                        style={
+                                            selectedTime === time 
+                                                ? { 
+                                                    backgroundColor: 'var(--button-green)',
+                                                    borderColor: 'var(--button-green)',
+                                                    color: 'white'
+                                                  } 
+                                                : {}
+                                        }
                                     >
                                         {time}
                                     </button>

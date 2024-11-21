@@ -2,7 +2,6 @@ import dbConnect from '../../../lib/dbConnect';
 import User from '../../../models/User';
 import crypto from 'crypto';
 import { sendEmail } from '../../../lib/email';
-import bcrypt from 'bcryptjs';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -10,15 +9,24 @@ export default async function handler(req, res) {
   }
 
   try {
+    console.log('Attempting to connect to MongoDB...');
     await dbConnect();
     console.log('Connected to MongoDB');
 
     const { username, email, password } = req.body;
-    console.log('Received registration request for:', email);
+    console.log('REGISTER - Received request:', {
+      email,
+      passwordLength: password?.length,
+      isPasswordHashed: password?.startsWith('$2a$')
+    });
 
     // Validate input
     if (!username || !email || !password) {
-      console.log('Missing required fields:', { username: !!username, email: !!email, password: !!password });
+      console.log('Missing required fields:', { 
+        username: !!username, 
+        email: !!email, 
+        password: !!password 
+      });
       return res.status(400).json({
         error: 'All fields are required'
       });
@@ -33,12 +41,14 @@ export default async function handler(req, res) {
     });
 
     if (existingUser) {
-      console.log('User already exists:', {
+      const existingDetails = {
         existingEmail: existingUser.email === email.toLowerCase(),
         existingUsername: existingUser.username === username.toLowerCase()
-      });
+      };
+      console.log('User already exists:', existingDetails);
       return res.status(400).json({
-        error: 'Username or email already exists'
+        error: 'Username or email already exists',
+        details: existingDetails
       });
     }
 
@@ -46,28 +56,33 @@ export default async function handler(req, res) {
     const verificationToken = crypto.randomBytes(32).toString('hex');
     console.log('Generated verification token');
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Log password state before user creation
+    console.log('REGISTER - Password state before User.create:', {
+      passwordLength: password.length,
+      isPasswordHashed: password.startsWith('$2a$')
+    });
 
-    // Create user with verification token
+    // Create user
     const user = await User.create({
       username: username.toLowerCase(),
       email: email.toLowerCase(),
-      password: hashedPassword,
+      password: password,
       emailVerificationToken: verificationToken,
       isVerified: false,
-      verificationExpires: new Date(Date.now() + 24*60*60*1000) // 24 hours
+      verificationExpires: new Date(Date.now() + 24*60*60*1000)
     });
 
-    console.log('User created successfully:', {
+    // Log password state after user creation
+    console.log('REGISTER - User created:', {
       userId: user._id,
       username: user.username,
-      isVerified: user.isVerified
+      isVerified: user.isVerified,
+      finalPasswordLength: user.password.length,
+      isFinalPasswordHashed: user.password.startsWith('$2a$')
     });
 
-    // Send verification email
+    // Rest of your email sending code...
     const verificationUrl = `${process.env.NEXTAUTH_URL}/verify-email?token=${verificationToken}`;
-    console.log('Verification URL:', verificationUrl);
     
     try {
       await sendEmail({
@@ -93,13 +108,6 @@ export default async function handler(req, res) {
       console.log('Verification email sent successfully to:', email);
     } catch (emailError) {
       console.error('Error sending verification email:', emailError);
-      // Log the error details
-      console.error('Email error details:', {
-        code: emailError.code,
-        command: emailError.command,
-        response: emailError.response
-      });
-      
       return res.status(201).json({
         success: true,
         message: 'Account created but verification email failed to send. Please contact support.',
@@ -114,7 +122,6 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Registration error:', error);
-    // Log detailed error information
     console.error('Error details:', {
       name: error.name,
       message: error.message,

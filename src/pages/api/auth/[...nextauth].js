@@ -17,12 +17,11 @@ export const authOptions = {
         try {
           console.log("Authorize function called with credentials:", credentials);
 
-          // Ensure credentials are present
           if (!credentials.identifier || !credentials.password) {
             throw new Error("Missing identifier or password");
           }
 
-          await dbConnect(); // Connect to MongoDB
+          await dbConnect();
           console.log("Database connected");
 
           const user = await User.findOne({
@@ -35,8 +34,7 @@ export const authOptions = {
           }
 
           const isValidPassword = await user.comparePassword(credentials.password);
-          console.log("Password match result for user:", isValidPassword);
-
+          
           if (!isValidPassword) {
             throw new Error("Incorrect password");
           }
@@ -49,7 +47,7 @@ export const authOptions = {
           };
         } catch (error) {
           console.error("Authorization error:", error);
-          return null;
+          throw error;
         }
       }
     })
