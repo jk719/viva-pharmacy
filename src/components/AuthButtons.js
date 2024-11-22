@@ -1,54 +1,153 @@
 "use client";
 
-import { useSession, signIn, signOut } from "next-auth/react";
+import { useSession, signIn, signOut, getSession } from "next-auth/react";
 import { useState } from "react";
-import axios from 'axios';
+import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 
 export default function AuthButtons() {
-  const { data: session } = useSession();
+  const { data: session, status, update: updateSession } = useSession();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
-  const [username, setUsername] = useState("");
-  const [identifier, setIdentifier] = useState("");
-  const [password, setPassword] = useState("");
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+    confirmPassword: "",
+    phoneNumber: ""
+  });
   const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   const toggleDropdown = () => setDropdownOpen(!dropdownOpen);
 
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setMessage("");
+    setError("");
+  };
+
+  const validateForm = () => {
+    if (!formData.email || !formData.password) {
+      setError("Email and password are required");
+      return false;
+    }
+
+    if (isSignUp) {
+      if (formData.password.length < 8) {
+        setError("Password must be at least 8 characters long");
+        return false;
+      }
+      if (formData.password !== formData.confirmPassword) {
+        setError("Passwords do not match");
+        return false;
+      }
+      if (formData.phoneNumber && !/^\+?[\d\s-]{10,}$/.test(formData.phoneNumber)) {
+        setError("Invalid phone number format");
+        return false;
+      }
+    }
+    return true;
+  };
+
   const handleAuthAction = async () => {
+    if (!validateForm()) return;
+
     if (isSignUp) {
       try {
-        console.log("Registration attempt with payload:", { username, email: identifier, password });
-        const response = await axios.post('/api/auth/register', { username, email: identifier, password }, {
-          headers: { 'Content-Type': 'application/json' }
+        setIsLoading(true);
+        setError('');
+        
+        // Register the user
+        const registerResponse = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password,
+            phoneNumber: formData.phoneNumber || undefined
+          })
         });
-        setMessage(response.data.message || "Account created successfully! Please sign in.");
-        setIsSignUp(false);
-        setUsername("");
-        setIdentifier("");
-        setPassword("");
+
+        const registerData = await registerResponse.json();
+
+        if (!registerData.success) {
+          throw new Error(registerData.message || 'Registration failed');
+        }
+
+        // Auto-login after registration
+        const signInResult = await signIn('credentials', {
+          redirect: false,
+          email: formData.email,
+          password: formData.password,
+        });
+
+        if (signInResult?.error) {
+          throw new Error(signInResult.error);
+        }
+
+        // Show success toast with verification instructions
+        toast.success(
+          'Account created successfully!',
+          {
+            duration: 3000,
+            style: {
+              background: '#003366',
+              color: '#fff',
+            },
+          }
+        );
+
+        // Reset form and close dropdown
+        setDropdownOpen(false);
+        setFormData({
+          email: "",
+          password: "",
+          confirmPassword: "",
+          phoneNumber: ""
+        });
+        
+        // Update session and refresh
+        await updateSession();
+        router.refresh();
+
       } catch (error) {
-        console.error("Registration error:", error.response?.data.message || error.message);
-        setMessage(error.response?.data.message || "Registration failed.");
+        console.error('Registration/Login error:', error);
+        toast.error(error.message);
+      } finally {
+        setIsLoading(false);
       }
     } else {
+      // Handle Sign In
       try {
-        console.log("Login attempt with payload:", { identifier, password });
+        setIsLoading(true);
+        setError('');
+        
         const result = await signIn("credentials", {
           redirect: false,
-          identifier,
-          password,
+          email: formData.email,
+          password: formData.password,
         });
 
         if (result?.error) {
-          console.error("Login error:", result.error);
-          setMessage("Sign in failed. Please check your credentials.");
+          toast.error("Invalid email or password");
+          setError("Sign in failed. Please check your credentials.");
         } else {
-          setMessage("Sign-in successful!");
+          setDropdownOpen(false);
+          setFormData({
+            email: "",
+            password: "",
+            confirmPassword: "",
+            phoneNumber: ""
+          });
+          router.refresh();
         }
       } catch (error) {
-        console.error("Login error:", error.message);
-        setMessage("Sign in failed. Please check your credentials.");
+        toast.error("Sign in failed");
+        setError("Sign in failed. Please try again.");
+      } finally {
+        setIsLoading(false);
       }
     }
   };
@@ -58,67 +157,111 @@ export default function AuthButtons() {
       {session ? (
         <div className="flex items-center space-x-4">
           <span className="text-white">{session.user.email}</span>
-          <button onClick={() => signOut()} className="text-white px-3 py-1 rounded transition-colors whitespace-nowrap" style={{ backgroundColor: 'var(--button-red)' }}>Sign Out</button>
+          <button 
+            onClick={() => signOut()} 
+            className="text-white px-3 py-1 rounded transition-colors whitespace-nowrap" 
+            style={{ backgroundColor: 'var(--button-red)' }}
+          >
+            Sign Out
+          </button>
         </div>
       ) : (
         <>
           <button
             onClick={toggleDropdown}
+            disabled={isLoading}
             className="text-white px-3 py-1 rounded transition-colors whitespace-nowrap"
             style={{ backgroundColor: 'var(--button-green)' }}
           >
-            {isSignUp ? "Sign Up" : "Sign In"}
+            {isLoading ? "Processing..." : isSignUp ? "Sign Up" : "Sign In"}
           </button>
+
           {dropdownOpen && (
-            <div className="absolute top-full mt-2 w-64 bg-primary-color shadow-md rounded-md p-4 z-10 left-1/2 transform -translate-x-1/2 md:left-auto md:right-0 md:transform-none" style={{ backgroundColor: "#003366", color: "var(--text-color)" }}>
+            <div className="absolute top-full mt-2 w-64 bg-primary-color shadow-md rounded-md p-4 z-10 left-1/2 transform -translate-x-1/2 md:left-auto md:right-0 md:transform-none" 
+                 style={{ backgroundColor: "#003366", color: "var(--text-color)" }}>
               <h2 className="text-lg font-bold mb-3" style={{ color: "white" }}>
                 {isSignUp ? "Sign Up" : "Sign In"}
               </h2>
-              {isSignUp && (
-                <input
-                  type="text"
-                  placeholder="Username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="w-full mb-2 p-2 border rounded"
-                  required
-                />
-              )}
+              
               <input
-                type="text"
-                placeholder="Username or Email"
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
+                type="email"
+                name="email"
+                placeholder="Email"
+                value={formData.email}
+                onChange={handleChange}
                 className="w-full mb-2 p-2 border rounded"
                 required
               />
+              
               <input
                 type="password"
+                name="password"
                 placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={formData.password}
+                onChange={handleChange}
                 className="w-full mb-2 p-2 border rounded"
                 required
               />
+
+              {isSignUp && (
+                <>
+                  <input
+                    type="password"
+                    name="confirmPassword"
+                    placeholder="Confirm Password"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    className="w-full mb-2 p-2 border rounded"
+                    required
+                  />
+                  
+                  <input
+                    type="tel"
+                    name="phoneNumber"
+                    placeholder="Phone Number (Optional)"
+                    value={formData.phoneNumber}
+                    onChange={handleChange}
+                    className="w-full mb-2 p-2 border rounded"
+                  />
+                </>
+              )}
+
               <button
                 onClick={handleAuthAction}
+                disabled={isLoading}
                 className="w-full button-primary py-2 rounded mt-2"
                 style={{ backgroundColor: "white" }}
               >
-                {isSignUp ? "Create Account" : "Sign In"}
+                {isLoading ? "Processing..." : isSignUp ? "Create Account" : "Sign In"}
               </button>
+              
               <button
                 onClick={() => {
                   setIsSignUp(!isSignUp);
                   setMessage("");
+                  setError("");
+                  setFormData({
+                    email: "",
+                    password: "",
+                    confirmPassword: "",
+                    phoneNumber: ""
+                  });
                 }}
                 className="underline mt-2 text-sm"
-                style={{ color: "#ffffff" }} // Set link color explicitly to white
+                style={{ color: "#ffffff" }}
               >
                 {isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up"}
               </button>
+              
               {message && (
-                <p className="mt-2 text-sm" style={{ color: isSignUp ? "green" : "red" }}>{message}</p>
+                <p className="mt-2 text-sm" style={{ color: message.includes("success") ? "green" : "red" }}>
+                  {message}
+                </p>
+              )}
+              {error && (
+                <p className="mt-2 text-sm" style={{ color: "red" }}>
+                  {error}
+                </p>
               )}
             </div>
           )}

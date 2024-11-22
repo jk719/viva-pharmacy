@@ -3,6 +3,7 @@
 
 import { SessionProvider } from "next-auth/react";
 import { CartProvider } from "../context/CartContext";
+import { Toaster } from 'react-hot-toast';
 import Navbar from "../components/Navbar";
 import Image from "next/image";
 import { FaInstagram, FaFacebook, FaTiktok } from "react-icons/fa";
@@ -14,6 +15,30 @@ function Providers({ children }) {
     <SessionProvider>
       <CartProvider>
         {children}
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            duration: 5000,
+            style: {
+              background: '#003366',
+              color: '#fff',
+              padding: '16px',
+              borderRadius: '8px',
+            },
+            success: {
+              iconTheme: {
+                primary: '#4ade80',
+                secondary: '#fff',
+              },
+            },
+            error: {
+              iconTheme: {
+                primary: '#ef4444',
+                secondary: '#fff',
+              },
+            },
+          }}
+        />
       </CartProvider>
     </SessionProvider>
   );

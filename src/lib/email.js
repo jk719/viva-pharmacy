@@ -27,39 +27,62 @@ export const sendEmail = async ({ to, subject, html }) => {
 
 // Specific verification email function
 export const sendVerificationEmail = async (email, token) => {
-  try {
-    // Force use of production URL regardless of environment
-    const verificationUrl = `https://viva-pharmacy.vercel.app/verify-email?token=${token}`;
-    
-    // Log the URL for debugging
-    console.log('Sending verification email with URL:', verificationUrl);
-    
-    const mailOptions = {
-      to: email,
-      subject: 'Verify your Viva Pharmacy account',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h1 style="color: #2C5282;">Welcome to Viva Pharmacy!</h1>
-          <p>Thank you for signing up. Please verify your email address by clicking the button below:</p>
-          <a href="${verificationUrl}" 
-             style="display: inline-block; background-color: #4299E1; color: white; 
-                    padding: 12px 24px; text-decoration: none; border-radius: 5px; 
-                    margin: 20px 0;">
-            Verify Email
-          </a>
-          <p style="color: #666;">If you didn't create an account, you can safely ignore this email.</p>
-          <p style="color: #666;">This verification link will expire in 24 hours.</p>
-          <p style="color: #666;">If the button doesn't work, copy and paste this link into your browser:</p>
-          <p style="color: #666; word-break: break-all;">${verificationUrl}</p>
-        </div>
-      `
-    };
+  // Determine the correct base URL based on environment
+  const baseUrl = process.env.NODE_ENV === 'production' 
+    ? process.env.NEXTAUTH_URL || 'https://viva-pharmacy.vercel.app'
+    : 'http://localhost:3000';
 
-    const result = await sendEmail(mailOptions);
-    console.log('Verification email sent successfully');
-    return result;
+  const verificationUrl = `${baseUrl}/verify-email?token=${token}`;
+  
+  console.log('Sending verification email with URL:', verificationUrl);
+
+  // Validate API key exists
+  if (!process.env.RESEND_API_KEY) {
+    console.error('RESEND_API_KEY is not configured');
+    throw new Error('Email service not configured');
+  }
+
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: process.env.EMAIL_FROM || 'Viva Pharmacy <onboarding@resend.dev>',
+        to: email,
+        subject: 'Verify your email address',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h1 style="color: #003366;">Welcome to Viva Pharmacy!</h1>
+            <p>Thank you for registering. Please verify your email address to complete your registration:</p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${verificationUrl}" 
+                 style="display: inline-block; padding: 12px 24px; background-color: #003366; color: white; text-decoration: none; border-radius: 4px;">
+                Verify Email
+              </a>
+            </div>
+            <p style="color: #666;">If the button doesn't work, copy and paste this link into your browser:</p>
+            <p style="color: #666; word-break: break-all;">${verificationUrl}</p>
+            <p style="color: #666;">This link will expire in 24 hours.</p>
+          </div>
+        `
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error('Email API error:', data);
+      throw new Error(data.message || 'Failed to send email');
+    }
+
+    console.log('Email sent successfully');
+    return data;
+
   } catch (error) {
-    console.error('Error sending verification email:', error);
-    throw error;
+    console.error('Email sending error:', error);
+    throw new Error('Failed to send verification email');
   }
 };

@@ -1,72 +1,110 @@
 // src/models/User.js
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 
-const UserSchema = new mongoose.Schema({
-  username: { type: String, required: true, unique: true },
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
+const userSchema = new mongoose.Schema({
+  email: {
+    type: String,
+    required: [true, 'Email is required'],
+    unique: true,
+    lowercase: true,
+    trim: true,
+    validate: {
+      validator: function(v) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+      },
+      message: props => `${props.value} is not a valid email address!`
+    }
+  },
+  password: {
+    type: String,
+    required: [true, 'Password is required'],
+    minlength: [8, 'Password must be at least 8 characters long']
+  },
+  phoneNumber: {
+    type: String,
+    required: false,
+    trim: true,
+    validate: {
+      validator: function(v) {
+        if (!v) return true; // Allow empty phone number
+        return /^\+?[\d\s-]{10,}$/.test(v);
+      },
+      message: props => `${props.value} is not a valid phone number!`
+    }
+  },
+  isVerified: {
+    type: Boolean,
+    default: false
+  },
   emailVerificationToken: String,
-  isVerified: { type: Boolean, default: false },
-  verificationExpires: Date
-});
-
-// Hash the password before saving the user
-UserSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) {
-    console.log('PRE SAVE - Password not modified, skipping hash');
-    return next();
-  }
-  
-  console.log("PRE SAVE - Password state:", {
-    originalPassword: this.password,
-    isAlreadyHashed: this.password.startsWith('$2a$'),
-    passwordLength: this.password.length
-  });
-
-  // Check if password is already hashed
-  if (this.password.startsWith('$2a$')) {
-    console.log("PRE SAVE - WARNING: Password appears to be already hashed, skipping hash");
-    return next();
-  }
-
-  try {
-    this.password = await bcrypt.hash(this.password, 12);
-    console.log("PRE SAVE - Successfully hashed password:", {
-      hashedResult: this.password,
-      resultLength: this.password.length
-    });
-    next();
-  } catch (error) {
-    console.error("PRE SAVE - Error hashing password:", error);
-    next(error);
+  verificationExpires: Date,
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
   }
 });
 
-UserSchema.methods.comparePassword = async function (candidatePassword) {
-  try {
-    console.log("COMPARE - Starting password comparison:", {
-      candidatePassword,
-      candidateLength: candidatePassword.length,
-      storedHash: this.password,
-      storedLength: this.password.length,
-      isCandidateHashed: candidatePassword.startsWith('$2a$')
-    });
+// Update timestamps
+userSchema.pre('save', function(next) {
+  this.updatedAt = new Date();
+  next();
+});
 
-    const isMatch = await bcrypt.compare(candidatePassword, this.password);
-    console.log("COMPARE - Password comparison result:", {
-      isMatch,
-      email: this.email // helpful for debugging specific users
-    });
-    return isMatch;
+// Hash password before saving
+userSchema.pre('save', async function(next) {
+  if (this.isModified('password')) {
+    try {
+      const salt = await bcrypt.genSalt(10);
+      this.password = await bcrypt.hash(this.password, salt);
+    } catch (error) {
+      next(error);
+    }
+  }
+  next();
+});
+
+// Add comparePassword method
+userSchema.methods.comparePassword = async function(candidatePassword) {
+  try {
+    return await bcrypt.compare(candidatePassword, this.password);
   } catch (error) {
-    console.error("COMPARE - Error comparing password:", {
-      error,
-      email: this.email
-    });
-    return false;
+    throw new Error('Password comparison failed');
   }
 };
 
-const User = mongoose.models.User || mongoose.model('User', UserSchema);
+// Generate verification token
+userSchema.methods.generateVerificationToken = function() {
+  this.emailVerificationToken = crypto.randomBytes(32).toString('hex');
+  this.verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+  return this.emailVerificationToken;
+};
+
+// Check if verification token is valid
+userSchema.methods.isVerificationTokenValid = function() {
+  return this.verificationExpires > Date.now();
+};
+
+// Clear verification tokens
+userSchema.methods.clearVerificationToken = function() {
+  this.emailVerificationToken = undefined;
+  this.verificationExpires = undefined;
+};
+
+// Ensure we don't return sensitive data in JSON
+userSchema.set('toJSON', {
+  transform: function(doc, ret, opt) {
+    delete ret.password;
+    delete ret.emailVerificationToken;
+    delete ret.verificationExpires;
+    return ret;
+  }
+});
+
+const User = mongoose.models.User || mongoose.model('User', userSchema);
 export default User;

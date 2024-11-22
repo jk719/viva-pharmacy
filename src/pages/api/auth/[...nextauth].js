@@ -10,39 +10,41 @@ export const authOptions = {
     CredentialsProvider({
       name: "Credentials",
       credentials: {
-        identifier: { label: "Username or Email", type: "text" },
+        email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" }
       },
       authorize: async (credentials) => {
         try {
           console.log("Authorize function called with credentials:", credentials);
 
-          if (!credentials.identifier || !credentials.password) {
-            throw new Error("Missing identifier or password");
+          if (!credentials.email || !credentials.password) {
+            throw new Error("Email and password are required");
           }
 
           await dbConnect();
           console.log("Database connected");
 
-          const user = await User.findOne({
-            $or: [{ email: credentials.identifier }, { username: credentials.identifier }]
+          const user = await User.findOne({ 
+            email: credentials.email.toLowerCase() 
           });
 
           if (!user) {
-            console.log("User not found for identifier:", credentials.identifier);
-            throw new Error("No user found with provided identifier");
+            console.log("User not found for email:", credentials.email);
+            throw new Error("Invalid email or password");
           }
 
           const isValidPassword = await user.comparePassword(credentials.password);
           
           if (!isValidPassword) {
-            throw new Error("Incorrect password");
+            console.log("Invalid password for user:", credentials.email);
+            throw new Error("Invalid email or password");
           }
 
+          console.log("User authenticated successfully:", user.email);
+          
           return { 
             id: user._id, 
-            email: user.email, 
-            name: user.username,
+            email: user.email,
             isVerified: user.isVerified
           };
         } catch (error) {
@@ -60,30 +62,24 @@ export const authOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.email = user.email;
         token.isVerified = user.isVerified;
       }
       return token;
     },
     async session({ session, token }) {
-      if (token?.id) {
+      if (token) {
         session.user.id = token.id;
+        session.user.email = token.email;
         session.user.isVerified = token.isVerified;
-
-        try {
-          await dbConnect();
-          const currentUser = await User.findById(token.id);
-          if (currentUser) {
-            session.user.isVerified = currentUser.isVerified;
-          }
-        } catch (error) {
-          console.error('Error checking verification status:', error);
-        }
       }
       return session;
-    },
+    }
   },
   pages: {
-    signIn: '/auth/signin',
+    signIn: '/',
+    error: '/',
+    verifyRequest: '/verify-email',
   },
   secret: process.env.NEXTAUTH_SECRET,
   debug: process.env.NODE_ENV === "development",

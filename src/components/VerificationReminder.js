@@ -1,50 +1,117 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useSession } from "next-auth/react";
+import { useEffect, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
+import toast from 'react-hot-toast';
 
 export default function VerificationReminder() {
-  const { data: session } = useSession();
-  const [isVerified, setIsVerified] = useState(true);
-  const [isVisible, setIsVisible] = useState(true);
+  const { data: session, update: updateSession } = useSession();
 
-  const checkVerificationStatus = async () => {
-    if (!session?.user?.email) return;
-
+  // Function to handle resending verification email
+  const handleResendVerification = useCallback(async (toastId) => {
     try {
-      const response = await fetch('/api/auth/check-verification', {
+      const response = await fetch('/api/auth/resend-verification', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+        headers: { 
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ email: session.user.email }),
+        credentials: 'include' // Important for session handling
       });
       
       const data = await response.json();
-      setIsVerified(data.isVerified);
       
-      if (data.isVerified) {
-        setIsVisible(false);
+      if (data.success) {
+        toast.success('Verification email sent!');
+      } else {
+        toast.error(data.error || 'Failed to send verification email');
       }
     } catch (error) {
-      console.error('Error checking verification status:', error);
+      console.error('Resend verification error:', error);
+      toast.error('Failed to send verification email');
+    } finally {
+      toast.dismiss(toastId);
     }
-  };
+  }, []);
 
+  // Check verification status periodically
   useEffect(() => {
-    if (session?.user?.email) {
-      checkVerificationStatus();
+    let intervalId;
+    let toastId;
+
+    const checkVerification = async () => {
+      if (session?.user && !session.user.isVerified) {
+        try {
+          const response = await fetch('/api/auth/check-verification', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json'
+            },
+            credentials: 'include' // Important for session handling
+          });
+          
+          if (!response.ok) {
+            throw new Error('Verification check failed');
+          }
+
+          const data = await response.json();
+          
+          if (data.isVerified) {
+            // User is verified, update session and dismiss toast
+            await updateSession();
+            toast.dismiss(toastId);
+            toast.success('Email verified successfully!');
+            clearInterval(intervalId);
+          }
+        } catch (error) {
+          console.error('Verification check failed:', error);
+          // Don't show error to user, just log it
+        }
+      } else if (session?.user?.isVerified) {
+        // If user is already verified, clean up
+        clearInterval(intervalId);
+        if (toastId) toast.dismiss(toastId);
+      }
+    };
+
+    if (session?.user && !session.user.isVerified) {
+      // Show the verification reminder toast
+      toastId = toast(
+        (t) => (
+          <div className="flex flex-col">
+            <p className="font-medium">Please verify your email address</p>
+            <button
+              onClick={() => handleResendVerification(t.id)}
+              className="px-3 py-1.5 mt-2 text-sm bg-white text-blue-600 rounded hover:bg-gray-100 transition-colors"
+            >
+              Resend verification email
+            </button>
+          </div>
+        ),
+        {
+          duration: Infinity,
+          position: 'bottom-right',
+          icon: '⚠️',
+          style: {
+            background: '#003366',
+            color: '#fff',
+            padding: '16px',
+          },
+        }
+      );
+
+      // Check verification status every 30 seconds
+      intervalId = setInterval(checkVerification, 30000);
+      
+      // Initial check
+      checkVerification();
     }
-  }, [session]);
 
-  // Don't render anything if verified or not visible
-  if (isVerified || !isVisible || !session?.user) {
-    return null;
-  }
+    // Cleanup function
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+      if (toastId) toast.dismiss(toastId);
+    };
+  }, [session, handleResendVerification, updateSession]);
 
-  return (
-    <div className="bg-yellow-100 p-4">
-      {/* ... rest of your component ... */}
-    </div>
-  );
+  return null;
 }
