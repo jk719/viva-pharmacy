@@ -82,18 +82,36 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
 userSchema.methods.generateVerificationToken = function() {
   this.emailVerificationToken = crypto.randomBytes(32).toString('hex');
   this.verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+  this.isVerified = false; // Ensure user is marked as unverified
   return this.emailVerificationToken;
 };
 
 // Check if verification token is valid
 userSchema.methods.isVerificationTokenValid = function() {
-  return this.verificationExpires > Date.now();
+  return this.emailVerificationToken && 
+         this.verificationExpires && 
+         this.verificationExpires > Date.now();
+};
+
+// Mark user as verified
+userSchema.methods.markAsVerified = function() {
+  this.isVerified = true;
+  this.emailVerificationToken = undefined;
+  this.verificationExpires = undefined;
 };
 
 // Clear verification tokens
 userSchema.methods.clearVerificationToken = function() {
   this.emailVerificationToken = undefined;
   this.verificationExpires = undefined;
+};
+
+// Static method to find user by verification token
+userSchema.statics.findByVerificationToken = function(token) {
+  return this.findOne({
+    emailVerificationToken: token,
+    verificationExpires: { $gt: Date.now() }
+  });
 };
 
 // Ensure we don't return sensitive data in JSON

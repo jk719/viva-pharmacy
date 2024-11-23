@@ -126,12 +126,10 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* Verification Reminder - Shows below navbar when user is logged in but not verified */}
-      {session?.user && !session.user.isVerified && (
-        <div className="mt-[180px] md:mt-[88px]">
-          <VerificationReminder email={session.user.email} />
-        </div>
-      )}
+      {/* Verification Reminder */}
+      <div className="mt-[180px] md:mt-[88px]">
+        <VerificationReminder />
+      </div>
     </>
   );
 }
