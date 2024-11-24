@@ -2,7 +2,7 @@
 "use client"; // Ensures this component is treated as a client component
 
 import { useCart } from '../../context/CartContext'; // Importing from CartContext
-import products from '../../data/products'; // Importing the products data
+import products from '../../lib/products/data'; // Importing the products data
 
 export default function ProductsPage() {
   const { addToCart } = useCart(); // Destructuring addToCart from useCart
