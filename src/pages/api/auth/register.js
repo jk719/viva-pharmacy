@@ -33,7 +33,11 @@ export default async function handler(req, res) {
       isVerified: false
     });
 
-    // Generate verification token using the model method
+    // Clear any existing verification tokens for this email
+    user.verificationToken = null;
+    user.verificationTokenExpires = null;
+
+    // Generate new verification token
     const verificationToken = user.generateVerificationToken();
     console.log('Generated verification token');
 
@@ -44,11 +48,37 @@ export default async function handler(req, res) {
     // Send verification email
     try {
       console.log('Attempting to send verification email...');
-      await sendVerificationEmail(user.email, verificationToken);
+      
+      // Always use the main production URL
+      const baseUrl = 'https://viva-pharmacy.vercel.app';
+      const verificationUrl = `${baseUrl}/verify-email?token=${verificationToken}`;
+      
+      // Log email configuration
+      console.log('Email configuration:', {
+        host: process.env.SMTP_HOST,
+        port: process.env.SMTP_PORT,
+        user: process.env.GMAIL_USER,
+        from: process.env.EMAIL_FROM,
+        verificationUrl: verificationUrl
+      });
+
+      await sendVerificationEmail(user.email, verificationUrl);
       console.log('Verification email sent successfully');
     } catch (emailError) {
       console.error('Failed to send verification email:', emailError);
-      // Continue with registration but log the error
+      console.error('Detailed email error:', {
+        message: emailError.message,
+        code: emailError.code,
+        command: emailError.command,
+        stack: emailError.stack
+      });
+      
+      return res.status(201).json({
+        success: true,
+        message: 'Account created but verification email failed to send. Please use resend verification option.',
+        emailError: true,
+        email: email
+      });
     }
 
     // Return success
@@ -70,7 +100,8 @@ export default async function handler(req, res) {
 
     res.status(500).json({ 
       success: false,
-      message: error.message || 'Failed to create account'
+      message: error.message || 'Failed to create account',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 }
