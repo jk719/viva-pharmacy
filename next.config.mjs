@@ -6,21 +6,36 @@ const __dirname = path.dirname(__filename);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  trailingSlash: true, // Set this to false if you don’t need trailing slashes
+  trailingSlash: true,
   images: {
-    unoptimized: true, // Useful if image optimization is not needed or handled externally
+    unoptimized: true,
   },
   env: {
-    // Set NEXTAUTH_URL based on environment
     NEXTAUTH_URL: process.env.VERCEL_URL
       ? `https://${process.env.VERCEL_URL}`
       : 'http://localhost:3000',
   },
   webpack: (config) => {
-    config.cache = false; // Only needed if caching issues arise
+    config.cache = false;
     return config;
   },
-  productionBrowserSourceMaps: true, // Helps with debugging in production if needed
+  productionBrowserSourceMaps: true,
+  experimental: {
+    serverActions: true,
+  },
+  headers: async () => {
+    return [
+      {
+        source: '/api/:path*',
+        headers: [
+          { key: 'Access-Control-Allow-Credentials', value: 'true' },
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET,DELETE,PATCH,POST,PUT' },
+          { key: 'Access-Control-Allow-Headers', value: 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version' },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

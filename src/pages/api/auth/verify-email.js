@@ -9,8 +9,8 @@ export default async function handler(req, res) {
     return res.status(405).json({ success: false, error: 'Method not allowed' });
   }
 
-  let session = null;
   try {
+    console.log('Starting verification process');
     await dbConnect();
     const { token } = req.body;
 
@@ -18,14 +18,14 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: 'Token is required' });
     }
 
-    // Get current session first
-    session = await getServerSession(req, res, authOptions);
+    // Get current session
+    const session = await getServerSession(req, res, authOptions);
+    console.log('Current session before verification:', session);
 
-    // Use findOneAndUpdate for atomic operation
+    // Find and update user
     const user = await User.findOneAndUpdate(
       {
         emailVerificationToken: token,
-        isVerified: false,
         verificationExpires: { $gt: new Date() }
       },
       {
@@ -36,27 +36,53 @@ export default async function handler(req, res) {
         }
       },
       { new: true }
-    );
+    ).select('-password');
 
     if (!user) {
+      console.error('No user found with token');
       return res.status(400).json({ 
         success: false, 
-        error: 'Invalid or expired token, or email already verified' 
+        error: 'Invalid or expired token' 
       });
     }
 
-    // Update session data if it exists
-    if (session?.user) {
-      session.user.isVerified = true;
-    }
+    console.log('User verified successfully:', user.email);
 
-    // Return success with session data
+    // Update all instances of this user (if any duplicates exist)
+    await User.updateMany(
+      { email: user.email },
+      {
+        $set: {
+          isVerified: true,
+          emailVerificationToken: null,
+          verificationExpires: null
+        }
+      }
+    );
+
+    // Create a fresh session object
+    const updatedSession = {
+      ...session,
+      user: {
+        ...session?.user,
+        isVerified: true,
+        id: user._id.toString(),
+        email: user.email,
+        role: user.role || 'user'
+      }
+    };
+
+    console.log('Updated session data:', updatedSession);
+
     return res.status(200).json({ 
       success: true, 
       message: 'Email verified successfully',
+      session: updatedSession,
       user: {
-        ...user._doc,
-        password: undefined // Remove sensitive data
+        id: user._id.toString(),
+        email: user.email,
+        isVerified: true,
+        role: user.role || 'user'
       }
     });
 
@@ -64,7 +90,8 @@ export default async function handler(req, res) {
     console.error('Verification error:', error);
     return res.status(500).json({ 
       success: false, 
-      error: 'Verification failed' 
+      error: 'Verification failed',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 }

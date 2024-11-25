@@ -43,9 +43,10 @@ export const authOptions = {
           console.log("User authenticated successfully:", user.email);
           
           return { 
-            id: user._id, 
+            id: user._id.toString(), 
             email: user.email,
-            isVerified: user.isVerified
+            isVerified: user.isVerified,
+            role: user.role || 'user'
           };
         } catch (error) {
           console.error("Authorization error:", error);
@@ -59,21 +60,66 @@ export const authOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
+      console.log('JWT Callback - Current token:', token);
+      console.log('JWT Callback - User data:', user);
+      console.log('JWT Callback - Trigger:', trigger);
+
       if (user) {
+        // Initial sign in
         token.id = user.id;
         token.email = user.email;
         token.isVerified = user.isVerified;
+        token.role = user.role;
       }
+
+      // If it's a session update
+      if (trigger === "update") {
+        try {
+          await dbConnect();
+          const freshUser = await User.findOne({ email: token.email });
+          
+          if (freshUser) {
+            console.log('JWT Callback - Fresh user data:', {
+              email: freshUser.email,
+              isVerified: freshUser.isVerified
+            });
+            
+            token.isVerified = freshUser.isVerified;
+            token.role = freshUser.role || 'user';
+          }
+        } catch (error) {
+          console.error('Error updating JWT:', error);
+        }
+      }
+
+      console.log('JWT Callback - Updated token:', token);
       return token;
     },
     async session({ session, token }) {
+      console.log('Session Callback - Token:', token);
+      console.log('Session Callback - Initial session:', session);
+
       if (token) {
         session.user.id = token.id;
         session.user.email = token.email;
         session.user.isVerified = token.isVerified;
+        session.user.role = token.role;
       }
+
+      console.log('Session Callback - Updated session:', session);
       return session;
+    }
+  },
+  events: {
+    async signIn({ user, account, profile, isNewUser }) {
+      console.log('SignIn Event:', { user, isNewUser });
+    },
+    async session({ session, token }) {
+      console.log('Session Event:', { session, token });
+    },
+    async updateUser({ user }) {
+      console.log('UpdateUser Event:', user);
     }
   },
   pages: {

@@ -1,70 +1,82 @@
+// src/app/verify-email/page.js
 'use client';
 
 import { useEffect, useState, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { signOut } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 
 function VerificationComponent() {
   const [status, setStatus] = useState('verifying');
   const [error, setError] = useState('');
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { data: session, update: updateSession } = useSession();
   const verificationAttempted = useRef(false);
-  const redirectTimeout = useRef(null);
 
   useEffect(() => {
     const verifyEmail = async () => {
       if (verificationAttempted.current) return;
-      verificationAttempted.current = true;
+      
+      const token = searchParams.get('token');
+      if (!token) {
+        setError('Verification token is missing');
+        setStatus('error');
+        return;
+      }
 
       try {
-        const token = searchParams.get('token');
-        
-        if (!token) {
-          setError('Verification token is missing');
-          setStatus('error');
-          return;
-        }
+        console.log('Starting verification with token:', token);
+        verificationAttempted.current = true;
 
         const response = await fetch('/api/auth/verify-email', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+          },
           body: JSON.stringify({ token })
         });
 
         const data = await response.json();
+        console.log('Verification response:', data);
 
         if (response.ok && data.success) {
-          setStatus('success');
-          
-          // Sign out first
+          // Sign out to force session refresh
           await signOut({ redirect: false });
-          
-          // Set redirect timeout
-          redirectTimeout.current = setTimeout(() => {
-            window.location.replace('/');
-          }, 2000);
+          setStatus('success');
         } else {
-          setError(data.error || 'Verification failed');
-          setStatus('error');
+          throw new Error(data.error || 'Verification failed');
         }
       } catch (error) {
         console.error('Verification error:', error);
-        setError('An error occurred during verification');
+        setError(error.message || 'An error occurred during verification');
         setStatus('error');
       }
     };
 
-    if (searchParams.get('token')) {
+    if (searchParams.get('token') && !verificationAttempted.current) {
       verifyEmail();
     }
-
-    return () => {
-      if (redirectTimeout.current) {
-        clearTimeout(redirectTimeout.current);
-      }
-    };
   }, [searchParams]);
+
+  if (status === 'success') {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6 bg-white rounded-lg shadow-lg">
+          <svg className="w-16 h-16 mx-auto text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+          </svg>
+          <h1 className="text-2xl font-semibold mb-4 text-green-600">Email Verified Successfully!</h1>
+          <p className="text-gray-600 mb-6">Your email has been verified. Please sign in again to continue using your account.</p>
+          <button
+            onClick={() => router.push('/')}
+            className="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          >
+            Sign In Now
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (status === 'verifying') {
     return (
@@ -77,25 +89,16 @@ function VerificationComponent() {
     );
   }
 
-  if (status === 'success') {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-semibold mb-4 text-green-600">Email Verified!</h1>
-          <p>Your email has been successfully verified.</p>
-          <p className="mt-2">Redirecting you to sign in...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center">
         <h1 className="text-2xl font-semibold mb-4 text-red-600">Verification Failed</h1>
         <p className="text-red-500">{error}</p>
         <button
-          onClick={() => router.push('/')}
+          onClick={() => {
+            router.push('/');
+            router.refresh();
+          }}
           className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
         >
           Return Home
@@ -105,7 +108,14 @@ function VerificationComponent() {
   );
 }
 
-// Loading component for Suspense fallback
+export default function VerifyEmail() {
+  return (
+    <Suspense fallback={<LoadingVerification />}>
+      <VerificationComponent />
+    </Suspense>
+  );
+}
+
 function LoadingVerification() {
   return (
     <div className="min-h-screen flex items-center justify-center">
@@ -114,14 +124,5 @@ function LoadingVerification() {
         <p>Please wait while we prepare the verification process.</p>
       </div>
     </div>
-  );
-}
-
-// Main component with Suspense boundary
-export default function VerifyEmail() {
-  return (
-    <Suspense fallback={<LoadingVerification />}>
-      <VerificationComponent />
-    </Suspense>
   );
 }
