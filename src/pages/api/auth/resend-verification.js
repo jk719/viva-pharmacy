@@ -1,3 +1,4 @@
+// src/pages/api/auth/resend-verification.js
 import dbConnect from '../../../lib/dbConnect';
 import User from '../../../models/User';
 import { sendVerificationEmail } from '../../../lib/email';
@@ -40,6 +41,14 @@ export default async function handler(req, res) {
       return res.status(400).json({ 
         success: false, 
         error: 'Email is already verified' 
+      });
+    }
+
+    // Check if existing token is still valid
+    if (user.isVerificationTokenValid()) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'A valid verification token already exists. Please check your email or wait before requesting a new one.' 
       });
     }
 

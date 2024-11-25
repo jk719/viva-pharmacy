@@ -1,7 +1,7 @@
 // src/app/page.js
 "use client";
 
-import FeaturedProducts from '../components/FeaturedProducts'; // Import the FeaturedProducts component
+import FeaturedProducts from '../components/products/FeaturedProducts'; // Import the FeaturedProducts component
 import Link from 'next/link'; // Import Link for internal navigation
 
 export default function Home() {

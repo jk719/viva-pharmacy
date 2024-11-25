@@ -1,20 +1,34 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
 
 export default function VerificationReminder() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [isDismissed, setIsDismissed] = useState(false);
+  const [isResending, setIsResending] = useState(false);
 
-  // If no session or user is verified or reminder is dismissed, don't show anything
-  if (!session?.user || session.user.isVerified || isDismissed) {
-    return null;
-  }
+  useEffect(() => {
+    const dismissed = localStorage.getItem('verificationReminderDismissed');
+    if (dismissed === 'true') {
+      setIsDismissed(true);
+    }
+  }, []);
 
-  const handleResendVerification = async () => {
+  useEffect(() => {
+    if (session?.user?.isVerified) {
+      setIsDismissed(true);
+      localStorage.setItem('verificationReminderDismissed', 'true');
+    }
+  }, [session?.user?.isVerified]);
+
+  const handleResendVerification = useCallback(async () => {
+    if (isResending) return;
+
+    setIsResending(true);
     const toastId = toast.loading('Sending verification email...');
+    
     try {
       const response = await fetch('/api/auth/resend-verification', {
         method: 'POST',
@@ -24,15 +38,31 @@ export default function VerificationReminder() {
       const data = await response.json();
       
       if (data.success) {
-        toast.success('Verification email sent!', { id: toastId });
+        toast.success('Verification email sent! Please check your inbox.', { id: toastId });
       } else {
         toast.error(data.error || 'Failed to send verification email', { id: toastId });
       }
     } catch (error) {
       console.error('Resend verification error:', error);
       toast.error('Failed to send verification email', { id: toastId });
+    } finally {
+      setIsResending(false);
     }
+  }, [isResending]);
+
+  const handleDismiss = () => {
+    setIsDismissed(true);
+    localStorage.setItem('verificationReminderDismissed', 'true');
   };
+
+  if (
+    status === 'loading' || 
+    !session?.user || 
+    session.user.isVerified || 
+    isDismissed
+  ) {
+    return null;
+  }
 
   return (
     <div className="fixed bottom-4 right-4 z-50">
@@ -50,14 +80,17 @@ export default function VerificationReminder() {
               </p>
               <button
                 onClick={handleResendVerification}
-                className="mt-2 text-sm text-blue-600 hover:text-blue-500"
+                disabled={isResending}
+                className={`mt-2 text-sm text-blue-600 hover:text-blue-500 ${
+                  isResending ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
               >
-                Resend verification email
+                {isResending ? 'Sending...' : 'Resend verification email'}
               </button>
             </div>
           </div>
           <button
-            onClick={() => setIsDismissed(true)}
+            onClick={handleDismiss}
             className="ml-4 text-blue-400 hover:text-blue-500"
             aria-label="Close"
           >

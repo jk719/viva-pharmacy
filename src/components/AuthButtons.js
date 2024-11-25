@@ -87,18 +87,9 @@ export default function AuthButtons() {
           throw new Error(signInResult.error);
         }
 
-        // Show success toast with verification instructions
-        toast.success(
-          'Account created successfully!',
-          {
-            duration: 3000,
-            style: {
-              background: '#003366',
-              color: '#fff',
-            },
-          }
-        );
-
+        // Show success toast
+        toast.success('Account created! Please check your email for verification.');
+        
         // Reset form and close dropdown
         setDropdownOpen(false);
         setFormData({
@@ -107,10 +98,9 @@ export default function AuthButtons() {
           confirmPassword: "",
           phoneNumber: ""
         });
-        
-        // Update session and refresh
-        await updateSession();
-        router.refresh();
+
+        // No need for manual session update or router refresh
+        // signIn will handle the session update
 
       } catch (error) {
         console.error('Registration/Login error:', error);

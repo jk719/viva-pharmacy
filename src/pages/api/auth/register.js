@@ -1,3 +1,4 @@
+// src/pages/api/auth/register.js
 import dbConnect from '../../../lib/dbConnect';
 import User from '../../../models/User';
 import { sendVerificationEmail } from '../../../lib/email';

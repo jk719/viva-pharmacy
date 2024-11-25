@@ -96,8 +96,7 @@ userSchema.methods.isVerificationTokenValid = function() {
 // Mark user as verified
 userSchema.methods.markAsVerified = function() {
   this.isVerified = true;
-  this.emailVerificationToken = undefined;
-  this.verificationExpires = undefined;
+  this.clearVerificationToken();
 };
 
 // Clear verification tokens
