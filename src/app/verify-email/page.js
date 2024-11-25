@@ -1,16 +1,16 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 import { signOut } from 'next-auth/react';
 
-export default function VerifyEmail() {
+function VerificationComponent() {
   const [status, setStatus] = useState('verifying');
   const [error, setError] = useState('');
   const searchParams = useSearchParams();
   const router = useRouter();
   const verificationAttempted = useRef(false);
+  const redirectTimeout = useRef(null);
 
   useEffect(() => {
     const verifyEmail = async () => {
@@ -37,16 +37,13 @@ export default function VerifyEmail() {
         if (response.ok && data.success) {
           setStatus('success');
           
-          // Sign out and redirect to force a clean session
-          await signOut({ 
-            redirect: false,
-            callbackUrl: '/'
-          });
+          // Sign out first
+          await signOut({ redirect: false });
           
-          // Redirect after a short delay
-          setTimeout(() => {
-            window.location.href = '/';
-          }, 1500);
+          // Set redirect timeout
+          redirectTimeout.current = setTimeout(() => {
+            window.location.replace('/');
+          }, 2000);
         } else {
           setError(data.error || 'Verification failed');
           setStatus('error');
@@ -61,46 +58,70 @@ export default function VerifyEmail() {
     if (searchParams.get('token')) {
       verifyEmail();
     }
+
+    return () => {
+      if (redirectTimeout.current) {
+        clearTimeout(redirectTimeout.current);
+      }
+    };
   }, [searchParams]);
 
-  if (status === 'success') {
+  if (status === 'verifying') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-green-600 mb-4">
-            Email Verified Successfully!
-          </h1>
-          <p className="text-gray-600">Redirecting to homepage...</p>
+          <h1 className="text-2xl font-semibold mb-4">Verifying your email...</h1>
+          <p>Please wait while we verify your email address.</p>
         </div>
       </div>
     );
   }
 
-  if (status === 'error') {
+  if (status === 'success') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-red-600 mb-4">
-            Verification Failed
-          </h1>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <button
-            onClick={() => router.push('/')}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
-          >
-            Return Home
-          </button>
+          <h1 className="text-2xl font-semibold mb-4 text-green-600">Email Verified!</h1>
+          <p>Your email has been successfully verified.</p>
+          <p className="mt-2">Redirecting you to sign in...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-        <p className="text-gray-600">Verifying your email...</p>
+        <h1 className="text-2xl font-semibold mb-4 text-red-600">Verification Failed</h1>
+        <p className="text-red-500">{error}</p>
+        <button
+          onClick={() => router.push('/')}
+          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          Return Home
+        </button>
       </div>
     </div>
+  );
+}
+
+// Loading component for Suspense fallback
+function LoadingVerification() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <h1 className="text-2xl font-semibold mb-4">Loading...</h1>
+        <p>Please wait while we prepare the verification process.</p>
+      </div>
+    </div>
+  );
+}
+
+// Main component with Suspense boundary
+export default function VerifyEmail() {
+  return (
+    <Suspense fallback={<LoadingVerification />}>
+      <VerificationComponent />
+    </Suspense>
   );
 }
