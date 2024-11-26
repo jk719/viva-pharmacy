@@ -38,7 +38,7 @@ export default function FeaturedProducts() {
   };
 
   return (
-    <section className="py-8">
+    <section className="pb-8">
       <ProductFilter
         categories={categories}
         selectedCategory={selectedCategory}

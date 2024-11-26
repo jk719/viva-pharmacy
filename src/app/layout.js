@@ -57,7 +57,7 @@ export default function RootLayout({ children }) {
           <Navbar />
 
           {/* Main Content */}
-          <main className="main-content p-6 min-h-screen">
+          <main className="main-content px-6 pb-6 min-h-screen">
             <div className="container mx-auto">
               {/* Page content */}
               {children}
