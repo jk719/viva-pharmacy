@@ -23,26 +23,48 @@ async function dbConnect() {
   if (!cached.promise) {
     console.log("Attempting to connect to MongoDB...");
 
-    cached.promise = mongoose.connect(MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 5000, // Set a timeout of 5 seconds
-    })
-    .then((mongoose) => {
-      console.log("Connected to MongoDB");
-      return mongoose;
-    })
-    .catch((error) => {
-      console.error("Error connecting to MongoDB:", error.message); // Log specific error message
-      throw new Error("Failed to connect to MongoDB");
-    });
+    const opts = {
+      bufferCommands: false,
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+      family: 4 // Use IPv4, skip trying IPv6
+    };
+
+    cached.promise = mongoose.connect(MONGODB_URI, opts)
+      .then((mongoose) => {
+        console.log("Connected to MongoDB");
+        
+        // Add connection error handler
+        mongoose.connection.on('error', (error) => {
+          console.error('MongoDB connection error:', error);
+          cached.conn = null;
+          cached.promise = null;
+        });
+
+        // Add disconnection handler
+        mongoose.connection.on('disconnected', () => {
+          console.warn('MongoDB disconnected. Clearing connection cache.');
+          cached.conn = null;
+          cached.promise = null;
+        });
+
+        return mongoose;
+      })
+      .catch((error) => {
+        console.error("Error connecting to MongoDB:", error.message);
+        cached.promise = null;
+        throw new Error(`MongoDB connection failed: ${error.message}`);
+      });
   }
 
   try {
     cached.conn = await cached.promise;
   } catch (error) {
     console.error("MongoDB connection failed:", error);
-    throw error; // Re-throw the error after logging
+    // Clear the cached promise on error
+    cached.promise = null;
+    throw error;
   }
 
   return cached.conn;

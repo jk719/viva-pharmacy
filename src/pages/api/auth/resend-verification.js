@@ -44,29 +44,25 @@ export default async function handler(req, res) {
       });
     }
 
-    // Check if existing token is still valid
-    if (user.isVerificationTokenValid()) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'A valid verification token already exists. Please check your email or wait before requesting a new one.' 
-      });
-    }
-
-    // Generate new verification token
+    // Always generate a new token
+    user.verificationToken = null;
+    user.verificationTokenExpires = null;
     const verificationToken = user.generateVerificationToken();
     await user.save();
 
     // Send new verification email
     try {
+      const verificationUrl = `${process.env.NEXTAUTH_URL}/verify-email?token=${verificationToken}`;
+      console.log('Sending verification email with URL:', verificationUrl);
       await sendVerificationEmail(user.email, verificationToken);
       console.log('Resent verification email to:', email);
 
       return res.status(200).json({
         success: true,
-        message: 'Verification email resent successfully'
+        message: 'Verification email sent successfully'
       });
     } catch (emailError) {
-      console.error('Failed to resend verification email:', emailError);
+      console.error('Failed to send verification email:', emailError);
       return res.status(500).json({
         success: false,
         error: 'Failed to send verification email',

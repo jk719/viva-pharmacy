@@ -21,7 +21,13 @@ const nextConfig = {
   },
   productionBrowserSourceMaps: true,
   experimental: {
-    serverActions: true,
+    serverActions: {
+      enabled: true,
+      allowedOrigins: [
+        'localhost:3000',
+        process.env.VERCEL_URL || '',
+      ].filter(Boolean)
+    }
   },
   headers: async () => {
     return [
