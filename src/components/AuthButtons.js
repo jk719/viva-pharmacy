@@ -220,26 +220,75 @@ export default function AuthButtons() {
 
               {/* Form */}
               <div className="p-6 bg-[#003366]">
-                <input
-                  type="email"
-                  name="email"
-                  placeholder="Email address"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 mb-3 border border-white/20 rounded-md bg-white/10 text-white placeholder-white/60 focus:ring-2 focus:ring-white/30 focus:border-transparent"
-                  required
-                />
-                
-                {!isForgotPassword && (
+                {isForgotPassword ? (
                   <input
-                    type="password"
-                    name="password"
-                    placeholder="Password"
-                    value={formData.password}
+                    type="email"
+                    name="email"
+                    placeholder="Email address"
+                    value={formData.email}
                     onChange={handleChange}
                     className="w-full px-4 py-2 mb-3 border border-white/20 rounded-md bg-white/10 text-white placeholder-white/60 focus:ring-2 focus:ring-white/30 focus:border-transparent"
                     required
                   />
+                ) : isSignUp ? (
+                  <>
+                    <input
+                      type="email"
+                      name="email"
+                      placeholder="Email address"
+                      value={formData.email}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 mb-3 border border-white/20 rounded-md bg-white/10 text-white placeholder-white/60 focus:ring-2 focus:ring-white/30 focus:border-transparent"
+                      required
+                    />
+                    <input
+                      type="password"
+                      name="password"
+                      placeholder="Password"
+                      value={formData.password}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 mb-3 border border-white/20 rounded-md bg-white/10 text-white placeholder-white/60 focus:ring-2 focus:ring-white/30 focus:border-transparent"
+                      required
+                    />
+                    <input
+                      type="password"
+                      name="confirmPassword"
+                      placeholder="Re-enter password"
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 mb-3 border border-white/20 rounded-md bg-white/10 text-white placeholder-white/60 focus:ring-2 focus:ring-white/30 focus:border-transparent"
+                      required
+                    />
+                    <input
+                      type="tel"
+                      name="phoneNumber"
+                      placeholder="Phone number (optional)"
+                      value={formData.phoneNumber}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 mb-3 border border-white/20 rounded-md bg-white/10 text-white placeholder-white/60 focus:ring-2 focus:ring-white/30 focus:border-transparent"
+                    />
+                  </>
+                ) : (
+                  <>
+                    <input
+                      type="email"
+                      name="email"
+                      placeholder="Email address"
+                      value={formData.email}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 mb-3 border border-white/20 rounded-md bg-white/10 text-white placeholder-white/60 focus:ring-2 focus:ring-white/30 focus:border-transparent"
+                      required
+                    />
+                    <input
+                      type="password"
+                      name="password"
+                      placeholder="Password"
+                      value={formData.password}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 mb-3 border border-white/20 rounded-md bg-white/10 text-white placeholder-white/60 focus:ring-2 focus:ring-white/30 focus:border-transparent"
+                      required
+                    />
+                  </>
                 )}
 
                 {/* Action Button */}
