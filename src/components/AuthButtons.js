@@ -190,13 +190,23 @@ export default function AuthButtons() {
         <>
           <button
             onClick={toggleDropdown}
-            className="bg-white text-[#003366] hover:bg-gray-100 px-4 py-2 rounded-md font-medium transition-colors"
+            className="text-white px-4 py-2 rounded-md font-medium transition-colors"
+            style={{ 
+              backgroundColor: '#28a745',
+              hover: {
+                backgroundColor: '#218838'
+              }
+            }}
           >
             Sign In
           </button>
 
           {dropdownOpen && (
-            <div className="absolute right-0 mt-2 w-80 bg-[#003366] rounded-lg shadow-lg overflow-hidden z-50">
+            <div className="absolute right-0 mt-2 w-80 bg-[#003366] rounded-lg shadow-lg overflow-hidden z-50 
+                          md:right-0 md:left-auto 
+                          sm:right-auto sm:left-0 
+                          xs:right-auto xs:left-0
+                          max-sm:fixed max-sm:right-4 max-sm:left-4 max-sm:w-auto">
               {/* Header */}
               <div className="px-6 py-4 border-b border-white/10">
                 <h2 className="text-xl font-semibold text-white">
