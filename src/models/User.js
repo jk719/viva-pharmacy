@@ -52,7 +52,9 @@ const userSchema = new mongoose.Schema({
   updatedAt: {
     type: Date,
     default: Date.now
-  }
+  },
+  resetPasswordToken: String,
+  resetPasswordExpires: Date,
 });
 
 // Update timestamps
@@ -61,24 +63,43 @@ userSchema.pre('save', function(next) {
   next();
 });
 
-// Hash password before saving
+// Hash password before saving - FIXED VERSION
 userSchema.pre('save', async function(next) {
-  if (this.isModified('password')) {
-    try {
-      const salt = await bcrypt.genSalt(10);
-      this.password = await bcrypt.hash(this.password, salt);
-    } catch (error) {
-      next(error);
+  try {
+    // Only hash if password is modified
+    if (!this.isModified('password')) {
+      return next();
     }
+
+    console.log('Pre-save: Hashing password for user:', this.email);
+    console.log('Original password length:', this.password?.length);
+
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+
+    console.log('Hashed password length:', this.password?.length);
+    console.log('Password hashed successfully');
+    
+    return next();
+  } catch (error) {
+    console.error('Error in password hashing:', error);
+    return next(error);
   }
-  next();
 });
 
-// Add comparePassword method
+// Improve comparePassword method with logging
 userSchema.methods.comparePassword = async function(candidatePassword) {
   try {
-    return await bcrypt.compare(candidatePassword, this.password);
+    console.log('Comparing passwords for user:', this.email);
+    console.log('Stored hash length:', this.password?.length);
+    console.log('Candidate password length:', candidatePassword?.length);
+
+    const isMatch = await bcrypt.compare(candidatePassword, this.password);
+    console.log('Password comparison result:', isMatch);
+    
+    return isMatch;
   } catch (error) {
+    console.error('Error comparing passwords:', error);
     throw new Error('Password comparison failed');
   }
 };

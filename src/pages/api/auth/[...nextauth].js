@@ -4,6 +4,7 @@ import NextAuth from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import dbConnect from '../../../lib/dbConnect';
 import User from '../../../models/User';
+import bcrypt from 'bcrypt';
 
 export const authOptions = {
   providers: [
@@ -15,7 +16,10 @@ export const authOptions = {
       },
       authorize: async (credentials) => {
         try {
-          console.log("Authorize function called with credentials:", credentials);
+          console.log("Authorize function called with credentials:", {
+            email: credentials.email,
+            passwordLength: credentials.password?.length
+          });
 
           if (!credentials.email || !credentials.password) {
             throw new Error("Email and password are required");
@@ -33,7 +37,14 @@ export const authOptions = {
             throw new Error("Invalid email or password");
           }
 
-          const isValidPassword = await user.comparePassword(credentials.password);
+          console.log("Found user:", {
+            email: user.email,
+            storedPasswordHash: user.password?.substring(0, 10) + '...',
+          });
+
+          // Direct bcrypt comparison
+          const isValidPassword = await bcrypt.compare(credentials.password, user.password);
+          console.log("Password comparison result:", isValidPassword);
           
           if (!isValidPassword) {
             console.log("Invalid password for user:", credentials.email);
