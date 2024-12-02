@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import dbConnect from '@/lib/dbConnect';
-import { authOptions } from '../auth/[...nextauth]/route';
-import Product from '@/models/Product'; // You'll need to create this model
+import Product from '@/models/Product';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 export async function GET(request) {
   try {

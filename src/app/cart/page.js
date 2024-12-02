@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useState } from 'react';
-import AuthButtons from '../../components/AuthButtons';
+import { AuthButtons } from '@/components/auth';
 
 export default function CartPage() {
     const { cartItems, removeFromCart, updateQuantity } = useCart();

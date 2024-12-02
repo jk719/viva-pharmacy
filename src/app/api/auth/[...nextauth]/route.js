@@ -4,7 +4,7 @@ import dbConnect from '@/lib/dbConnect';
 import User from '@/models/User';
 import { comparePasswords, AUTH_ERRORS } from '@/lib/auth';
 
-const authOptions = {
+export const authOptions = {
   providers: [
     CredentialsProvider({
       name: 'Credentials',

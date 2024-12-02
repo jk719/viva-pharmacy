@@ -1,10 +1,11 @@
 'use client';
-import { signIn } from 'next-auth/react';
 import { useState } from 'react';
+import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import Link from 'next/link';
 
-export default function Login() {
+function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [formData, setFormData] = useState({
@@ -105,10 +106,18 @@ export default function Login() {
 
         <div className="text-sm text-center">
           <Link href="/register" className="font-medium text-indigo-600 hover:text-indigo-500">
-            Don't have an account? Register
+            Don&apos;t have an account? Register
           </Link>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <LoginContent />
+    </Suspense>
   );
 }

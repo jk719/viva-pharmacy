@@ -149,7 +149,7 @@ export function AuthButtons() {
             </span>
             <div className="mt-2">
               <Link href="/register" className="text-sm text-gray-300 hover:text-white transition-colors">
-                Don't have an account? Sign Up
+                Don&apos;t have an account? Sign Up
               </Link>
             </div>
           </div>
