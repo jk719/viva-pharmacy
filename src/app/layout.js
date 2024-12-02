@@ -16,9 +16,10 @@ function Providers({ children }) {
       <CartProvider>
         {children}
         <Toaster
-          position="bottom-center"
+          position="top-center"
           containerStyle={{
-            bottom: 80,
+            top: '80px',
+            zIndex: 10000
           }}
           toastOptions={{
             duration: 5000,
@@ -26,18 +27,21 @@ function Providers({ children }) {
               background: '#003366',
               color: '#fff',
               padding: '16px',
-              borderRadius: '8px',
+              fontSize: '16px',
+              maxWidth: '90vw',
+              textAlign: 'center',
+              zIndex: 10000,
             },
             success: {
               iconTheme: {
-                primary: '#4ade80',
-                secondary: '#fff',
+                primary: 'white',
+                secondary: '#003366',
               },
             },
             error: {
               iconTheme: {
-                primary: '#ef4444',
-                secondary: '#fff',
+                primary: 'white',
+                secondary: '#003366',
               },
             },
           }}

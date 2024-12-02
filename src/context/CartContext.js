@@ -7,75 +7,71 @@ const CartContext = createContext();
 
 // Custom hook to use the cart context
 export function useCart() {
-    return useContext(CartContext);
+    const context = useContext(CartContext);
+    if (!context) {
+        throw new Error('useCart must be used within a CartProvider');
+    }
+    return context;
 }
 
 // CartProvider component to wrap around parts of the app that need access to the cart context
 export function CartProvider({ children }) {
-    const [cartItems, setCartItems] = useState([]);
+    const [items, setItems] = useState([]);
+    const [total, setTotal] = useState(0);
+    const [deliveryOption, setDeliveryOption] = useState('pickup');
+    const [selectedTime, setSelectedTime] = useState('');
+    const [showTimeError, setShowTimeError] = useState(false);
 
-    // Load cart items from localStorage on initial render
+    // Calculate total whenever items change
     useEffect(() => {
-        const storedCart = localStorage.getItem('cartItems');
-        if (storedCart) {
-            setCartItems(JSON.parse(storedCart));
-        }
-    }, []);
+        const newTotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        setTotal(newTotal);
+    }, [items]);
 
-    // Update localStorage whenever cartItems change
-    useEffect(() => {
-        localStorage.setItem('cartItems', JSON.stringify(cartItems));
-    }, [cartItems]);
-
-    // Function to add items to the cart
-    const addToCart = (item) => {
-        setCartItems((prevItems) => {
-            const existingItem = prevItems.find((i) => i.id === item.id);
+    // Add item to cart
+    const addToCart = (product) => {
+        setItems(prevItems => {
+            const existingItem = prevItems.find(item => item.id === product.id);
             if (existingItem) {
-                return prevItems.map((i) =>
-                    i.id === item.id ? { ...i, quantity: (i.quantity || 1) + 1 } : i
+                return prevItems.map(item =>
+                    item.id === product.id
+                        ? { ...item, quantity: item.quantity + 1 }
+                        : item
                 );
-            } else {
-                return [...prevItems, { ...item, quantity: 1 }];
             }
+            return [...prevItems, { ...product, quantity: 1 }];
         });
     };
 
-    // New updateQuantity function
-    const updateQuantity = (itemId, newQuantity) => {
-        if (newQuantity < 1) return;
-        
-        setCartItems(prevItems => {
-            const updatedItems = prevItems.map(item =>
-                item.id === itemId ? { ...item, quantity: newQuantity } : item
-            );
-            return updatedItems;
-        });
+    // Remove item from cart
+    const removeFromCart = (productId) => {
+        setItems(prevItems => prevItems.filter(item => item.id !== productId));
     };
 
-    // Function to decrement item quantity or remove item if quantity is 0
-    const decrement = (itemId) => {
-        setCartItems((prevItems) => {
-            return prevItems
-                .map((item) =>
-                    item.id === itemId ? { ...item, quantity: item.quantity - 1 } : item
-                )
-                .filter((item) => item.quantity > 0); // Remove items with 0 quantity
-        });
-    };
-
-    // Function to remove an item completely from the cart
-    const removeFromCart = (itemId) => {
-        setCartItems((prevItems) => prevItems.filter((item) => item.id !== itemId));
+    // Update item quantity
+    const updateQuantity = (productId, quantity) => {
+        setItems(prevItems =>
+            prevItems.map(item =>
+                item.id === productId
+                    ? { ...item, quantity: Math.max(0, quantity) }
+                    : item
+            )
+        );
     };
 
     return (
-        <CartContext.Provider value={{ 
-            cartItems, 
-            addToCart, 
-            decrement, 
+        <CartContext.Provider value={{
+            items,
+            total,
+            addToCart,
             removeFromCart,
-            updateQuantity // Added the new function to the context value
+            updateQuantity,
+            deliveryOption,
+            setDeliveryOption,
+            selectedTime,
+            setSelectedTime,
+            showTimeError,
+            setShowTimeError
         }}>
             {children}
         </CartContext.Provider>

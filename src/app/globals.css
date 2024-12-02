@@ -321,3 +321,15 @@ nav img {
   background-color: var(--primary-color);
   color: white;
 }
+
+/* Toast container styling */
+.Toaster {
+  position: fixed;
+  z-index: 9999 !important;
+}
+
+/* Individual toast styling */
+.toast {
+  position: relative;
+  z-index: 10000 !important;
+}

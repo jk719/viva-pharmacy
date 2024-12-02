@@ -8,7 +8,7 @@ import { useState } from 'react';
 import ProductFilter from './ProductFilter';
 
 export default function FeaturedProducts() {
-  const { addToCart, decrement, cartItems } = useCart();
+  const { addToCart, decrement, items = [] } = useCart();
   const [selectedCategory, setSelectedCategory] = useState('All');
 
   const categoriesWithCounts = [...new Set(products.map((product) => product.category))]
@@ -21,16 +21,23 @@ export default function FeaturedProducts() {
   const categories = ['All', ...categoriesWithCounts.map(category => category.name)];
 
   const getItemQuantity = (productId) => {
-    const item = cartItems.find((item) => item.id === productId);
+    const item = items?.find((item) => item?.id === productId);
     return item ? item.quantity : 0;
   };
 
   const handleAddToCart = (product) => {
-    addToCart(product);
+    console.log('Adding to cart:', product);
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+      quantity: 1
+    });
   };
 
-  const handleDecrement = (product) => {
-    decrement(product.id);
+  const handleDecrement = (productId) => {
+    decrement(productId);
   };
 
   const handleCategoryChange = (event) => {
@@ -89,7 +96,7 @@ export default function FeaturedProducts() {
                           ) : (
                             <div className="flex items-center space-x-2">
                               <button
-                                onClick={() => handleDecrement(product)}
+                                onClick={() => handleDecrement(product.id)}
                                 className="text-white px-3 py-1 rounded transition-colors"
                                 style={{ backgroundColor: 'var(--button-red)' }}
                                 aria-label="Decrease quantity"
