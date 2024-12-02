@@ -111,9 +111,8 @@ export const authOptions = {
       console.log('Session Callback - Token:', token);
       console.log('Session Callback - Initial session:', session);
 
-      if (token) {
+      if (session?.user) {
         session.user.id = token.id;
-        session.user.email = token.email;
         session.user.isVerified = token.isVerified;
         session.user.role = token.role;
       }

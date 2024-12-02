@@ -55,11 +55,13 @@ const userSchema = new mongoose.Schema({
   },
   resetPasswordToken: String,
   resetPasswordExpires: Date,
+  verificationToken: String,
 });
 
 // Update timestamps
 userSchema.pre('save', function(next) {
   this.updatedAt = new Date();
+  console.log('Saving user with verification token:', this.verificationToken);
   next();
 });
 

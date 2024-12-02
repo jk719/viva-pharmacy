@@ -4,12 +4,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import ClientCartIcon from "./ClientCartIcon";
-import AuthButtons from "./AuthButtons";
-import VerificationReminder from "./VerificationReminder";
-import { useState } from "react";
+import { AuthButtons } from "./auth";
+import { VerificationReminder } from "./auth";
+import { useState, useEffect } from "react";
 import products from "../data/products";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import toast from 'react-hot-toast';
 
 export default function Navbar() {
   const [query, setQuery] = useState("");

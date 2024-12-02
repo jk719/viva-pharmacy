@@ -9,19 +9,26 @@ const transporter = nodemailer.createTransport({
   }
 });
 
+// Add some debug logging
+console.log('Email configuration:', {
+  service: 'gmail',
+  user: process.env.GMAIL_USER,
+  pass: process.env.GMAIL_APP_PASSWORD ? '**********' : undefined // Don't log the actual password
+});
+
 // General email sending function
 export const sendEmail = async ({ to, subject, html }) => {
   console.log('Sending email with configuration:', {
     service: 'gmail',
     user: process.env.GMAIL_USER,
-    from: process.env.EMAIL_FROM || process.env.GMAIL_USER,
+    from: process.env.GMAIL_USER,
     to: to,
     subject: subject
   });
 
   try {
     const result = await transporter.sendMail({
-      from: process.env.EMAIL_FROM || `Viva Pharmacy <${process.env.GMAIL_USER}>`,
+      from: `Viva Pharmacy <${process.env.GMAIL_USER}>`,
       to,
       subject,
       html,
@@ -29,22 +36,24 @@ export const sendEmail = async ({ to, subject, html }) => {
     console.log('Email sent successfully to:', to);
     return result;
   } catch (error) {
-    console.error('Detailed email sending error:', {
-      message: error.message,
-      code: error.code,
-      command: error.command,
-      stack: error.stack
-    });
+    console.error('Detailed email sending error:', error);
     throw error;
   }
 };
 
 // Specific verification email function
-export const sendVerificationEmail = async (email, verificationUrl) => {
+export const sendVerificationEmail = async (email, verificationToken) => {
+  // Use localhost in development, actual domain in production
+  const baseUrl = process.env.NODE_ENV === 'production' 
+    ? 'https://viva-pharmacy.vercel.app'
+    : 'http://localhost:3000';
+    
+  const verificationUrl = `${baseUrl}/verify-email?token=${verificationToken}`;
+
   console.log('Sending verification email with details:', {
     to: email,
     url: verificationUrl,
-    from: process.env.EMAIL_FROM || process.env.GMAIL_USER
+    from: process.env.GMAIL_USER
   });
 
   try {
@@ -76,12 +85,7 @@ export const sendVerificationEmail = async (email, verificationUrl) => {
     return result;
 
   } catch (error) {
-    console.error('Failed to send verification email:', {
-      to: email,
-      error: error.message,
-      code: error.code,
-      command: error.command
-    });
+    console.error('Failed to send verification email:', error);
     throw error;
   }
 };
@@ -89,11 +93,7 @@ export const sendVerificationEmail = async (email, verificationUrl) => {
 // Test the email configuration on startup
 transporter.verify(function (error, success) {
   if (error) {
-    console.error('Email configuration error:', {
-      message: error.message,
-      code: error.code,
-      command: error.command
-    });
+    console.error('Email configuration error:', error);
   } else {
     console.log('Email server is ready to send messages');
   }

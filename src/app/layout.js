@@ -16,7 +16,10 @@ function Providers({ children }) {
       <CartProvider>
         {children}
         <Toaster
-          position="top-right"
+          position="bottom-center"
+          containerStyle={{
+            bottom: 80,
+          }}
           toastOptions={{
             duration: 5000,
             style: {
