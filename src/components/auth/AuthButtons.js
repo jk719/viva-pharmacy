@@ -1,37 +1,41 @@
 "use client";
-
-import { signIn, signOut, useSession } from 'next-auth/react';
 import { useState, useRef, useEffect } from 'react';
-import Link from 'next/link';
+import { useSession, signOut, signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export function AuthButtons() {
   const { data: session } = useSession();
-  const [isOpen, setIsOpen] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const dropdownRef = useRef(null);
   const router = useRouter();
+  const dropdownRef = useRef(null);
 
-  // Close dropdown when clicking outside
+  // Handle click outside
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsOpen(false);
+        setShowLogin(false);
       }
     }
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Reset form when dropdown closes
+  // Handle escape key
   useEffect(() => {
-    if (!isOpen) {
-      setFormData({ email: '', password: '' });
-      setError('');
+    function handleEscape(event) {
+      if (event.key === 'Escape') {
+        setShowLogin(false);
+      }
     }
-  }, [isOpen]);
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -48,7 +52,7 @@ export function AuthButtons() {
       if (result.error) {
         setError(result.error);
       } else {
-        setIsOpen(false);
+        setShowLogin(false);
         router.refresh();
       }
     } catch (err) {
@@ -60,37 +64,16 @@ export function AuthButtons() {
 
   if (session) {
     return (
-      <div className="relative" ref={dropdownRef}>
+      <div className="flex items-center space-x-4">
+        <span className="text-white text-sm hidden md:inline">
+          {session.user.email}
+        </span>
         <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center space-x-2 text-gray-700 hover:text-gray-900"
+          onClick={() => signOut()}
+          className="bg-white/10 hover:bg-white/20 text-white font-medium px-4 py-2 rounded-full transition-all duration-300"
         >
-          <span className="text-sm">{session.user.email}</span>
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
+          Sign Out
         </button>
-
-        {isOpen && (
-          <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
-            <Link
-              href="/profile"
-              className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-              onClick={() => setIsOpen(false)}
-            >
-              Profile
-            </Link>
-            <button
-              onClick={() => {
-                signOut();
-                setIsOpen(false);
-              }}
-              className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
-            >
-              Sign Out
-            </button>
-          </div>
-        )}
       </div>
     );
   }
@@ -98,75 +81,78 @@ export function AuthButtons() {
   return (
     <div className="relative" ref={dropdownRef}>
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+        onClick={() => setShowLogin(!showLogin)}
+        className="bg-green-500 hover:bg-green-600 text-white font-medium px-4 py-2 rounded-full transition-all duration-300"
       >
         Sign In
       </button>
 
-      {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg p-4 z-50">
+      {showLogin && (
+        <div className="absolute left-1/2 transform -translate-x-1/2 mt-2 w-[90vw] md:w-80 md:left-auto md:right-0 md:-translate-x-0 bg-[#003366] rounded-lg shadow-lg p-6 z-50 animate-slideDown">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h2 className="text-2xl font-bold text-white">Welcome Back</h2>
+              <p className="text-sm text-gray-300">Sign in to your account</p>
+            </div>
+            <button 
+              onClick={() => setShowLogin(false)}
+              className="text-gray-400 hover:text-white transition-colors"
+              aria-label="Close login form"
+            >
+              ✕
+            </button>
+          </div>
+          
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded text-sm">
+              <div className="text-red-400 text-sm">
                 {error}
               </div>
             )}
             
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Email</label>
-              <input
-                type="email"
-                required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                autoComplete="email"
-              />
-            </div>
+            <input
+              type="email"
+              placeholder="Email address"
+              className="w-full px-4 py-3 bg-[#002347] border border-[#004386] rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              required
+            />
+            
+            <input
+              type="password"
+              placeholder="Password"
+              className="w-full px-4 py-3 bg-[#002347] border border-[#004386] rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              required
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Password</label>
-              <input
-                type="password"
-                required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                autoComplete="current-password"
-              />
-            </div>
-
-            <div>
-              <button
-                type="submit"
-                disabled={loading}
-                className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-                  loading ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-              >
-                {loading ? 'Signing in...' : 'Sign In'}
-              </button>
-            </div>
-
-            <div className="text-center text-sm">
-              <Link
-                href="/register"
-                className="text-blue-600 hover:text-blue-500"
-                onClick={() => setIsOpen(false)}
-              >
-                Create an account
-              </Link>
-              <span className="mx-2">•</span>
-              <Link
-                href="/forgot-password"
-                className="text-blue-600 hover:text-blue-500"
-                onClick={() => setIsOpen(false)}
-              >
-                Forgot password?
-              </Link>
-            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-white text-[#003366] py-3 rounded-md hover:bg-gray-100 transition-colors duration-200 font-medium"
+            >
+              {loading ? 'Signing in...' : 'Sign In'}
+            </button>
           </form>
+
+          <div className="mt-4 text-center">
+            <Link href="/forgot-password" className="text-sm text-gray-300 hover:text-white transition-colors">
+              Forgot password?
+            </Link>
+          </div>
+          
+          <div className="mt-4 text-center border-t border-[#004386] pt-4">
+            <span className="text-sm text-gray-300">
+              Or
+            </span>
+            <div className="mt-2">
+              <Link href="/register" className="text-sm text-gray-300 hover:text-white transition-colors">
+                Don't have an account? Sign Up
+              </Link>
+            </div>
+          </div>
         </div>
       )}
     </div>

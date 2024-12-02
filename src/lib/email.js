@@ -98,3 +98,28 @@ transporter.verify(function (error, success) {
     console.log('Email server is ready to send messages');
   }
 });
+
+export async function sendPasswordResetEmail(email, token) {
+  const resetUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/reset-password/${token}`;
+  
+  const emailContent = {
+    to: email,
+    subject: 'Reset Your Password',
+    html: `
+      <h1>Reset Your Password</h1>
+      <p>You requested to reset your password. Click the button below to set a new password:</p>
+      <a href="${resetUrl}" style="background-color: #003366; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; margin: 16px 0;">Reset Password</a>
+      <p>Or copy and paste this link into your browser:</p>
+      <p>${resetUrl}</p>
+      <p>This link will expire in 1 hour.</p>
+      <p>If you didn't request this, please ignore this email.</p>
+    `
+  };
+
+  try {
+    await sendEmail(emailContent);
+  } catch (error) {
+    console.error('Error sending reset password email:', error);
+    throw error;
+  }
+}

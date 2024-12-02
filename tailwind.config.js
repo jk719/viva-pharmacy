@@ -13,6 +13,15 @@ module.exports = {
         primaryText: '#2E2E2E',    // Dark grey for text
         backgroundGray: '#F5F5F5', // Light gray background for sections
       },
+      keyframes: {
+        slideDown: {
+          '0%': { opacity: 0, transform: 'translateY(-10px)' },
+          '100%': { opacity: 1, transform: 'translateY(0)' }
+        }
+      },
+      animation: {
+        slideDown: 'slideDown 0.2s ease-out'
+      }
     },
   },
   plugins: [],
