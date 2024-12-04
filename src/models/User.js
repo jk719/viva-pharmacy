@@ -3,6 +3,57 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 
+// Add address schema
+const addressSchema = new mongoose.Schema({
+  fullName: {
+    type: String,
+    required: [true, 'Full name is required']
+  },
+  street: {
+    type: String,
+    required: [true, 'Street address is required']
+  },
+  apartment: {
+    type: String
+  },
+  city: {
+    type: String,
+    required: [true, 'City is required']
+  },
+  state: {
+    type: String,
+    required: [true, 'State is required']
+  },
+  zipCode: {
+    type: String,
+    required: [true, 'ZIP code is required'],
+    validate: {
+      validator: function(v) {
+        return /^\d{5}(-\d{4})?$/.test(v);
+      },
+      message: props => `${props.value} is not a valid ZIP code!`
+    }
+  },
+  phone: {
+    type: String,
+    required: [true, 'Phone number is required'],
+    validate: {
+      validator: function(v) {
+        return /^\+?[\d\s-]{10,}$/.test(v);
+      },
+      message: props => `${props.value} is not a valid phone number!`
+    }
+  },
+  isDefault: {
+    type: Boolean,
+    default: false
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
 const userSchema = new mongoose.Schema({
   email: {
     type: String,
@@ -56,6 +107,8 @@ const userSchema = new mongoose.Schema({
   resetPasswordToken: String,
   resetPasswordExpires: Date,
   verificationToken: String,
+  // Add addresses array
+  addresses: [addressSchema]
 });
 
 // Update timestamps
@@ -150,6 +203,21 @@ userSchema.set('toJSON', {
     return ret;
   }
 });
+
+// Add method to handle default addresses
+userSchema.methods.setDefaultAddress = async function(addressId) {
+  // First, set all addresses to non-default
+  this.addresses.forEach(addr => addr.isDefault = false);
+  
+  // Then set the specified address as default
+  const address = this.addresses.id(addressId);
+  if (address) {
+    address.isDefault = true;
+    await this.save();
+    return true;
+  }
+  return false;
+};
 
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 export default User;

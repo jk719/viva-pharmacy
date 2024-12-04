@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 // Create a context for the cart
 const CartContext = createContext();
@@ -18,61 +18,126 @@ export function useCart() {
 export function CartProvider({ children }) {
     const [items, setItems] = useState([]);
     const [total, setTotal] = useState(0);
+    const [loading, setLoading] = useState(true);
     const [deliveryOption, setDeliveryOption] = useState('pickup');
     const [selectedTime, setSelectedTime] = useState('');
     const [showTimeError, setShowTimeError] = useState(false);
 
-    // Calculate total whenever items change
+    // Load cart from localStorage on initial mount
     useEffect(() => {
-        const newTotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        setTotal(newTotal);
-    }, [items]);
+        try {
+            const savedCart = localStorage.getItem('cart');
+            if (savedCart) {
+                const parsedCart = JSON.parse(savedCart);
+                setItems(parsedCart);
+            }
+        } catch (error) {
+            console.error('Error loading cart:', error);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
 
-    // Add item to cart
-    const addToCart = (product) => {
+    // Update total and save to localStorage when items change
+    useEffect(() => {
+        if (!loading) {
+            const newTotal = items.reduce((sum, item) => 
+                sum + (item.price * item.quantity), 0
+            );
+            setTotal(newTotal);
+            localStorage.setItem('cart', JSON.stringify(items));
+        }
+    }, [items, loading]);
+
+    const getProductId = useCallback((product) => {
+        return product.id;
+    }, []);
+
+    const addToCart = useCallback((product) => {
+        console.log('Adding product:', product);
         setItems(prevItems => {
-            const existingItem = prevItems.find(item => item.id === product.id);
+            const productId = getProductId(product);
+            console.log('Product ID:', productId);
+            
+            const existingItem = prevItems.find(item => 
+                getProductId(item) === productId
+            );
+            
             if (existingItem) {
+                console.log('Found existing item:', existingItem);
                 return prevItems.map(item =>
-                    item.id === product.id
+                    getProductId(item) === productId
                         ? { ...item, quantity: item.quantity + 1 }
                         : item
                 );
             }
+            
+            console.log('Adding new item to cart');
             return [...prevItems, { ...product, quantity: 1 }];
         });
-    };
+    }, [getProductId]);
 
-    // Remove item from cart
-    const removeFromCart = (productId) => {
-        setItems(prevItems => prevItems.filter(item => item.id !== productId));
-    };
+    const removeFromCart = useCallback((productId) => {
+        setItems(prevItems => 
+            prevItems.filter(item => getProductId(item) !== productId)
+        );
+    }, [getProductId]);
 
-    // Update item quantity
-    const updateQuantity = (productId, quantity) => {
+    const updateQuantity = useCallback((productId, quantity) => {
         setItems(prevItems =>
             prevItems.map(item =>
-                item.id === productId
-                    ? { ...item, quantity: Math.max(0, quantity) }
+                getProductId(item) === productId
+                    ? { ...item, quantity: Math.max(0, parseInt(quantity)) }
                     : item
             )
         );
+    }, [getProductId]);
+
+    const decrement = useCallback((productId) => {
+        setItems(prevItems => {
+            const existingItem = prevItems.find(item => getProductId(item) === productId);
+            
+            if (existingItem) {
+                if (existingItem.quantity === 1) {
+                    return prevItems.filter(item => getProductId(item) !== productId);
+                }
+                
+                return prevItems.map(item =>
+                    getProductId(item) === productId
+                        ? { ...item, quantity: item.quantity - 1 }
+                        : item
+                );
+            }
+            
+            return prevItems;
+        });
+    }, [getProductId]);
+
+    const clearCart = useCallback(() => {
+        localStorage.removeItem('cart');
+        setItems([]);
+        setTotal(0);
+    }, []);
+
+    const value = {
+        items,
+        total,
+        loading,
+        addToCart,
+        removeFromCart,
+        updateQuantity,
+        clearCart,
+        decrement,
+        deliveryOption,
+        setDeliveryOption,
+        selectedTime,
+        setSelectedTime,
+        showTimeError,
+        setShowTimeError
     };
 
     return (
-        <CartContext.Provider value={{
-            items,
-            total,
-            addToCart,
-            removeFromCart,
-            updateQuantity,
-            deliveryOption,
-            setDeliveryOption,
-            selectedTime,
-            setSelectedTime,
-            showTimeError,
-            setShowTimeError
-        }}>
+        <CartContext.Provider value={value}>
             {children}
         </CartContext.Provider>
     );

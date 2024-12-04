@@ -3,6 +3,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import dbConnect from '@/lib/dbConnect';
 import User from '@/models/User';
 import { comparePasswords, AUTH_ERRORS } from '@/lib/auth';
+import { getBaseUrl } from '@/lib/env';
 
 export const authOptions = {
   providers: [
@@ -59,7 +60,11 @@ export const authOptions = {
         session.user.isVerified = token.isVerified;
       }
       return session;
-    }
+    },
+    async redirect({ url, baseUrl }) {
+      const currentBaseUrl = getBaseUrl();
+      return url.startsWith(currentBaseUrl) ? url : currentBaseUrl;
+    },
   },
   pages: {
     signIn: '/login',
