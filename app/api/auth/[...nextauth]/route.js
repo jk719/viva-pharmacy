@@ -55,7 +55,10 @@ export const authOptions = {
       return token;
     },
     async session({ session, token }) {
-      if (token) {
+      await dbConnect();
+      const user = await User.findOne({ email: session.user.email });
+      if (user) {
+        session.user.id = user._id.toString();
         session.user.role = token.role;
         session.user.isVerified = token.isVerified;
       }

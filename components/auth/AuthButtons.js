@@ -64,16 +64,27 @@ export function AuthButtons() {
 
   if (session) {
     return (
-      <div className="flex items-center space-x-4">
-        <span className="text-white text-sm hidden md:inline">
-          {session.user.email}
-        </span>
+      <div className="relative" ref={dropdownRef}>
         <button
-          onClick={() => signOut()}
+          onClick={() => setShowLogin(!showLogin)}
           className="bg-white/10 hover:bg-white/20 text-white font-medium px-4 py-2 rounded-full transition-all duration-300"
         >
-          Sign Out
+          {session.user.email}
         </button>
+
+        {showLogin && (
+          <div className="absolute right-0 mt-2 w-48 bg-[#003366] rounded-lg shadow-lg p-4 z-50">
+            <Link href="/profile" className="block text-white hover:text-gray-200 mb-2">
+              Profile
+            </Link>
+            <button
+              onClick={() => signOut()}
+              className="w-full text-left text-white hover:text-gray-200"
+            >
+              Sign Out
+            </button>
+          </div>
+        )}
       </div>
     );
   }

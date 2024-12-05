@@ -1,4 +1,3 @@
-// src/app/checkout/page.js
 "use client";
 
 import { useEffect, useState } from 'react';
@@ -158,7 +157,11 @@ export default function CheckoutPage() {
 
       {shippingAddress && cartTotal > 0 && (
         <div className="mt-8">
-          <PaymentForm amount={cartTotal} shippingAddress={shippingAddress} />
+          <PaymentForm 
+            amount={cartTotal} 
+            items={items} // Pass cart items to PaymentForm
+            shippingAddress={shippingAddress} 
+          />
         </div>
       )}
     </div>

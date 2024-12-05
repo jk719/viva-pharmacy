@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
 import { useState, useEffect } from 'react';
 import { Elements } from '@stripe/react-stripe-js';
 import { PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import stripePromise from '@/lib/stripe/client';
 
-const PaymentForm = ({ amount }) => {
+const PaymentForm = ({ amount, items }) => { // Add items prop
   const [clientSecret, setClientSecret] = useState('');
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -25,7 +25,10 @@ const PaymentForm = ({ amount }) => {
         const response = await fetch('/api/payments', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount })
+          body: JSON.stringify({ 
+            amount,
+            cartItems: items // Pass cart items to the API
+          })
         });
 
         const data = await response.json();
@@ -47,7 +50,7 @@ const PaymentForm = ({ amount }) => {
     };
 
     initializePayment();
-  }, [amount]);
+  }, [amount, items]); // Add items to dependency array
 
   if (loading) {
     return <div className="text-center py-4">Initializing payment...</div>;
