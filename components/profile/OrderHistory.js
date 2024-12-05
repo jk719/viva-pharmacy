@@ -47,64 +47,44 @@ export default function OrderHistory({ userId }) {
   }
 
   return (
-    <div>
-      <h2 className="text-2xl font-bold mb-4">Order History</h2>
-      {orders.length === 0 ? (
-        <p className="text-center py-4">No orders found.</p>
-      ) : (
-        <div className="space-y-4">
-          {orders.map((order) => (
-            <div 
-              key={order._id} 
-              className="border rounded-lg p-4 hover:shadow-lg transition-shadow"
-            >
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="font-semibold">Order #{order._id}</p>
-                  <p className="text-sm text-gray-600">
-                    {new Date(order.createdAt).toLocaleDateString()}
-                  </p>
+    <div className="order-history">
+      <h2 className="text-xl font-bold mb-4 text-center text-[#003366]">Order History</h2>
+      {orders?.map(order => (
+        <div key={order._id} className="order mb-6 p-4 border rounded-lg shadow-sm bg-white">
+          <h3 className="font-semibold mb-2 text-center">Order ID: {order._id}</h3>
+          <p className="mb-2 text-center">Total: ${order.total.toFixed(2)}</p>
+          <p className="mb-4 text-center">Status: {order.status}</p>
+          <div className="order-items grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {order.items.map(item => (
+              <div key={item._id} className="flex items-center p-4 border rounded-lg">
+                {item.image ? (
+                  <div className="relative h-20 w-20 flex-shrink-0">
+                    <Image
+                      src={item.image}
+                      alt={item.name}
+                      fill
+                      className="object-contain rounded-md"
+                      sizes="80px"
+                    />
+                  </div>
+                ) : (
+                  <div className="h-20 w-20 flex-shrink-0 bg-gray-100 rounded-md flex items-center justify-center">
+                    <span className="text-gray-400">No Image</span>
+                  </div>
+                )}
+                <div className="ml-4 flex-grow">
+                  <h4 className="font-medium text-[#003366]">{item.name}</h4>
+                  <p className="text-gray-600">Quantity: {item.quantity}</p>
+                  <p className="text-gray-600">Price: ${item.price.toFixed(2)}</p>
                 </div>
-                <p className="font-bold">${order.total.toFixed(2)}</p>
               </div>
-              <div className="mt-4">
-                <p className="font-medium">Items:</p>
-                <ul className="list-disc list-inside">
-                  {order.items.map((item, index) => (
-                    <li key={index} className="text-sm">
-                      <div className="flex items-center mb-4">
-                        {item.image ? (
-                          <div className="relative h-20 w-20 flex-shrink-0">
-                            <Image
-                              src={item.image}
-                              alt={item.name}
-                              fill
-                              className="object-contain rounded-md"
-                              sizes="80px"
-                            />
-                          </div>
-                        ) : (
-                          <div className="h-20 w-20 flex-shrink-0 bg-gray-200 flex items-center justify-center">
-                            <span>No Image</span>
-                          </div>
-                        )}
-                        <div className="ml-4">
-                          <h4 className="font-medium">{item.name}</h4>
-                          <p>Quantity: {item.quantity}</p>
-                          <p>Price: ${item.price.toFixed(2)}</p>
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="mt-2">
-                <p className="text-sm text-gray-600">
-                  Status: <span className="font-medium">{order.status}</span>
-                </p>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
+        </div>
+      ))}
+      {(!orders || orders.length === 0) && (
+        <div className="text-center p-8 bg-white rounded-lg shadow-sm">
+          <p className="text-gray-600">No orders found</p>
         </div>
       )}
     </div>

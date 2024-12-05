@@ -108,7 +108,15 @@ const userSchema = new mongoose.Schema({
   resetPasswordExpires: Date,
   verificationToken: String,
   // Add addresses array
-  addresses: [addressSchema]
+  addresses: [addressSchema],
+  vivaBucks: { 
+    type: Number, 
+    default: 0 
+  },
+  rewardPoints: { 
+    type: Number, 
+    default: 0 
+  }
 });
 
 // Update timestamps

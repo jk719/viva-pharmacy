@@ -2,6 +2,7 @@ import { headers } from 'next/headers';
 import Stripe from 'stripe';
 import dbConnect from '@/lib/dbConnect';
 import Order from '@/models/Order';
+import User from '@/models/User';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -61,6 +62,27 @@ export async function POST(req) {
                 });
 
                 console.log('Order created successfully:', order);
+
+                const calculateVivaBucks = (amount) => {
+                    // For example: $1 = 0.01 VivaBucks
+                    return amount * 0.01;
+                };
+
+                const calculateRewardPoints = (amount) => {
+                    // For example: $1 = 1 point
+                    return Math.floor(amount);
+                };
+
+                // After successful payment
+                const vivaBucksEarned = calculateVivaBucks(paymentIntent.amount);
+                const rewardPointsEarned = calculateRewardPoints(paymentIntent.amount);
+
+                await User.findByIdAndUpdate(paymentIntent.metadata.userId, {
+                    $inc: {
+                        vivaBucks: vivaBucksEarned,
+                        rewardPoints: rewardPointsEarned
+                    }
+                });
             } catch (dbError) {
                 console.error('Database error:', dbError);
                 // Continue processing even if order creation fails
