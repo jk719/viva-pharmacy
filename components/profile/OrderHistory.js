@@ -47,43 +47,68 @@ export default function OrderHistory({ userId }) {
   }
 
   return (
-    <div className="order-history">
-      <h2 className="text-xl font-bold mb-4 text-center text-[#003366]">Order History</h2>
+    <div className="order-history px-4 md:px-0">
+      <h2 className="text-xl font-bold mb-6 text-[#003366] border-b pb-2">
+        Order History
+      </h2>
+      
       {orders?.map(order => (
-        <div key={order._id} className="order mb-6 p-4 border rounded-lg shadow-sm bg-white">
-          <h3 className="font-semibold mb-2 text-center">Order ID: {order._id}</h3>
-          <p className="mb-2 text-center">Total: ${order.total.toFixed(2)}</p>
-          <p className="mb-4 text-center">Status: {order.status}</p>
-          <div className="order-items grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div key={order._id} className="mb-6 bg-white rounded-xl overflow-hidden shadow-sm">
+          {/* Order Header */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-xs text-gray-500">Order ID:</span>
+              <span className="text-sm font-medium">{order._id}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <span className={`px-2 py-1 rounded-full text-xs ${
+                  order.status === 'Completed' ? 'bg-green-100 text-green-700' :
+                  order.status === 'Processing' ? 'bg-blue-100 text-blue-700' :
+                  'bg-gray-100 text-gray-700'
+                }`}>
+                  {order.status}
+                </span>
+              </div>
+              <span className="font-semibold text-lg">${order.total.toFixed(2)}</span>
+            </div>
+          </div>
+
+          {/* Order Items */}
+          <div className="divide-y divide-gray-100">
             {order.items.map(item => (
-              <div key={item._id} className="flex items-center p-4 border rounded-lg">
+              <div key={item._id} className="p-4 flex gap-4">
                 {item.image ? (
-                  <div className="relative h-20 w-20 flex-shrink-0">
+                  <div className="relative h-16 w-16 flex-shrink-0">
                     <Image
                       src={item.image}
                       alt={item.name}
                       fill
                       className="object-contain rounded-md"
-                      sizes="80px"
+                      sizes="64px"
                     />
                   </div>
                 ) : (
-                  <div className="h-20 w-20 flex-shrink-0 bg-gray-100 rounded-md flex items-center justify-center">
-                    <span className="text-gray-400">No Image</span>
+                  <div className="h-16 w-16 flex-shrink-0 bg-gray-50 rounded-md flex items-center justify-center">
+                    <span className="text-gray-400 text-xs">No Image</span>
                   </div>
                 )}
-                <div className="ml-4 flex-grow">
-                  <h4 className="font-medium text-[#003366]">{item.name}</h4>
-                  <p className="text-gray-600">Quantity: {item.quantity}</p>
-                  <p className="text-gray-600">Price: ${item.price.toFixed(2)}</p>
+                <div className="flex-grow min-w-0">
+                  <h4 className="font-medium text-sm text-[#003366] truncate">{item.name}</h4>
+                  <div className="flex justify-between items-center mt-1">
+                    <span className="text-sm text-gray-500">Qty: {item.quantity}</span>
+                    <span className="text-sm font-medium">${item.price.toFixed(2)}</span>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
         </div>
       ))}
+
       {(!orders || orders.length === 0) && (
-        <div className="text-center p-8 bg-white rounded-lg shadow-sm">
+        <div className="text-center p-8 bg-white rounded-xl shadow-sm">
+          <div className="text-gray-400 mb-2">📦</div>
           <p className="text-gray-600">No orders found</p>
         </div>
       )}

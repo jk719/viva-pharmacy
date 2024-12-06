@@ -85,120 +85,127 @@ function ProfileInfo({ user }) {
 
   return (
     <div className="max-w-4xl mx-auto p-4">
-      <div className="bg-gradient-to-b from-white to-[#f0f4f8] shadow-lg rounded-2xl p-8">
-        {/* Header Section */}
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-[#003366] mb-2">Your Profile</h2>
-          <p className="text-[#4d6580]">Manage your information</p>
+      <div className="bg-white shadow-sm rounded-xl overflow-hidden">
+        {/* Profile Header */}
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6">
+          <h2 className="text-xl font-bold text-[#003366] mb-1">Your Profile</h2>
+          <p className="text-sm text-gray-600">Manage your information</p>
         </div>
 
-        {/* Profile Information Form */}
-        <form onSubmit={handleSubmit} className="space-y-8">
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-[#e6eef5]">
-            <h3 className="text-xl font-semibold mb-6 text-center text-[#003366]">Personal Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="group">
-                <label className="block text-sm font-medium text-[#4d6580] text-center mb-2">First Name</label>
-                <input
-                  type="text"
-                  name="firstName"
-                  value={formData.firstName}
-                  onChange={handleChange}
-                  disabled={!editMode}
-                  className="w-full px-4 py-3 rounded-lg border border-[#ccd9e6] focus:ring-2 focus:ring-[#003366] focus:border-transparent transition-all text-center disabled:bg-[#f0f4f8]"
-                />
+        <form onSubmit={handleSubmit} className="p-4 space-y-6">
+          {/* Personal Info Section */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-[#003366] mb-4">Personal Information</h3>
+            
+            <div className="space-y-4">
+              {/* Name Fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">First Name</label>
+                  <input
+                    type="text"
+                    name="firstName"
+                    value={formData.firstName}
+                    onChange={handleChange}
+                    disabled={!editMode}
+                    className="w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-[#003366] focus:border-transparent disabled:bg-gray-50 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Last Name</label>
+                  <input
+                    type="text"
+                    name="lastName"
+                    value={formData.lastName}
+                    onChange={handleChange}
+                    disabled={!editMode}
+                    className="w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-[#003366] focus:border-transparent disabled:bg-gray-50 text-sm"
+                  />
+                </div>
               </div>
-              <div className="group">
-                <label className="block text-sm font-medium text-[#4d6580] text-center mb-2">Last Name</label>
-                <input
-                  type="text"
-                  name="lastName"
-                  value={formData.lastName}
-                  onChange={handleChange}
-                  disabled={!editMode}
-                  className="w-full px-4 py-3 rounded-lg border border-[#ccd9e6] focus:ring-2 focus:ring-[#003366] focus:border-transparent transition-all text-center disabled:bg-[#f0f4f8]"
-                />
-              </div>
-              <div className="group">
-                <label className="block text-sm font-medium text-[#4d6580] text-center mb-2">Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  disabled={true}
-                  className="w-full px-4 py-3 rounded-lg border border-[#ccd9e6] bg-[#f0f4f8] text-center"
-                />
-              </div>
-              <div className="group">
-                <label className="block text-sm font-medium text-[#4d6580] text-center mb-2">Phone</label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handlePhoneChange}
-                  placeholder="(123) 456-7890"
-                  maxLength="14"
-                  disabled={!editMode}
-                  className="w-full px-4 py-3 rounded-lg border border-[#ccd9e6] focus:ring-2 focus:ring-[#003366] focus:border-transparent transition-all text-center disabled:bg-[#f0f4f8]"
-                />
+
+              {/* Contact Fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Email</label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    disabled={true}
+                    className="w-full px-3 py-2 rounded-lg border bg-gray-50 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Phone</label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handlePhoneChange}
+                    disabled={!editMode}
+                    className="w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-[#003366] focus:border-transparent disabled:bg-gray-50 text-sm"
+                  />
+                </div>
               </div>
             </div>
           </div>
 
           {/* Address Section */}
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-[#e6eef5]">
-            <h4 className="text-xl font-semibold mb-6 text-center text-[#003366]">Shipping Address</h4>
-            <div className="space-y-6">
+          <div className="space-y-4 pt-4 border-t">
+            <h3 className="text-lg font-medium text-[#003366] mb-4">Shipping Address</h3>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-1">Street Address</label>
+              <input
+                type="text"
+                name="address.street"
+                value={formData.address.street}
+                onChange={handleChange}
+                disabled={!editMode}
+                className="w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-[#003366] focus:border-transparent disabled:bg-gray-50 text-sm"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-[#4d6580] text-center mb-2">Street Address</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1">City</label>
                 <input
                   type="text"
-                  name="address.street"
-                  value={formData.address.street}
+                  name="address.city"
+                  value={formData.address.city}
                   onChange={handleChange}
                   disabled={!editMode}
-                  className="w-full px-4 py-3 rounded-lg border border-[#ccd9e6] focus:ring-2 focus:ring-[#003366] focus:border-transparent transition-all text-center disabled:bg-[#f0f4f8]"
+                  className="w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-[#003366] focus:border-transparent disabled:bg-gray-50 text-sm"
                 />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-[#4d6580] text-center mb-2">City</label>
-                  <input
-                    type="text"
-                    name="address.city"
-                    value={formData.address.city}
-                    onChange={handleChange}
-                    disabled={!editMode}
-                    className="w-full px-4 py-3 rounded-lg border border-[#ccd9e6] focus:ring-2 focus:ring-[#003366] focus:border-transparent transition-all text-center disabled:bg-[#f0f4f8]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[#4d6580] text-center mb-2">State</label>
-                  <input
-                    type="text"
-                    name="address.state"
-                    value={formData.address.state}
-                    onChange={handleChange}
-                    disabled={!editMode}
-                    className="w-full px-4 py-3 rounded-lg border border-[#ccd9e6] focus:ring-2 focus:ring-[#003366] focus:border-transparent transition-all text-center disabled:bg-[#f0f4f8]"
-                  />
-                </div>
-                <div className="col-span-1 sm:col-span-2 md:col-span-1">
-                  <label className="block text-sm font-medium text-[#4d6580] text-center mb-2">ZIP Code</label>
-                  <input
-                    type="text"
-                    name="address.zipCode"
-                    value={formData.address.zipCode}
-                    onChange={handleChange}
-                    disabled={!editMode}
-                    className="w-full px-4 py-3 rounded-lg border border-[#ccd9e6] focus:ring-2 focus:ring-[#003366] focus:border-transparent transition-all text-center disabled:bg-[#f0f4f8]"
-                  />
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">State</label>
+                <input
+                  type="text"
+                  name="address.state"
+                  value={formData.address.state}
+                  onChange={handleChange}
+                  disabled={!editMode}
+                  className="w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-[#003366] focus:border-transparent disabled:bg-gray-50 text-sm"
+                />
+              </div>
+              <div className="col-span-2 md:col-span-1">
+                <label className="block text-sm font-medium text-gray-600 mb-1">ZIP Code</label>
+                <input
+                  type="text"
+                  name="address.zipCode"
+                  value={formData.address.zipCode}
+                  onChange={handleChange}
+                  disabled={!editMode}
+                  className="w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-[#003366] focus:border-transparent disabled:bg-gray-50 text-sm"
+                />
               </div>
             </div>
           </div>
 
-          <div className="flex justify-center space-x-4">
+          {/* Action Buttons */}
+          <div className="flex gap-3 pt-4 border-t">
             {!editMode ? (
               <button
                 type="button"
