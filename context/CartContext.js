@@ -54,6 +54,11 @@ export function CartProvider({ children }) {
     }, []);
 
     const addToCart = useCallback((product) => {
+        if (!product || !product.id) {
+            console.error('Invalid product:', product);
+            return;
+        }
+        
         console.log('Adding product:', product);
         setItems(prevItems => {
             const productId = getProductId(product);

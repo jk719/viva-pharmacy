@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import dbConnect from '@/lib/dbConnect';
 import Order from '@/models/Order';
 import User from '@/models/User';
+import { NextResponse } from 'next/server';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -27,38 +28,48 @@ export async function POST(req) {
             console.log('Event constructed successfully:', event.type);
         } catch (err) {
             console.error('Webhook signature verification failed:', err.message);
-            return new Response(`Webhook Error: ${err.message}`, { 
-                status: 400,
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            });
+            return NextResponse.json({ error: err.message }, { status: 400 });
         }
 
         // Handle the event
         if (event.type === 'payment_intent.succeeded') {
             const paymentIntent = event.data.object;
-            console.log('Payment Intent data:', paymentIntent);
             
             try {
-                // Get cart items from metadata
-                const cartItems = paymentIntent.metadata.cartItems 
-                    ? JSON.parse(paymentIntent.metadata.cartItems) 
-                    : [];
+                const userId = paymentIntent.metadata.userId;
+                if (!userId) {
+                    console.error('No userId found in payment metadata');
+                    return NextResponse.json(
+                        { error: 'No userId in metadata' }, 
+                        { status: 400 }
+                    );
+                }
 
-                // Create order in database
+                // Parse cart items from metadata
+                const cartItems = JSON.parse(paymentIntent.metadata.cartItemIds || '[]');
+                
+                // Format items according to the Order schema
+                const formattedItems = cartItems.map(item => ({
+                    productId: item.id.toString(),
+                    name: item.name,
+                    quantity: item.qty,
+                    price: item.price
+                }));
+
+                // Create order with schema-matching structure
                 const order = await Order.create({
-                    userId: paymentIntent.metadata.userId,
-                    orderId: `ORDER-${Date.now()}`,
-                    amount: paymentIntent.amount / 100,
-                    status: 'pending',
+                    userId: userId,
+                    items: formattedItems,
                     total: paymentIntent.amount / 100,
-                    items: cartItems,
-                    orderData: {
-                        items: cartItems,
-                        total: paymentIntent.amount / 100,
-                    },
-                    createdAt: new Date(),
+                    status: 'pending',
+                    shippingAddress: {
+                        // Get from payment metadata or use placeholder
+                        street: paymentIntent.metadata.street || '',
+                        city: paymentIntent.metadata.city || '',
+                        state: paymentIntent.metadata.state || '',
+                        zipCode: paymentIntent.metadata.zipCode || '',
+                        country: paymentIntent.metadata.country || 'US'
+                    }
                 });
 
                 console.log('Order created successfully:', order);
@@ -68,43 +79,29 @@ export async function POST(req) {
                     return amount * 0.01;
                 };
 
-                const calculateRewardPoints = (amount) => {
-                    // For example: $1 = 1 point
-                    return Math.floor(amount);
-                };
-
-                // After successful payment
+                // Calculate and update VivaBucks
                 const vivaBucksEarned = calculateVivaBucks(paymentIntent.amount);
-                const rewardPointsEarned = calculateRewardPoints(paymentIntent.amount);
-
-                await User.findByIdAndUpdate(paymentIntent.metadata.userId, {
-                    $inc: {
-                        vivaBucks: vivaBucksEarned,
-                        rewardPoints: rewardPointsEarned
-                    }
+                await User.findByIdAndUpdate(userId, {
+                    $inc: { vivaBucks: vivaBucksEarned }
                 });
+
+                return NextResponse.json({ success: true });
             } catch (dbError) {
                 console.error('Database error:', dbError);
-                // Continue processing even if order creation fails
+                return NextResponse.json(
+                    { error: 'Database operation failed' },
+                    { status: 500 }
+                );
             }
         }
 
-        return new Response(JSON.stringify({ received: true }), { 
-            status: 200,
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        });
-    } catch (error) {
-        console.error('Webhook error:', error);
-        return new Response(
-            JSON.stringify({ error: 'Webhook handler failed' }), 
-            { 
-                status: 500,
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            }
+        // Return success for other event types
+        return NextResponse.json({ received: true });
+    } catch (err) {
+        console.error('Webhook error:', err);
+        return NextResponse.json(
+            { error: 'Webhook handler failed' },
+            { status: 500 }
         );
     }
 }

@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 export default function ClientProductView({ product }) {
-  const { addToCart, decrement, cartItems } = useCart();
+  const { addToCart, decrement, items = [] } = useCart();
   const router = useRouter();
 
   const handleBack = () => {
@@ -13,15 +13,26 @@ export default function ClientProductView({ product }) {
   };
 
   const getItemQuantity = (productId) => {
-    const item = cartItems.find((item) => item.id === productId);
+    if (!items) return 0;
+    const item = items.find((item) => item?.id === productId);
     return item ? item.quantity : 0;
   };
 
-  const quantity = getItemQuantity(product.id);
+  const quantity = product ? getItemQuantity(product.id) : 0;
 
   if (!product) {
     return <p>Product details are not available.</p>;
   }
+
+  const handleAddToCart = () => {
+    if (!product) return;
+    addToCart(product);
+  };
+
+  const handleDecrement = () => {
+    if (!product) return;
+    decrement(product.id);
+  };
 
   return (
     <div className="fixed inset-0 bg-gray-800 bg-opacity-75 z-50 flex items-center justify-center p-4">
@@ -63,7 +74,7 @@ export default function ClientProductView({ product }) {
             <div className="flex items-center space-x-2 mt-2 mb-4">
               {quantity === 0 ? (
                 <button
-                  onClick={() => addToCart(product)}
+                  onClick={handleAddToCart}
                   className="text-white px-4 py-1 rounded transition-colors"
                   style={{ backgroundColor: 'var(--primary-color)' }}
                   aria-label="Add to cart"
@@ -73,7 +84,7 @@ export default function ClientProductView({ product }) {
               ) : (
                 <div className="flex items-center space-x-2">
                   <button
-                    onClick={() => decrement(product.id)}
+                    onClick={handleDecrement}
                     className="text-white px-3 py-1 rounded transition-colors"
                     style={{ backgroundColor: 'var(--button-red)' }}
                     aria-label="Decrease quantity"
@@ -82,7 +93,7 @@ export default function ClientProductView({ product }) {
                   </button>
                   <span className="w-8 text-center">{quantity}</span>
                   <button
-                    onClick={() => addToCart(product)}
+                    onClick={handleAddToCart}
                     className="text-white px-3 py-1 rounded transition-colors"
                     style={{ backgroundColor: 'var(--button-green)' }}
                     aria-label="Increase quantity"
