@@ -62,6 +62,19 @@ export function AuthButtons() {
     }
   };
 
+  const handleSignOut = async () => {
+    try {
+      const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+      await signOut({
+        callbackUrl: baseUrl,
+        redirect: false
+      });
+      router.push(baseUrl);
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
+  };
+
   if (session) {
     return (
       <div className="relative" ref={dropdownRef}>
@@ -78,7 +91,7 @@ export function AuthButtons() {
               Profile
             </Link>
             <button
-              onClick={() => signOut()}
+              onClick={handleSignOut}
               className="w-full text-left text-white hover:text-gray-200"
             >
               Sign Out

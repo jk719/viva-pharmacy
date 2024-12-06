@@ -68,9 +68,13 @@ export const authOptions = {
       const currentBaseUrl = getBaseUrl();
       return url.startsWith(currentBaseUrl) ? url : currentBaseUrl;
     },
+    async signOut({ token, session }) {
+      return true;
+    },
   },
   pages: {
     signIn: '/login',
+    signOut: '/',
     error: '/auth/error',
     verifyRequest: '/auth/verify-request',
   },
@@ -78,6 +82,35 @@ export const authOptions = {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
+  useSecureCookies: process.env.NODE_ENV === 'production',
+  cookies: {
+    sessionToken: {
+      name: `${process.env.NODE_ENV === 'production' ? '__Secure-' : ''}next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production'
+      }
+    },
+    callbackUrl: {
+      name: `${process.env.NODE_ENV === 'production' ? '__Secure-' : ''}next-auth.callback-url`,
+      options: {
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production'
+      }
+    },
+    csrfToken: {
+      name: `${process.env.NODE_ENV === 'production' ? '__Host-' : ''}next-auth.csrf-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production'
+      }
+    }
+  }
 };
 
 const handler = NextAuth(authOptions);
