@@ -39,7 +39,7 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="bg-primary-color text-white py-4 fixed top-0 w-full z-20">
+      <nav className="bg-primary-color text-white py-3 fixed top-0 w-full z-50">
         <div className="container mx-auto px-4">
           {/* Mobile Layout */}
           <div className="flex justify-center md:hidden mb-2">
@@ -116,8 +116,8 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* Verification Reminder */}
-      <div className="mt-[180px] md:mt-[88px]">
+      {/* Reduced margin */}
+      <div className="mt-[120px] md:mt-[64px]">
         <VerificationReminder />
       </div>
     </>

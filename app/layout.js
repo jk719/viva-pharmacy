@@ -5,6 +5,7 @@ import { SessionProvider } from "next-auth/react";
 import { CartProvider } from "../context/CartContext";
 import { Toaster } from 'react-hot-toast';
 import Navbar from "../components/Navbar";
+import VivaBucksProgress from '@/components/VivaBucksProgress';
 import Image from "next/image";
 import { FaInstagram, FaFacebook, FaTiktok } from "react-icons/fa";
 import "./globals.css";
@@ -60,21 +61,17 @@ export default function RootLayout({ children }) {
       </head>
       <body className="bg-white text-primary-color">
         <Providers>
-          {/* Navbar */}
           <Navbar />
-
-          {/* Main Content */}
-          <main className="main-content px-6 pb-6 min-h-screen">
-            <div className="container mx-auto">
-              {/* Page content */}
-              {children}
-            </div>
-          </main>
-
-          {/* Footer */}
+          <div className="pt-[80px] md:pt-[64px]">
+            <VivaBucksProgress />
+            <main className="px-6 pb-6 min-h-screen">
+              <div className="container mx-auto">
+                {children}
+              </div>
+            </main>
+          </div>
           <footer className="footer bg-primary text-white py-6">
             <div className="container mx-auto flex flex-col md:flex-row justify-between items-center text-center md:text-left space-y-4 md:space-y-0">
-              {/* Footer Logo */}
               <div className="flex items-center justify-center md:justify-start">
                 <Image
                   src="/images/viva-online-logo.png"
@@ -85,8 +82,6 @@ export default function RootLayout({ children }) {
                   className="object-contain"
                 />
               </div>
-
-              {/* Social Media Icons */}
               <div className="flex space-x-6 items-center justify-center">
                 <a 
                   href="https://www.instagram.com/yourbusiness" 
@@ -116,8 +111,6 @@ export default function RootLayout({ children }) {
                   <FaTiktok size={20} />
                 </a>
               </div>
-
-              {/* Footer Text */}
               <div className="text-xs md:text-sm text-center md:text-left">
                 &copy; {new Date().getFullYear()} VIVA Pharmacy & Wellness. All rights reserved.
               </div>
