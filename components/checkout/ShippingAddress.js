@@ -83,12 +83,30 @@ export default function ShippingAddress({ onAddressSelect }) {
     }
   };
 
+  const formatPhoneNumber = (phoneNumberString) => {
+    let cleaned = ('' + phoneNumberString).replace(/\D/g, '');
+    let match = cleaned.match(/^(\d{3})(\d{3})(\d{4})$/);
+    if (match) {
+        return '(' + match[1] + ') ' + match[2] + '-' + match[3];
+    }
+    return phoneNumberString;
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setNewAddress(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    if (name === 'phone') {
+        const cleaned = value.replace(/\D/g, '');
+        const trimmed = cleaned.slice(0, 10);
+        setNewAddress(prev => ({
+            ...prev,
+            [name]: trimmed
+        }));
+    } else {
+        setNewAddress(prev => ({
+            ...prev,
+            [name]: value
+        }));
+    }
   };
 
   const displayedAddresses = showAll ? addresses : addresses.slice(0, 3);
@@ -105,17 +123,19 @@ export default function ShippingAddress({ onAddressSelect }) {
             {displayedAddresses.map((address, index) => (
               <div 
                 key={index}
-                className={`flex-shrink-0 w-64 rounded-lg p-4 cursor-pointer transition-colors duration-200
+                className={`flex-shrink-0 w-64 rounded-lg p-4 cursor-pointer
                   ${selectedAddress === address 
-                    ? 'bg-green-600 text-white' 
-                    : 'bg-[#003366] text-white'
-                  } hover:opacity-90`}
+                    ? 'border-[3px] border-[#003366] text-[#003366] bg-white font-semibold' 
+                    : 'border border-gray-200 text-gray-600 bg-white'
+                  }`}
                 onClick={() => handleAddressSelect(address)}
               >
-                <p className="font-medium">{address.fullName}</p>
-                <p className="text-sm opacity-90">{address.street}{address.apartment && `, ${address.apartment}`}</p>
-                <p className="text-sm opacity-90">{address.city}, {address.state} {address.zipCode}</p>
-                <p className="text-sm opacity-90">{address.phone}</p>
+                <p className={`${selectedAddress === address ? 'font-bold' : 'font-medium'}`}>
+                  {address.fullName}
+                </p>
+                <p className="text-sm">{address.street}{address.apartment && `, ${address.apartment}`}</p>
+                <p className="text-sm">{address.city}, {address.state} {address.zipCode}</p>
+                <p className="text-sm">{formatPhoneNumber(address.phone)}</p>
               </div>
             ))}
             
@@ -123,7 +143,7 @@ export default function ShippingAddress({ onAddressSelect }) {
             {addresses.length < 5 && !showNewAddressForm && (
               <button
                 onClick={() => setShowNewAddressForm(true)}
-                className="flex-shrink-0 w-64 h-full bg-[#003366] text-white rounded-lg p-4 hover:opacity-90 flex items-center justify-center"
+                className="flex-shrink-0 w-64 h-full bg-white text-gray-600 rounded-lg p-4 flex items-center justify-center border-2 border-dashed border-gray-200"
               >
                 <div className="text-center">
                   <span className="block text-2xl">+</span>
@@ -136,7 +156,7 @@ export default function ShippingAddress({ onAddressSelect }) {
           {addresses.length > 3 && !showAll && (
             <button 
               onClick={() => setShowAll(true)}
-              className="text-[#003366] hover:text-opacity-80"
+              className="text-[#289d44] hover:text-opacity-80 font-medium"
             >
               Show More Addresses
             </button>
@@ -148,7 +168,7 @@ export default function ShippingAddress({ onAddressSelect }) {
       {addresses.length === 0 && !showNewAddressForm && (
         <button
           onClick={() => setShowNewAddressForm(true)}
-          className="w-full py-2 px-4 bg-[#003366] text-white rounded-md hover:opacity-90"
+          className="w-full py-2 px-4 bg-[#F3F4F6] text-[#003366] rounded-md hover:bg-gray-100"
         >
           + Add New Address
         </button>
@@ -218,17 +238,18 @@ export default function ShippingAddress({ onAddressSelect }) {
               <input
                 type="tel"
                 name="phone"
-                value={newAddress.phone}
+                value={formatPhoneNumber(newAddress.phone)}
                 onChange={handleInputChange}
                 placeholder="Phone Number"
                 required
                 className="w-full p-2 border rounded"
+                maxLength="14"
               />
 
               <div className="flex gap-4 mt-6">
                 <button
                   type="submit"
-                  className="flex-1 bg-[#003366] text-white py-2 px-4 rounded-md hover:opacity-90"
+                  className="flex-1 bg-[#289d44] text-white py-2 px-4 rounded-md hover:opacity-90"
                 >
                   Save Address
                 </button>

@@ -24,6 +24,9 @@ function CartContent() {
         message: ''
     });
 
+    const [showAllTimes, setShowAllTimes] = useState(false);
+    const initialTimeDisplay = 8; // Number of time slots to show initially
+
     const timeSlots = useMemo(() => {
         const slots = [];
         const start = 9 * 60 + 30;
@@ -161,7 +164,7 @@ function CartContent() {
                                 />
                                 <div className={`flex items-center p-3 rounded-lg transition-all ${
                                     deliveryOption === 'pickup' 
-                                        ? 'bg-blue-500 text-white' 
+                                        ? 'bg-[#289d44] text-white' 
                                         : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'
                                 }`}>
                                     <FaStore className="text-xl mr-2" />
@@ -182,7 +185,7 @@ function CartContent() {
                                 />
                                 <div className={`flex items-center p-3 rounded-lg transition-all ${
                                     deliveryOption === 'delivery' 
-                                        ? 'bg-blue-500 text-white' 
+                                        ? 'bg-[#289d44] text-white' 
                                         : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'
                                 }`}>
                                     <FaTruck className="text-xl mr-2" />
@@ -194,21 +197,39 @@ function CartContent() {
                         {/* Time Slots */}
                         <div className="mb-4">
                             <h3 className="font-semibold mb-2">Select Time:</h3>
-                            <select
-                                value={selectedTime}
-                                onChange={(e) => {
-                                    setSelectedTime(e.target.value);
-                                    setErrorState({ show: false, message: '' });
-                                }}
-                                className={`block w-full pl-10 pr-10 py-3 text-base 
-                                    ${errorState.show ? 'border-red-500 ring-2 ring-red-500' : 'border-gray-300'} 
-                                    rounded-lg`}
-                            >
-                                <option value="">Select a time slot</option>
-                                {timeSlots.map((time) => (
-                                    <option key={time} value={time}>{time}</option>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                                {timeSlots
+                                    .slice(0, showAllTimes ? timeSlots.length : initialTimeDisplay)
+                                    .map((time) => (
+                                        <button
+                                            key={time}
+                                            onClick={() => {
+                                                setSelectedTime(time);
+                                                setErrorState({ show: false, message: '' });
+                                            }}
+                                            className={`p-2 rounded-lg transition-colors ${
+                                                selectedTime === time 
+                                                    ? 'bg-[#289d44] text-white' 
+                                                    : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                                            }`}
+                                        >
+                                            {time}
+                                        </button>
                                 ))}
-                            </select>
+                            </div>
+                            
+                            {timeSlots.length > initialTimeDisplay && (
+                                <button
+                                    onClick={() => setShowAllTimes(!showAllTimes)}
+                                    className="mt-3 text-[#289d44] hover:text-[#1e7433] flex items-center justify-center w-full py-2 border border-[#289d44] rounded-lg"
+                                >
+                                    {showAllTimes ? (
+                                        <span>Show Less Times</span>
+                                    ) : (
+                                        <span>View More Times ({timeSlots.length - initialTimeDisplay} available)</span>
+                                    )}
+                                </button>
+                            )}
                             
                             {/* Error message */}
                             {errorState.show && (
@@ -237,10 +258,18 @@ function CartContent() {
                         </div>
                     </div>
 
-                    <div className="mt-6 flex justify-end">
+                    <div className="mt-6 flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
+                        <Link 
+                            href="/"
+                            className="w-full sm:w-auto text-white px-6 py-2 rounded hover:opacity-90 transition-opacity text-center"
+                            style={{ backgroundColor: '#003366' }}
+                        >
+                            Continue Shopping
+                        </Link>
+                        
                         <button
                             onClick={handleCheckout}
-                            className="text-white px-6 py-2 rounded hover:opacity-90 transition-opacity"
+                            className="w-full sm:w-auto text-white px-6 py-2 rounded hover:opacity-90 transition-opacity"
                             style={{ backgroundColor: '#003366' }}
                         >
                             Proceed to Checkout
