@@ -1,6 +1,7 @@
 // src/app/layout.js
 "use client";
 
+import { Suspense } from "react";
 import { SessionProvider } from "next-auth/react";
 import { CartProvider } from "../context/CartContext";
 import { Toaster } from 'react-hot-toast';
@@ -66,7 +67,13 @@ export default function RootLayout({ children }) {
             <VivaBucksProgress />
             <main className="px-6 pb-6 min-h-screen">
               <div className="container mx-auto">
-                {children}
+                <Suspense fallback={
+                  <div className="min-h-screen flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-gray-900"></div>
+                  </div>
+                }>
+                  {children}
+                </Suspense>
               </div>
             </main>
           </div>

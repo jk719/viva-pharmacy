@@ -1,11 +1,11 @@
 'use client';
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { PasswordStrengthIndicator } from '@/components/auth';
 import toast from 'react-hot-toast';
 
-export default function Register() {
+function RegisterContent() {
   const router = useRouter();
   const [formData, setFormData] = useState({
     email: '',
@@ -33,14 +33,14 @@ export default function Register() {
         toast.success(
           '✨ Account created successfully!\n✉️ Please check your email to verify your account.', 
           {
-            duration: 6000,  // Slightly longer duration for this important message
+            duration: 6000,
             style: {
-              background: '#003366',  // Matches your existing theme
+              background: '#003366',
               color: '#fff',
               padding: '16px',
               borderRadius: '8px',
-              maxWidth: '500px',  // Wider toast for this message
-              whiteSpace: 'pre-line'  // Allows line breaks in the message
+              maxWidth: '500px',
+              whiteSpace: 'pre-line'
             },
           }
         );
@@ -127,5 +127,27 @@ export default function Register() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Register() {
+  return (
+    <Suspense 
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-48 mb-4"></div>
+            <div className="space-y-4">
+              <div className="h-10 bg-gray-200 rounded"></div>
+              <div className="h-10 bg-gray-200 rounded"></div>
+              <div className="h-10 bg-gray-200 rounded"></div>
+              <div className="h-10 bg-gray-200 rounded"></div>
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <RegisterContent />
+    </Suspense>
   );
 }

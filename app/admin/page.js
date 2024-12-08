@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 
-export default function AdminPage() {
+function AdminContent() {
     const { data: session, status } = useSession();
     const router = useRouter();
     const [product, setProduct] = useState({
@@ -193,5 +193,19 @@ export default function AdminPage() {
                 </button>
             </form>
         </div>
+    );
+}
+
+export default function AdminPage() {
+    return (
+        <Suspense 
+            fallback={
+                <div className="min-h-screen flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-gray-900"></div>
+                </div>
+            }
+        >
+            <AdminContent />
+        </Suspense>
     );
 }

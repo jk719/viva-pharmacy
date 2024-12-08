@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useCart } from '@/context/CartContext';
 import PaymentForm from '@/components/checkout/PaymentForm';
 import Image from 'next/image';
@@ -8,7 +8,7 @@ import { STATES, calculateTax, formatTaxRate, getTaxRate, hasRegions, getRegions
 import ShippingAddress from '@/components/checkout/ShippingAddress';
 import { useSession } from 'next-auth/react';
 
-export default function CheckoutPage() {
+function CheckoutContent() {
   const { items = [], loading, deliveryOption } = useCart();
   const [error, setError] = useState(null);
   const [cartTotal, setCartTotal] = useState(0);
@@ -159,11 +159,32 @@ export default function CheckoutPage() {
         <div className="mt-8">
           <PaymentForm 
             amount={cartTotal} 
-            items={items} // Pass cart items to PaymentForm
+            items={items}
             shippingAddress={shippingAddress} 
           />
         </div>
       )}
     </div>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense 
+      fallback={
+        <div className="container mx-auto px-4 py-8">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-48 mb-4"></div>
+            <div className="space-y-4">
+              <div className="h-32 bg-gray-200 rounded"></div>
+              <div className="h-24 bg-gray-200 rounded"></div>
+              <div className="h-48 bg-gray-200 rounded"></div>
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <CheckoutContent />
+    </Suspense>
   );
 }

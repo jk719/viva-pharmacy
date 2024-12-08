@@ -1,10 +1,11 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useEffect } from 'react';
 import { useCart } from '@/context/CartContext';
 import { useRouter } from 'next/navigation';
 
-export default function SuccessPage() {
+function SuccessContent() {
   const { clearCart } = useCart();
   const router = useRouter();
 
@@ -30,5 +31,19 @@ export default function SuccessPage() {
         </button>
       </div>
     </div>
+  );
+}
+
+export default function SuccessPage() {
+  return (
+    <Suspense 
+      fallback={
+        <div className="container mx-auto px-4 py-8 text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-gray-900 mx-auto"></div>
+        </div>
+      }
+    >
+      <SuccessContent />
+    </Suspense>
   );
 }

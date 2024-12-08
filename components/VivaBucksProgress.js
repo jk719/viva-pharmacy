@@ -1,10 +1,12 @@
+"use client";
+
 import { useSession } from "next-auth/react";
 import { FaGift } from "react-icons/fa";
 import { BsCoin } from "react-icons/bs";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from 'next/navigation';
 
-export default function VivaBucksProgress() {
+function VivaBucksContent() {
   const { data: session } = useSession();
   const [vivaBucks, setVivaBucks] = useState(0);
   const [previousVivaBucks, setPreviousVivaBucks] = useState(0);
@@ -137,5 +139,23 @@ export default function VivaBucksProgress() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function VivaBucksProgress() {
+  return (
+    <Suspense 
+      fallback={
+        <div className="fixed w-full top-[180px] md:top-[64px] z-40 bg-white">
+          <div className="mx-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-2 md:p-2.5 border border-blue-100">
+            <div className="animate-pulse flex justify-center items-center h-8">
+              <div className="h-2 w-32 bg-gray-200 rounded"></div>
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <VivaBucksContent />
+    </Suspense>
   );
 } 
