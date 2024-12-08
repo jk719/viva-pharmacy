@@ -121,6 +121,8 @@ const userSchema = new mongoose.Schema({
 
 // Update timestamps
 userSchema.pre('save', function(next) {
+  console.log('🔵 Pre-save middleware triggered for user:', this.email);
+  console.log('📝 Updated fields:', this.modifiedPaths());
   this.updatedAt = new Date();
   console.log('Saving user with verification token:', this.verificationToken);
   next();
@@ -226,6 +228,13 @@ userSchema.methods.setDefaultAddress = async function(addressId) {
   }
   return false;
 };
+
+// Add logging to findOneAndUpdate
+userSchema.pre('findOneAndUpdate', function() {
+  console.log('🔵 Update operation triggered');
+  console.log('📝 Update query:', JSON.stringify(this.getQuery(), null, 2));
+  console.log('📝 Update data:', JSON.stringify(this.getUpdate(), null, 2));
+});
 
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 export default User;

@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { toast } from 'react-hot-toast';
 
 function formatPhoneNumber(value) {
+  if (!value) return '';
   const phoneNumber = value.replace(/\D/g, '');
   if (phoneNumber.length <= 3) {
     return phoneNumber;
@@ -14,21 +16,48 @@ function formatPhoneNumber(value) {
   }
 }
 
-function ProfileInfo({ user }) {
+function ProfileInfo({ user: initialUser }) {
   const [editMode, setEditMode] = useState(false);
   const { data: session, update } = useSession();
   const [formData, setFormData] = useState({
-    firstName: user.firstName || '',
-    lastName: user.lastName || '',
-    email: user.email || '',
-    phone: user.phone || '',
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
     address: {
-      street: user.address?.street || '',
-      city: user.address?.city || '',
-      state: user.address?.state || '',
-      zipCode: user.address?.zipCode || ''
+      street: '',
+      city: '',
+      state: '',
+      zipCode: ''
     }
   });
+
+  useEffect(() => {
+    // Find the default address
+    const defaultAddress = initialUser?.addresses?.find(addr => addr.isDefault) || initialUser?.addresses?.[0];
+    
+    if (defaultAddress) {
+      const [firstName, lastName] = (defaultAddress.fullName || '').split(' ');
+      setFormData({
+        firstName: firstName || '',
+        lastName: lastName || '',
+        email: initialUser.email || '',
+        phone: formatPhoneNumber(defaultAddress.phone) || initialUser.phoneNumber || '',
+        address: {
+          street: defaultAddress.street || '',
+          city: defaultAddress.city || '',
+          state: defaultAddress.state || '',
+          zipCode: defaultAddress.zipCode || ''
+        }
+      });
+    } else {
+      // If no address exists, just set the email
+      setFormData(prev => ({
+        ...prev,
+        email: initialUser.email || ''
+      }));
+    }
+  }, [initialUser]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -59,7 +88,13 @@ function ProfileInfo({ user }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('🔵 Starting profile update submission');
+    console.log('📝 Form data:', JSON.stringify(formData, null, 2));
+    
+    const loadingToast = toast.loading('Updating profile...');
+    
     try {
+      console.log('🔄 Sending update request to server');
       const response = await fetch('/api/user/profile', {
         method: 'PUT',
         headers: {
@@ -68,18 +103,32 @@ function ProfileInfo({ user }) {
         body: JSON.stringify(formData),
       });
 
-      if (response.ok) {
-        setEditMode(false);
-        await update({
-          ...session,
-          user: {
-            ...session.user,
-            ...formData
-          }
-        });
+      const data = await response.json();
+      console.log('📥 Server response:', JSON.stringify(data, null, 2));
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update profile');
       }
+
+      console.log('🔄 Updating session');
+      await update({
+        ...session,
+        user: {
+          ...session.user,
+          ...formData
+        }
+      });
+      console.log('✅ Session updated successfully');
+
+      toast.dismiss(loadingToast);
+      toast.success('Profile updated successfully!');
+      setEditMode(false);
+      
+      console.log('✅ Profile update completed successfully');
     } catch (error) {
-      console.error('Error updating profile:', error);
+      console.error('❌ Error in profile update:', error);
+      toast.dismiss(loadingToast);
+      toast.error(error.message || 'Failed to update profile');
     }
   };
 

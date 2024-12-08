@@ -124,6 +124,23 @@ export default function RootLayout({ children }) {
             </div>
           </footer>
         </Providers>
+        <Toaster 
+          position="top-right"
+          toastOptions={{
+            duration: 3000,
+            style: {
+              background: '#363636',
+              color: '#fff',
+            },
+            success: {
+              duration: 3000,
+              theme: {
+                primary: '#4CAF50',
+                secondary: '#131313',
+              },
+            },
+          }}
+        />
       </body>
     </html>
   );

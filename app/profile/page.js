@@ -1,13 +1,32 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ProfileInfo from '@/components/profile/ProfileInfo';
 import OrderHistory from '@/components/profile/OrderHistory';
 
 export default function ProfilePage() {
   const { data: session } = useSession();
   const [activeTab, setActiveTab] = useState('info');
+  const [userData, setUserData] = useState(null);
+
+  useEffect(() => {
+    async function fetchUserData() {
+      if (session?.user?.email) {
+        try {
+          const response = await fetch('/api/user/profile');
+          if (response.ok) {
+            const data = await response.json();
+            setUserData(data);
+          }
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+        }
+      }
+    }
+
+    fetchUserData();
+  }, [session]);
 
   if (!session) {
     return (
@@ -25,7 +44,7 @@ export default function ProfilePage() {
         {/* Welcome Section */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-[#003366] mb-2">
-            Welcome, {session.user.firstName || session.user.email}
+            Welcome, {userData?.firstName || session.user.email}
           </h1>
           <p className="text-[#4d6580]">Manage your account and view your orders</p>
         </div>
@@ -89,7 +108,7 @@ export default function ProfilePage() {
         {/* Content */}
         <div className="bg-white rounded-xl shadow-lg p-6 border border-[#e6eef5]">
           <div className={`transition-opacity duration-200 ${activeTab === 'info' ? 'opacity-100' : 'opacity-0 hidden'}`}>
-            <ProfileInfo user={session.user} />
+            <ProfileInfo user={userData || session.user} />
           </div>
           <div className={`transition-opacity duration-200 ${activeTab === 'orders' ? 'opacity-100' : 'opacity-0 hidden'}`}>
             <OrderHistory userId={session.user.id} />
