@@ -3,7 +3,6 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import dbConnect from '@/lib/dbConnect';
 import User from '@/models/User';
 import { comparePasswords, AUTH_ERRORS } from '@/lib/auth';
-import { getBaseUrl } from '@/lib/env';
 
 export const authOptions = {
   providers: [
@@ -14,6 +13,10 @@ export const authOptions = {
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error(AUTH_ERRORS.INVALID_CREDENTIALS);
+        }
+
         try {
           await dbConnect();
           const user = await User.findOne({ email: credentials.email.toLowerCase() });
@@ -28,90 +31,53 @@ export const authOptions = {
           }
 
           return {
-            id: user._id,
+            id: user._id.toString(),
             email: user.email,
             role: user.role,
             isVerified: user.isVerified
           };
         } catch (error) {
-          throw new Error(error.message || AUTH_ERRORS.SERVER_ERROR);
+          console.error('Authorization error:', error);
+          throw error;
         }
       }
     })
   ],
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
   callbacks: {
-    async jwt({ token, user, trigger, session }) {
-      if (trigger === 'update') {
-        const updatedUser = await User.findOne({ email: token.email });
-        if (updatedUser) {
-          token.isVerified = updatedUser.isVerified;
-          token.role = updatedUser.role;
-        }
-      }
+    async jwt({ token, user }) {
       if (user) {
+        token.id = user.id;
         token.role = user.role;
         token.isVerified = user.isVerified;
       }
       return token;
     },
     async session({ session, token }) {
-      await dbConnect();
-      const user = await User.findOne({ email: session.user.email });
-      if (user) {
-        session.user.id = user._id.toString();
+      if (session?.user) {
+        session.user.id = token.id;
         session.user.role = token.role;
         session.user.isVerified = token.isVerified;
       }
       return session;
-    },
-    async redirect({ url, baseUrl }) {
-      const currentBaseUrl = getBaseUrl();
-      return url.startsWith(currentBaseUrl) ? url : currentBaseUrl;
-    },
-    async signOut({ token, session }) {
-      return true;
-    },
+    }
   },
   pages: {
     signIn: '/login',
-    signOut: '/',
     error: '/auth/error',
-    verifyRequest: '/auth/verify-request',
   },
-  session: {
-    strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-  },
-  useSecureCookies: process.env.NODE_ENV === 'production',
-  cookies: {
-    sessionToken: {
-      name: `${process.env.NODE_ENV === 'production' ? '__Secure-' : ''}next-auth.session-token`,
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: process.env.NODE_ENV === 'production'
-      }
-    },
-    callbackUrl: {
-      name: `${process.env.NODE_ENV === 'production' ? '__Secure-' : ''}next-auth.callback-url`,
-      options: {
-        sameSite: 'lax',
-        path: '/',
-        secure: process.env.NODE_ENV === 'production'
-      }
-    },
-    csrfToken: {
-      name: `${process.env.NODE_ENV === 'production' ? '__Host-' : ''}next-auth.csrf-token`,
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: process.env.NODE_ENV === 'production'
-      }
-    }
-  }
+  secret: process.env.NEXTAUTH_SECRET,
+  debug: process.env.NODE_ENV === 'development',
 };
 
 const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
+
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};

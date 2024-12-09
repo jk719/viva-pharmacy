@@ -116,6 +116,23 @@ const userSchema = new mongoose.Schema({
   rewardPoints: { 
     type: Number, 
     default: 0 
+  },
+  cumulativePoints: {  // New field for tier tracking
+    type: Number,
+    default: 0
+  },
+  currentTier: {
+    type: String,
+    enum: ['Standard', 'Silver', 'Gold', 'Platinum', 'Sapphire', 'Diamond', 'Legend'],
+    default: 'Standard'
+  },
+  pointsMultiplier: {
+    type: Number,
+    default: 1
+  },
+  nextRewardMilestone: {
+    type: Number,
+    default: 100  // First milestone
   }
 });
 
@@ -235,6 +252,107 @@ userSchema.pre('findOneAndUpdate', function() {
   console.log('📝 Update query:', JSON.stringify(this.getQuery(), null, 2));
   console.log('📝 Update data:', JSON.stringify(this.getUpdate(), null, 2));
 });
+
+// Add new methods for the rewards system
+userSchema.methods.calculateTier = function() {
+  if (this.cumulativePoints >= 10000) {
+    this.currentTier = 'Legend';
+    this.pointsMultiplier = 2.5;
+  } else if (this.cumulativePoints >= 8000) {
+    this.currentTier = 'Diamond';
+    this.pointsMultiplier = 2.25;
+  } else if (this.cumulativePoints >= 6000) {
+    this.currentTier = 'Sapphire';
+    this.pointsMultiplier = 2.0;
+  } else if (this.cumulativePoints >= 4000) {
+    this.currentTier = 'Platinum';
+    this.pointsMultiplier = 1.75;
+  } else if (this.cumulativePoints >= 2000) {
+    this.currentTier = 'Gold';
+    this.pointsMultiplier = 1.5;
+  } else if (this.cumulativePoints >= 1000) {
+    this.currentTier = 'Silver';
+    this.pointsMultiplier = 1.25;
+  } else {
+    this.currentTier = 'Standard';
+    this.pointsMultiplier = 1;
+  }
+};
+
+userSchema.methods.calculateNextReward = function() {
+  const milestones = [100, 200, 400, 600, 800, 1000];
+  for (const milestone of milestones) {
+    if (this.rewardPoints < milestone) {
+      this.nextRewardMilestone = milestone;
+      break;
+    }
+  }
+};
+
+userSchema.methods.getRewardAmount = function() {
+  const rewardTiers = {
+    100: 5,
+    200: 15,
+    400: 30,
+    600: 50,
+    800: 75,
+    1000: 100
+  };
+  return rewardTiers[this.nextRewardMilestone] || 0;
+};
+
+userSchema.methods.addPoints = async function(points) {
+  try {
+    console.log('🎯 Adding points:', points);
+    
+    // Apply tier multiplier to points
+    const adjustedPoints = Math.floor(points * this.pointsMultiplier);
+    console.log('✨ Adjusted points with multiplier:', adjustedPoints);
+    
+    // Update reward points and cumulative points
+    this.rewardPoints += adjustedPoints;
+    this.cumulativePoints += adjustedPoints;
+    
+    console.log('📊 Current reward points:', this.rewardPoints);
+    console.log('📈 Current cumulative points:', this.cumulativePoints);
+    
+    // Check if milestone reached
+    if (this.rewardPoints >= this.nextRewardMilestone) {
+      const rewardAmount = this.getRewardAmount();
+      this.vivaBucks += rewardAmount;
+      console.log('🎉 Milestone reached! Added VivaBucks:', rewardAmount);
+      
+      // Add bonus points if reaching 1000 milestone
+      if (this.nextRewardMilestone === 1000) {
+        this.rewardPoints = 100; // Bonus points
+        console.log('🌟 1000 milestone bonus: 100 points');
+      } else {
+        this.rewardPoints = 0; // Reset progress
+        console.log('🔄 Progress reset');
+      }
+    }
+    
+    // Recalculate tier and next milestone
+    this.calculateTier();
+    this.calculateNextReward();
+    
+    console.log('👑 Current tier:', this.currentTier);
+    console.log('🎯 Next milestone:', this.nextRewardMilestone);
+    
+    await this.save();
+    return {
+      adjustedPoints,
+      vivaBucks: this.vivaBucks,
+      rewardPoints: this.rewardPoints,
+      currentTier: this.currentTier,
+      nextMilestone: this.nextRewardMilestone,
+      multiplier: this.pointsMultiplier
+    };
+  } catch (error) {
+    console.error('❌ Error adding points:', error);
+    throw error;
+  }
+};
 
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 export default User;

@@ -2,58 +2,13 @@
 "use client";
 
 import { Suspense } from "react";
-import { SessionProvider } from "next-auth/react";
-import { CartProvider } from "../context/CartContext";
-import { Toaster } from 'react-hot-toast';
 import Navbar from "../components/Navbar";
 import VivaBucksProgress from '@/components/VivaBucksProgress';
 import Image from "next/image";
 import { FaInstagram, FaFacebook, FaTiktok } from "react-icons/fa";
+import { Providers } from './providers';
 import "./globals.css";
 
-// Create a client component wrapper for providers
-function Providers({ children }) {
-  return (
-    <SessionProvider>
-      <CartProvider>
-        {children}
-        <Toaster
-          position="top-center"
-          containerStyle={{
-            top: '80px',
-            zIndex: 10000
-          }}
-          toastOptions={{
-            duration: 5000,
-            style: {
-              background: '#003366',
-              color: '#fff',
-              padding: '16px',
-              fontSize: '16px',
-              maxWidth: '90vw',
-              textAlign: 'center',
-              zIndex: 10000,
-            },
-            success: {
-              iconTheme: {
-                primary: 'white',
-                secondary: '#003366',
-              },
-            },
-            error: {
-              iconTheme: {
-                primary: 'white',
-                secondary: '#003366',
-              },
-            },
-          }}
-        />
-      </CartProvider>
-    </SessionProvider>
-  );
-}
-
-// Main layout component
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
@@ -124,23 +79,6 @@ export default function RootLayout({ children }) {
             </div>
           </footer>
         </Providers>
-        <Toaster 
-          position="top-right"
-          toastOptions={{
-            duration: 3000,
-            style: {
-              background: '#363636',
-              color: '#fff',
-            },
-            success: {
-              duration: 3000,
-              theme: {
-                primary: '#4CAF50',
-                secondary: '#131313',
-              },
-            },
-          }}
-        />
       </body>
     </html>
   );
