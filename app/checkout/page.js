@@ -1,21 +1,49 @@
 "use client";
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, Suspense, useMemo } from 'react';
 import { useCart } from '@/context/CartContext';
 import PaymentForm from '@/components/checkout/PaymentForm';
 import Image from 'next/image';
 import { calculateTax, formatTaxRate, getTaxRate } from '@/lib/tax/taxRates';
 import ShippingAddress from '@/components/checkout/ShippingAddress';
 import { useSession } from 'next-auth/react';
+import { FaClock } from 'react-icons/fa';
 
 function CheckoutContent() {
-  const { items = [], loading, deliveryOption } = useCart();
+  const { 
+    items = [], 
+    loading, 
+    deliveryOption,
+    selectedTime,
+    setSelectedTime 
+  } = useCart();
   const [error, setError] = useState(null);
   const [cartTotal, setCartTotal] = useState(0);
   const [subtotal, setSubtotal] = useState(0);
   const [tax, setTax] = useState(0);
   const [shippingAddress, setShippingAddress] = useState(null);
+  const [deliveryMethod, setDeliveryMethod] = useState('delivery');
   const { data: session } = useSession();
+  const [showAllTimes, setShowAllTimes] = useState(false);
+  const initialTimeDisplay = 8;
+
+  // Add timeSlots calculation
+  const timeSlots = useMemo(() => {
+    const slots = [];
+    const start = 9 * 60 + 30;
+    const end = 19 * 60 + 55;
+    const interval = deliveryMethod === 'pickup' ? 15 : 60;
+
+    for (let mins = start; mins <= end; mins += interval) {
+      const hours = Math.floor(mins / 60);
+      const minutes = mins % 60;
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      const displayHours = hours > 12 ? hours - 12 : hours;
+      const timeString = `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+      slots.push(timeString);
+    }
+    return slots;
+  }, [deliveryMethod]);
 
   useEffect(() => {
     if (!loading) {
@@ -60,6 +88,66 @@ function CheckoutContent() {
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold mb-4">Checkout</h1>
       
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold mb-4">Delivery Method</h2>
+        <div className="flex gap-4">
+          <button
+            onClick={() => setDeliveryMethod('delivery')}
+            className={`flex-1 py-4 px-6 rounded-lg border-2 transition-all ${
+              deliveryMethod === 'delivery'
+                ? 'border-[#289d44] bg-[#289d44] text-white'
+                : 'border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            <div className="font-semibold mb-1">Home Delivery</div>
+            <div className="text-sm text-gray-600">Delivered to your address</div>
+          </button>
+          
+          <button
+            onClick={() => setDeliveryMethod('pickup')}
+            className={`flex-1 py-4 px-6 rounded-lg border-2 transition-all ${
+              deliveryMethod === 'pickup'
+                ? 'border-[#289d44] bg-[#289d44] text-white'
+                : 'border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            <div className="font-semibold mb-1">Store Pickup</div>
+            <div className="text-sm text-gray-600">Pick up at our location</div>
+          </button>
+        </div>
+      </div>
+
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold mb-2">Select Time</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {timeSlots
+            .slice(0, showAllTimes ? timeSlots.length : initialTimeDisplay)
+            .map((time) => (
+              <button
+                key={time}
+                onClick={() => setSelectedTime(time)}
+                className={`p-2 rounded-lg transition-colors flex items-center justify-center gap-2 ${
+                  selectedTime === time 
+                    ? 'bg-[#289d44] text-white' 
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                }`}
+              >
+                <FaClock className="text-sm" />
+                {time}
+              </button>
+          ))}
+        </div>
+        
+        {timeSlots.length > initialTimeDisplay && (
+          <button
+            onClick={() => setShowAllTimes(!showAllTimes)}
+            className="mt-3 text-[#289d44] hover:text-[#1e7433] flex items-center justify-center w-full py-2 border border-[#289d44] rounded-lg"
+          >
+            {showAllTimes ? 'Show Less Times' : `View More Times (${timeSlots.length - initialTimeDisplay} available)`}
+          </button>
+        )}
+      </div>
+
       <div className="mb-8">
         <h2 className="text-xl font-semibold mb-2">Order Summary</h2>
         <div className="border rounded-lg shadow-sm">
@@ -109,14 +197,21 @@ function CheckoutContent() {
         </div>
       </div>
 
-      <ShippingAddress onAddressSelect={setShippingAddress} />
+      {deliveryMethod === 'delivery' && (
+        <ShippingAddress onAddressSelect={setShippingAddress} />
+      )}
 
-      {shippingAddress && cartTotal > 0 && (
+      {((deliveryMethod === 'delivery' && shippingAddress) || 
+         deliveryMethod === 'pickup') && 
+       selectedTime && 
+       cartTotal > 0 && (
         <div className="mt-8">
           <PaymentForm 
             amount={cartTotal} 
             items={items}
-            shippingAddress={shippingAddress} 
+            shippingAddress={deliveryMethod === 'delivery' ? shippingAddress : null}
+            deliveryMethod={deliveryMethod}
+            selectedTime={selectedTime}
           />
         </div>
       )}
