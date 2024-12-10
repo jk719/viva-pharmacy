@@ -22,12 +22,7 @@ body {
   font-family: 'Helvetica Neue', Arial, sans-serif;
 }
 
-/* Main content padding to prevent overlap with fixed navbar */
-.main-content {
-  padding-top: 5rem;
-}
-
-/* Navbar styling */
+/* Update navbar styling to match our new structure */
 nav {
   background-color: var(--primary-color);
   color: white;
@@ -127,14 +122,10 @@ nav img {
   }
 }
 
-/* Sticky filter section styling */
-.sticky-filter {
-  position: sticky;
-  top: 5rem;
-  z-index: 40;
+/* Add new styles for our fixed components */
+.fixed-header-stack > * {
   background-color: var(--background);
-  padding: 1rem;
-  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 /* Adjust styling for the category select dropdown */
@@ -150,10 +141,6 @@ nav img {
 }
 
 @media (max-width: 768px) {
-  .sticky-filter {
-    padding: 1rem 1.5rem; /* Add extra padding on mobile for better alignment */
-  }
-
   #category {
     margin-top: 0.5rem;
   }

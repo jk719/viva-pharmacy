@@ -54,6 +54,26 @@ const addressSchema = new mongoose.Schema({
   }
 });
 
+// Add new schema for reward history
+const rewardHistorySchema = new mongoose.Schema({
+  amount: {
+    type: Number,
+    required: true
+  },
+  pointsUsed: {
+    type: Number,
+    required: true
+  },
+  redeemedAt: {
+    type: Date,
+    default: Date.now
+  },
+  tier: {
+    type: String,
+    required: true
+  }
+});
+
 const userSchema = new mongoose.Schema({
   email: {
     type: String,
@@ -109,21 +129,22 @@ const userSchema = new mongoose.Schema({
   verificationToken: String,
   // Add addresses array
   addresses: [addressSchema],
-  vivaBucks: { 
-    type: Number, 
-    default: 0 
+  // Add reward history to user schema
+  rewardHistory: [rewardHistorySchema],
+  vivaBucks: {
+    type: Number,
+    default: 0
   },
-  rewardPoints: { 
-    type: Number, 
-    default: 0 
+  rewardPoints: {
+    type: Number,
+    default: 0
   },
-  cumulativePoints: {  // New field for tier tracking
+  cumulativePoints: {
     type: Number,
     default: 0
   },
   currentTier: {
     type: String,
-    enum: ['Standard', 'Silver', 'Gold', 'Platinum', 'Sapphire', 'Diamond', 'Legend'],
     default: 'Standard'
   },
   pointsMultiplier: {
@@ -287,6 +308,10 @@ userSchema.methods.calculateNextReward = function() {
       break;
     }
   }
+  // If points exceed all milestones, set next milestone to 1000
+  if (this.rewardPoints >= 1000) {
+    this.nextRewardMilestone = 1000;
+  }
 };
 
 userSchema.methods.getRewardAmount = function() {
@@ -316,23 +341,7 @@ userSchema.methods.addPoints = async function(points) {
     console.log('📊 Current reward points:', this.rewardPoints);
     console.log('📈 Current cumulative points:', this.cumulativePoints);
     
-    // Check if milestone reached
-    if (this.rewardPoints >= this.nextRewardMilestone) {
-      const rewardAmount = this.getRewardAmount();
-      this.vivaBucks += rewardAmount;
-      console.log('🎉 Milestone reached! Added VivaBucks:', rewardAmount);
-      
-      // Add bonus points if reaching 1000 milestone
-      if (this.nextRewardMilestone === 1000) {
-        this.rewardPoints = 100; // Bonus points
-        console.log('🌟 1000 milestone bonus: 100 points');
-      } else {
-        this.rewardPoints = 0; // Reset progress
-        console.log('🔄 Progress reset');
-      }
-    }
-    
-    // Recalculate tier and next milestone
+    // Only recalculate tier (no automatic redemption)
     this.calculateTier();
     this.calculateNextReward();
     
@@ -350,6 +359,63 @@ userSchema.methods.addPoints = async function(points) {
     };
   } catch (error) {
     console.error('❌ Error adding points:', error);
+    throw error;
+  }
+};
+
+// Modify redeemReward to handle specific milestone redemptions
+userSchema.methods.redeemReward = async function() {
+  try {
+    const milestones = [100, 200, 400, 600, 800, 1000];
+    let rewardAmount = 0;
+    let reachedMilestone = 0;
+
+    // Find the highest milestone reached
+    for (const milestone of milestones) {
+      if (this.rewardPoints >= milestone) {
+        reachedMilestone = milestone;
+        rewardAmount = this.getRewardAmount();
+      }
+    }
+    
+    if (rewardAmount === 0) {
+      return {
+        success: false,
+        message: "No reward available to redeem"
+      };
+    }
+
+    // Add to reward history
+    this.rewardHistory.push({
+      amount: rewardAmount,
+      pointsUsed: reachedMilestone,
+      tier: this.currentTier
+    });
+
+    // Update VivaBucks and points
+    this.vivaBucks += rewardAmount;
+    
+    // Handle points after redemption
+    if (reachedMilestone === 1000) {
+      const overflow = this.rewardPoints - 1000;
+      this.rewardPoints = 100 + overflow; // Bonus points plus any overflow
+    } else {
+      this.rewardPoints -= reachedMilestone; // Only subtract the points used for redemption
+    }
+
+    // Recalculate next milestone
+    this.calculateNextReward();
+    
+    await this.save();
+
+    return {
+      success: true,
+      rewardAmount,
+      remainingPoints: this.rewardPoints,
+      message: `Successfully redeemed $${rewardAmount} for ${reachedMilestone} points`
+    };
+  } catch (error) {
+    console.error('❌ Error redeeming reward:', error);
     throw error;
   }
 };

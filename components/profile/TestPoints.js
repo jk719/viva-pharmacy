@@ -1,12 +1,23 @@
 'use client';
 
 import { useState } from 'react';
+import eventEmitter, { Events } from '@/lib/eventEmitter';
 
-export default function TestPoints() {
+// Add preset point values for common testing scenarios
+const PRESET_POINTS = [
+  { value: 100, label: '100 ($5)' },
+  { value: 200, label: '200 ($15)' },
+  { value: 400, label: '400 ($30)' },
+  { value: 600, label: '600 ($50)' },
+  { value: 800, label: '800 ($75)' },
+  { value: 1000, label: '1000 ($100)' }
+];
+
+export default function TestPoints({ onPointsAdded }) {
   const [points, setPoints] = useState(100);
   const [loading, setLoading] = useState(false);
 
-  const addTestPoints = async () => {
+  const handleAddPoints = async (points) => {
     setLoading(true);
     try {
       const response = await fetch('/api/user/vivabucks/test', {
@@ -14,16 +25,16 @@ export default function TestPoints() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ points: Number(points) }),
+        body: JSON.stringify({ points }),
       });
       
       if (response.ok) {
-        const data = await response.json();
-        console.log('Points added:', data);
-        window.location.reload(); // Refresh to see changes
+        onPointsAdded();
+        // Emit points updated event
+        eventEmitter.dispatchEvent(new Event(Events.POINTS_UPDATED));
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error adding test points:', error);
     } finally {
       setLoading(false);
     }
@@ -32,21 +43,61 @@ export default function TestPoints() {
   return (
     <div className="mt-4 p-4 bg-gray-50 rounded-lg">
       <h3 className="text-sm font-medium text-gray-700 mb-2">Test Points</h3>
+      
+      {/* Preset buttons */}
+      <div className="grid grid-cols-3 gap-2 mb-3">
+        {PRESET_POINTS.map(({ value, label }) => (
+          <button
+            key={value}
+            onClick={() => handleAddPoints(value)}
+            disabled={loading}
+            className="px-2 py-1 text-xs bg-white border border-gray-300 rounded-md 
+                     hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 
+                     focus:ring-offset-2 disabled:opacity-50"
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Custom points input */}
       <div className="flex gap-2">
-        <input
-          type="number"
-          value={points}
-          onChange={(e) => setPoints(e.target.value)}
-          className="px-3 py-2 border rounded-md w-24"
-        />
+        <div className="relative flex-1">
+          <input
+            type="number"
+            value={points}
+            onChange={(e) => setPoints(Math.max(0, parseInt(e.target.value) || 0))}
+            className="w-full px-3 py-2 border rounded-md focus:outline-none 
+                     focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Custom points"
+            min="0"
+          />
+        </div>
         <button
-          onClick={addTestPoints}
-          disabled={loading}
-          className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50"
+          onClick={() => handleAddPoints(points)}
+          disabled={loading || points <= 0}
+          className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 
+                   disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none 
+                   focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         >
-          {loading ? 'Adding...' : 'Add Points'}
+          {loading ? (
+            <span className="flex items-center">
+              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Adding...
+            </span>
+          ) : (
+            'Add Points'
+          )}
         </button>
       </div>
+
+      {/* Help text */}
+      <p className="mt-2 text-xs text-gray-500">
+        Use preset buttons for quick testing of reward tiers or enter a custom amount.
+      </p>
     </div>
   );
 } 

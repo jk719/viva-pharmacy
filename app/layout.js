@@ -3,11 +3,12 @@
 
 import { Suspense } from "react";
 import Navbar from "../components/Navbar";
-import VivaBucksProgress from '@/components/VivaBucksProgress';
 import Image from "next/image";
 import { FaInstagram, FaFacebook, FaTiktok } from "react-icons/fa";
 import { Providers } from './providers';
+import { Toaster } from 'react-hot-toast';
 import "./globals.css";
+import HeaderProgress from '@/components/HeaderProgress';
 
 export default function RootLayout({ children }) {
   return (
@@ -18,8 +19,8 @@ export default function RootLayout({ children }) {
       <body className="bg-white text-primary-color">
         <Providers>
           <Navbar />
-          <div className="pt-[80px] md:pt-[64px]">
-            <VivaBucksProgress />
+          <HeaderProgress />
+          <div className="pt-[280px] md:pt-[180px]">
             <main className="px-6 pb-6 min-h-screen">
               <div className="container mx-auto">
                 <Suspense fallback={
@@ -78,6 +79,28 @@ export default function RootLayout({ children }) {
               </div>
             </div>
           </footer>
+          <Toaster 
+            position="top-right"
+            toastOptions={{
+              duration: 3000,
+              style: {
+                background: '#363636',
+                color: '#fff',
+              },
+              success: {
+                duration: 3000,
+                theme: {
+                  primary: '#4CAF50',
+                }
+              },
+              error: {
+                duration: 4000,
+                theme: {
+                  primary: '#E57373',
+                }
+              }
+            }}
+          />
         </Providers>
       </body>
     </html>

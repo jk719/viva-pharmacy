@@ -13,6 +13,23 @@ module.exports = {
         primaryBlue: '#0B61C6',    // Blue for banner
         primaryText: '#2E2E2E',    // Dark grey for text
         backgroundGray: '#F5F5F5', // Light gray background for sections
+        primary: {
+          DEFAULT: '#003366',  // Add this to match your CSS variables
+        }
+      },
+      spacing: {
+        'navbar': '64px',
+        'header-stack': {
+          sm: '100px',
+          md: '150px',
+          lg: '200px',
+        }
+      },
+      zIndex: {
+        'navbar': '50',
+        'verification': '35',
+        'progress': '40',
+        'filter': '30',
       },
       keyframes: {
         slideDown: {

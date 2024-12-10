@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import ClientCartIcon from "./ClientCartIcon";
 import { AuthButtons } from "./auth";
-import { VerificationReminder } from "./auth";
+import VerificationAlert from "./VerificationAlert";
 import { useState } from "react";
 import products from "../data/products";
 import { useRouter } from "next/navigation";
@@ -116,10 +116,7 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* Reduced margin */}
-      <div className="mt-[120px] md:mt-[64px]">
-        <VerificationReminder />
-      </div>
+      <VerificationAlert />
     </>
   );
 }

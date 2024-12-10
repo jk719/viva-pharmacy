@@ -35,6 +35,10 @@ export async function GET(request) {
       );
     }
 
+    console.log('Session user ID:', session.user.id);
+    console.log('Request user ID:', userId);
+    console.log('User found:', user ? user.email : 'No user found');
+
     return NextResponse.json({
       vivaBucks: user.vivaBucks || 0,
       rewardPoints: user.rewardPoints || 0,
