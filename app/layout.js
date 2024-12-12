@@ -20,7 +20,7 @@ export default function RootLayout({ children }) {
         <Providers>
           <Navbar />
           <HeaderProgress />
-          <div className="pt-[295px] md:pt-[225px]">
+          <div className="pt-[325px] md:pt-[225px]">
             <main className="px-6 pb-6 min-h-screen">
               <div className="container mx-auto">
                 <Suspense fallback={
