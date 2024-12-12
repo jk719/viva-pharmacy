@@ -59,18 +59,17 @@ export default function HeaderProgress() {
   const progress = (currentPoints / scale) * 100;
 
   return (
-    <div className="fixed w-full left-0 top-[180px] md:top-[80px] z-30 bg-white shadow-sm">
+    <div className="fixed w-full left-0 top-[175px] md:top-[65px] z-30 bg-white/80 backdrop-blur-md shadow-sm">
       <div className="w-full max-w-7xl mx-auto px-3 md:px-4 py-0.5">
         <motion.div 
           className="relative"
           layout
         >
-          {/* Points Display */}
           <Link href="/profile" className="block mb-2">
             <div className="flex justify-between items-center">
               <div className="flex items-center space-x-2">
                 <span className="text-2xl">🌟</span>
-                <span className="text-lg font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                <span className="text-lg font-semibold text-gray-800">
                   {currentPoints} Points
                 </span>
                 <span className="text-sm text-gray-600 ml-2">
@@ -83,10 +82,9 @@ export default function HeaderProgress() {
             </div>
           </Link>
 
-          {/* Progress Bar */}
           <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
             <motion.div
-              className="h-full bg-orange-500 rounded-full"
+              className="h-full bg-blue-500 rounded-full"
               initial={{ width: 0 }}
               animate={{ width: `${Math.min(progress, 100)}%` }}
               transition={{ 
@@ -96,12 +94,12 @@ export default function HeaderProgress() {
             />
           </div>
 
-          <div className="flex justify-between text-xs md:text-sm text-gray-500 mt-1">
+          <div className="flex justify-between text-xs md:text-sm text-gray-600 mt-1">
             <span>0p</span>
             <span>{scale}p</span>
           </div>
 
-          <div className="text-xs md:text-sm text-gray-500 mt-0.5 text-center">
+          <div className="text-xs md:text-sm text-gray-600 mt-0.5 text-center">
             {currentMilestone.points - currentPoints} points to next reward
           </div>
         </motion.div>
