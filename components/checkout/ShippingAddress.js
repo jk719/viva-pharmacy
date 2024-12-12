@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { FaMapMarkerAlt } from 'react-icons/fa';
 
 export default function ShippingAddress({ onAddressSelect }) {
   const { data: session } = useSession();
@@ -119,35 +120,68 @@ export default function ShippingAddress({ onAddressSelect }) {
       {addresses.length > 0 && (
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Saved Addresses</h3>
-          <div className="flex space-x-4 overflow-x-auto pb-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {displayedAddresses.map((address, index) => (
-              <div 
+              <button
                 key={index}
-                className={`flex-shrink-0 w-64 rounded-lg p-4 cursor-pointer
-                  ${selectedAddress === address 
-                    ? 'border-[3px] border-[#003366] text-[#003366] bg-white font-semibold' 
-                    : 'border border-gray-200 text-gray-600 bg-white'
-                  }`}
                 onClick={() => handleAddressSelect(address)}
+                className={`relative p-4 rounded-lg border transition-all text-left ${
+                  selectedAddress === address
+                    ? 'border-[#289d44] bg-white shadow-md'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
               >
-                <p className={`${selectedAddress === address ? 'font-bold' : 'font-medium'}`}>
-                  {address.fullName}
-                </p>
-                <p className="text-sm">{address.street}{address.apartment && `, ${address.apartment}`}</p>
-                <p className="text-sm">{address.city}, {address.state} {address.zipCode}</p>
-                <p className="text-sm">{formatPhoneNumber(address.phone)}</p>
-              </div>
+                <div className="flex items-center space-x-3">
+                  <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
+                    selectedAddress === address ? 'bg-[#289d44] text-white' : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    <FaMapMarkerAlt className="text-xl" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-semibold">{address.fullName}</div>
+                    <div className="text-sm text-gray-600">
+                      {address.street}{address.apartment && `, ${address.apartment}`}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {address.city}, {address.state} {address.zipCode}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {formatPhoneNumber(address.phone)}
+                    </div>
+                  </div>
+                  <div className={`w-5 h-5 rounded-full border-2 ${
+                    selectedAddress === address
+                      ? 'border-[#289d44] bg-[#289d44]'
+                      : 'border-gray-300'
+                  }`}>
+                    {selectedAddress === address && (
+                      <div className="w-full h-full relative">
+                        <div className="absolute inset-0 m-auto w-2 h-2 rounded-full bg-white"></div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {selectedAddress === address && (
+                  <div className="absolute -top-2 -right-2">
+                    <div className="bg-[#289d44] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                      ✓
+                    </div>
+                  </div>
+                )}
+              </button>
             ))}
             
             {/* Add New Address Card */}
             {addresses.length < 5 && !showNewAddressForm && (
               <button
                 onClick={() => setShowNewAddressForm(true)}
-                className="flex-shrink-0 w-64 h-full bg-white text-gray-600 rounded-lg p-4 flex items-center justify-center border-2 border-dashed border-gray-200"
+                className="relative p-4 rounded-lg border-2 border-dashed border-gray-200 hover:border-gray-300 transition-all flex items-center justify-center"
               >
                 <div className="text-center">
-                  <span className="block text-2xl">+</span>
-                  <span className="block text-sm">Add New Address</span>
+                  <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-2">
+                    <span className="text-2xl text-gray-600">+</span>
+                  </div>
+                  <span className="block text-sm text-gray-600">Add New Address</span>
                 </div>
               </button>
             )}
