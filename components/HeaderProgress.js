@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import eventEmitter, { Events } from '@/lib/eventEmitter';
+import Link from 'next/link';
 
 const MILESTONES = [
   { points: 100, amount: 5 },
@@ -58,22 +59,32 @@ export default function HeaderProgress() {
   const progress = (currentPoints / scale) * 100;
 
   return (
-    <div className="fixed w-full left-0 top-[180px] md:top-[80px] z-40 bg-white shadow-sm">
-      <div className="w-full max-w-7xl mx-auto px-3 md:px-4 py-2">
+    <div className="fixed w-full left-0 top-[180px] md:top-[80px] z-30 bg-white shadow-sm">
+      <div className="w-full max-w-7xl mx-auto px-3 md:px-4 py-0.5">
         <motion.div 
           className="relative"
           layout
         >
-          <div className="grid grid-cols-2 md:flex md:justify-between md:items-center gap-1 mb-1">
-            <div className="text-gray-600 text-xs md:text-sm">
-              Current Points: {currentPoints}
+          {/* Points Display */}
+          <Link href="/profile" className="block mb-2">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center space-x-2">
+                <span className="text-2xl">🌟</span>
+                <span className="text-lg font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                  {currentPoints} Points
+                </span>
+                <span className="text-sm text-gray-600 ml-2">
+                  ({rewardsData.currentTier})
+                </span>
+              </div>
+              <div className="text-sm text-gray-600">
+                ${currentMilestone.amount} at {currentMilestone.points}p
+              </div>
             </div>
-            <div className="text-gray-600 text-xs md:text-sm text-right">
-              ${currentMilestone.amount} at {currentMilestone.points}p
-            </div>
-          </div>
+          </Link>
 
-          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+          {/* Progress Bar */}
+          <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
             <motion.div
               className="h-full bg-orange-500 rounded-full"
               initial={{ width: 0 }}
@@ -85,12 +96,12 @@ export default function HeaderProgress() {
             />
           </div>
 
-          <div className="flex justify-between text-[10px] md:text-xs text-gray-500 mt-1">
+          <div className="flex justify-between text-xs md:text-sm text-gray-500 mt-1">
             <span>0p</span>
             <span>{scale}p</span>
           </div>
 
-          <div className="text-[10px] md:text-xs text-gray-500 mt-1 text-center">
+          <div className="text-xs md:text-sm text-gray-500 mt-0.5 text-center">
             {currentMilestone.points - currentPoints} points to next reward
           </div>
         </motion.div>

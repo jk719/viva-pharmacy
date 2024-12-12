@@ -1,117 +1,82 @@
+import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import Stripe from 'stripe';
 import dbConnect from '@/lib/dbConnect';
-import Order from '@/models/Order';
 import User from '@/models/User';
-import { NextResponse } from 'next/server';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+const WEBHOOK_SECRET = process.env.STRIPE_SIGNING_SECRET;
 
-export async function POST(req) {
-    console.log('Webhook received:', req.url);
-    
+export async function POST(request) {
     try {
-        await dbConnect();
-        
-        const body = await req.text();
-        const headersList = await headers();
-        const sig = headersList.get('stripe-signature');
-
-        console.log('Stripe signature:', sig);
-        console.log('Endpoint secret:', endpointSecret ? 'Present' : 'Missing');
+        const rawBody = await request.text();
+        const sig = headers().get('stripe-signature');
 
         let event;
-
         try {
-            event = stripe.webhooks.constructEvent(body, sig, endpointSecret);
-            console.log('Event constructed successfully:', event.type);
+            event = stripe.webhooks.constructEvent(rawBody, sig, WEBHOOK_SECRET);
         } catch (err) {
-            console.error('Webhook signature verification failed:', err.message);
+            console.error('❌ Webhook signature verification failed:', err.message);
             return NextResponse.json({ error: err.message }, { status: 400 });
         }
 
-        // Handle the event
+        console.log('✅ Webhook received:', event.type);
+
+        // ONLY handle payment_intent.succeeded
         if (event.type === 'payment_intent.succeeded') {
             const paymentIntent = event.data.object;
             
+            console.log('💳 Processing payment:', {
+                id: paymentIntent.id,
+                amount: paymentIntent.amount,
+                metadata: paymentIntent.metadata
+            });
+
+            const amountInDollars = paymentIntent.amount / 100;
+            const pointsToAdd = Math.floor(amountInDollars);
+            const customerId = paymentIntent.metadata.userId;
+
+            if (!customerId) {
+                console.error('❌ No customer ID in metadata');
+                return NextResponse.json({ error: 'No customer ID' }, { status: 400 });
+            }
+
             try {
-                const userId = paymentIntent.metadata.userId;
-                if (!userId) {
-                    console.error('No userId found in payment metadata');
-                    return NextResponse.json(
-                        { error: 'No userId in metadata' }, 
-                        { status: 400 }
-                    );
+                await dbConnect();
+                const user = await User.findById(customerId);
+                
+                if (!user) {
+                    console.error('❌ User not found:', customerId);
+                    return NextResponse.json({ error: 'User not found' }, { status: 404 });
                 }
 
-                // Parse cart items from metadata
-                const cartItems = JSON.parse(paymentIntent.metadata.cartItemIds || '[]');
+                const result = await user.addPoints(pointsToAdd);
                 
-                // Format items according to the Order schema
-                const formattedItems = cartItems.map(item => ({
-                    productId: item.id.toString(),
-                    name: item.name,
-                    quantity: item.qty,
-                    price: item.price
-                }));
-
-                // Create order with schema-matching structure
-                const order = await Order.create({
-                    userId: userId,
-                    items: formattedItems,
-                    total: paymentIntent.amount / 100,
-                    status: 'pending',
-                    shippingAddress: {
-                        // Get from payment metadata or use placeholder
-                        street: paymentIntent.metadata.street || '',
-                        city: paymentIntent.metadata.city || '',
-                        state: paymentIntent.metadata.state || '',
-                        zipCode: paymentIntent.metadata.zipCode || '',
-                        country: paymentIntent.metadata.country || 'US'
-                    }
+                console.log('🎯 Points updated:', {
+                    paymentId: paymentIntent.id,
+                    userId: customerId,
+                    basePoints: pointsToAdd,
+                    adjustedPoints: result.adjustedPoints,
+                    previousTotal: user.rewardPoints,
+                    newTotal: result.rewardPoints,
+                    tier: result.currentTier
                 });
 
-                console.log('Order created successfully:', order);
-
-                const calculateVivaBucks = (amount) => {
-                    // For example: $1 = 0.01 VivaBucks
-                    return amount * 0.01;
-                };
-
-                // Calculate and update VivaBucks
-                const vivaBucksEarned = calculateVivaBucks(paymentIntent.amount);
-                await User.findByIdAndUpdate(userId, {
-                    $inc: { vivaBucks: vivaBucksEarned }
+                return NextResponse.json({ 
+                    success: true, 
+                    result,
+                    message: `Added ${result.adjustedPoints} points (${pointsToAdd} base points)`
                 });
-
-                return NextResponse.json({ success: true });
-            } catch (dbError) {
-                console.error('Database error:', dbError);
-                return NextResponse.json(
-                    { error: 'Database operation failed' },
-                    { status: 500 }
-                );
+            } catch (err) {
+                console.error('❌ Error updating points:', err);
+                return NextResponse.json({ error: err.message }, { status: 500 });
             }
+        } else {
+            // For all other events, just acknowledge
+            return NextResponse.json({ received: true });
         }
-
-        // Return success for other event types
-        return NextResponse.json({ received: true });
     } catch (err) {
-        console.error('Webhook error:', err);
-        return NextResponse.json(
-            { error: 'Webhook handler failed' },
-            { status: 500 }
-        );
+        console.error('❌ Error:', err);
+        return NextResponse.json({ error: err.message }, { status: 500 });
     }
-}
-
-// Add OPTIONS method to handle preflight requests
-export async function OPTIONS(req) {
-    return new Response(null, {
-        status: 200,
-        headers: {
-            'Content-Type': 'application/json',
-        }
-    });
 }

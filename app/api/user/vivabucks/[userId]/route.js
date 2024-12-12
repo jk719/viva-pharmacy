@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { headers } from 'next/headers';
 import dbConnect from '@/lib/dbConnect';
 import User from '@/models/User';
 import { getServerSession } from "next-auth/next";
@@ -59,32 +60,58 @@ export async function GET(request) {
 // Add POST method for adding points
 export async function POST(request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
-
     await dbConnect();
     const userId = request.url.split('/').pop();
     const data = await request.json();
-    const { points } = data;
+    const { points, source } = data;
+    
+    // Check for webhook authorization
+    const headersList = headers();
+    const webhookAuth = headersList.get('authorization');
+    const INTERNAL_KEY = process.env.INTERNAL_API_KEY || 'stripe-webhook-key';
+    const isWebhook = webhookAuth === `Bearer ${INTERNAL_KEY}`;
+    
+    console.log('🔑 Auth Check:', {
+      isWebhook,
+      hasAuth: !!webhookAuth,
+      source
+    });
+
+    // Only check session if not a webhook request
+    if (!isWebhook) {
+      const session = await getServerSession(authOptions);
+      if (!session) {
+        console.log('❌ Auth failed: No session found');
+        return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+      }
+    }
 
     if (!points || typeof points !== 'number') {
+      console.log('❌ Invalid points:', points);
       return NextResponse.json({ error: "Invalid points value" }, { status: 400 });
     }
 
     const user = await User.findById(userId);
     
     if (!user) {
+      console.log('❌ User not found:', userId);
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Add points and get updated rewards data
+    console.log('📝 Adding points:', {
+      userId,
+      points,
+      source: isWebhook ? 'webhook' : 'user',
+      currentPoints: user.rewardPoints,
+      email: user.email
+    });
+
     const result = await user.addPoints(points);
+    console.log('✅ Points added successfully:', result);
 
     return NextResponse.json(result);
   } catch (error) {
-    console.error('Error adding points:', error);
+    console.error('❌ Error adding points:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
