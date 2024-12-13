@@ -45,7 +45,7 @@ export default function FeaturedProducts() {
   };
 
   return (
-    <section className="pb-8">
+    <section className="py-4">
       <ProductFilter
         categories={categories}
         selectedCategory={selectedCategory}
@@ -55,7 +55,7 @@ export default function FeaturedProducts() {
       {categoriesWithCounts
         .filter(category => selectedCategory === 'All' || category.name === selectedCategory)
         .map((category) => (
-          <div key={category.name} className="mb-8 md:mt-[200px] mt-20">
+          <div key={category.name} className="mb-8 mt-4">
             <h2 className="text-2xl font-bold mb-4 text-primary">{category.name}</h2>
 
             <div className="flex overflow-x-auto gap-4 scroll-snap-x px-2">

@@ -86,7 +86,7 @@ export function AuthButtons() {
         </button>
 
         {showLogin && (
-          <div className="absolute right-0 mt-2 w-48 bg-[#003366] rounded-lg shadow-lg p-4 z-50">
+          <div className="absolute right-0 mt-2 w-48 bg-[#003366] rounded-lg shadow-lg p-4 z-30">
             <Link href="/profile" className="block text-white hover:text-gray-200 mb-2">
               Profile
             </Link>
@@ -112,7 +112,7 @@ export function AuthButtons() {
       </button>
 
       {showLogin && (
-        <div className="absolute left-1/2 transform -translate-x-1/2 mt-2 w-[90vw] md:w-80 md:left-auto md:right-0 md:-translate-x-0 bg-[#003366] rounded-lg shadow-lg p-6 z-50 animate-slideDown">
+        <div className="absolute left-1/2 transform -translate-x-1/2 mt-2 w-[90vw] md:w-80 md:left-auto md:right-0 md:-translate-x-0 bg-[#003366] rounded-lg shadow-lg p-6 z-30 animate-slideDown">
           <div className="flex justify-between items-center mb-4">
             <div>
               <h2 className="text-2xl font-bold text-white">Welcome Back</h2>

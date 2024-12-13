@@ -210,9 +210,16 @@ export default function ShippingAddress({ onAddressSelect }) {
 
       {/* New Address Form Modal */}
       {showNewAddressForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div 
+          className="absolute inset-0 bg-black/50 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="new-address-title"
+        >
           <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-lg font-medium mb-4">Add New Address</h3>
+            <h3 id="new-address-title" className="text-lg font-medium mb-4">
+              Add New Address
+            </h3>
             <form onSubmit={handleSubmit} className="space-y-4">
               <input
                 type="text"

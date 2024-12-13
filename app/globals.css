@@ -22,7 +22,7 @@ body {
   font-family: 'Helvetica Neue', Arial, sans-serif;
 }
 
-/* Update navbar styling to match our new structure */
+/* Update navbar styling to use regular flow */
 nav {
   background-color: var(--primary-color);
   color: white;
@@ -30,10 +30,7 @@ nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  position: fixed;
-  top: 0;
   width: 100%;
-  z-index: 50;
   box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
   flex-wrap: wrap;
 }
@@ -120,12 +117,6 @@ nav img {
     padding: 0.2rem 0.5rem;
     min-width: 60px;
   }
-}
-
-/* Add new styles for our fixed components */
-.fixed-header-stack > * {
-  background-color: var(--background);
-  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 /* Adjust styling for the category select dropdown */
@@ -311,7 +302,7 @@ nav img {
 
 /* Toast container styling */
 .Toaster {
-  position: fixed;
+  position: absolute;
   z-index: 9999 !important;
 }
 

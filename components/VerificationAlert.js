@@ -32,9 +32,9 @@ export default function VerificationAlert() {
   };
 
   return (
-    <div className="fixed w-full left-0 top-[100px] md:top-[64px] z-35 bg-white">
-      <div className="container mx-auto px-6">
-        <div className="bg-primary/10 border-l-4 border-primary rounded-lg p-4 shadow-sm">
+    <div className="w-full bg-white border-b">
+      <div className="container mx-auto px-4">
+        <div className="bg-primary/10 border-l-4 border-primary rounded-lg p-4 my-2">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center space-x-2">
               <span className="text-lg">⚠️</span>

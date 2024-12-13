@@ -35,9 +35,13 @@ export default function ClientProductView({ product }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-800 bg-opacity-75 z-50 flex items-center justify-center p-4">
+    <div 
+      className="absolute inset-0 bg-gray-800/75 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="product-details"
+    >
       <div className="bg-white w-full max-w-xs sm:max-w-md md:max-w-3/4 lg:max-w-2/3 rounded-lg shadow-lg relative overflow-y-auto p-4 md:p-6">
-        
         {/* Back Button */}
         <button
           onClick={handleBack}
@@ -62,7 +66,9 @@ export default function ClientProductView({ product }) {
 
           {/* Product Details */}
           <div className="flex-1 px-4 md:px-6">
-            <h1 className="text-xl md:text-2xl font-bold mb-2">{product.name}</h1>
+            <h1 id="product-details" className="text-xl md:text-2xl font-bold mb-2">
+              {product.name}
+            </h1>
             <div className="flex items-center text-yellow-500 mb-2 md:mb-4">
               <span className="text-sm">★★★★☆</span>
               <span className="text-sm text-gray-600 ml-2">(2415)</span>

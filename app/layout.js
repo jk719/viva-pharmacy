@@ -9,6 +9,7 @@ import { Providers } from './providers';
 import { Toaster } from 'react-hot-toast';
 import "./globals.css";
 import HeaderProgress from '@/components/HeaderProgress';
+import RewardAlert from '@/components/RewardAlert';
 
 export default function RootLayout({ children }) {
   return (
@@ -18,23 +19,32 @@ export default function RootLayout({ children }) {
       </head>
       <body className="bg-white text-primary-color">
         <Providers>
-          <Navbar />
-          <HeaderProgress />
-          <div className="pt-[325px] md:pt-[225px]">
-            <main className="px-6 pb-6 min-h-screen">
-              <div className="container mx-auto">
-                <Suspense fallback={
-                  <div className="min-h-screen flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-gray-900"></div>
-                  </div>
-                }>
-                  {children}
-                </Suspense>
-              </div>
-            </main>
+          <div className="w-full bg-white">
+            <div className="bg-primary-color">
+              <Navbar />
+            </div>
+            
+            <div className="bg-white border-b">
+              <HeaderProgress />
+            </div>
           </div>
+
+          <main className="min-h-screen">
+            <div className="container mx-auto px-4">
+              <Suspense fallback={
+                <div className="flex items-center justify-center min-h-[60vh]">
+                  <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-gray-900" />
+                </div>
+              }>
+                {children}
+              </Suspense>
+            </div>
+          </main>
+
+          <RewardAlert />
+          
           <footer className="footer bg-primary text-white py-6">
-            <div className="container mx-auto flex flex-col md:flex-row justify-between items-center text-center md:text-left space-y-4 md:space-y-0">
+            <div className="container mx-auto flex flex-col md:flex-row justify-between items-center text-center md:text-left space-y-4 md:space-y-0 px-4">
               <div className="flex items-center justify-center md:justify-start">
                 <Image
                   src="/images/viva-online-logo.png"
@@ -79,6 +89,8 @@ export default function RootLayout({ children }) {
               </div>
             </div>
           </footer>
+
+          <div id="modal-root" className="relative z-50" />
           <Toaster 
             position="top-right"
             toastOptions={{
