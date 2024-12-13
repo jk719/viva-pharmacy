@@ -6,15 +6,7 @@ import { motion } from "framer-motion";
 import eventEmitter, { Events } from '@/lib/eventEmitter';
 import Link from 'next/link';
 import { FaStar, FaGift, FaCoins } from 'react-icons/fa';
-
-const MILESTONES = [
-  { points: 100, amount: 5 },
-  { points: 200, amount: 15 },
-  { points: 400, amount: 30 },
-  { points: 600, amount: 50 },
-  { points: 800, amount: 75 },
-  { points: 1000, amount: 100 }
-];
+import { REWARDS_CONFIG } from '@/lib/rewards/config';
 
 export default function HeaderProgress() {
   const { data: session } = useSession();
@@ -37,27 +29,32 @@ export default function HeaderProgress() {
   useEffect(() => {
     fetchRewardsData();
     const handlePointsUpdate = () => fetchRewardsData();
-    eventEmitter.addEventListener(Events.POINTS_UPDATED, handlePointsUpdate);
+    const handlePointsReset = () => {
+      setRewardsData(null);
+      fetchRewardsData();
+    };
+
+    eventEmitter.on(Events.POINTS_UPDATED, handlePointsUpdate);
+    eventEmitter.on(Events.POINTS_RESET, handlePointsReset);
+    
     return () => {
-      eventEmitter.removeEventListener(Events.POINTS_UPDATED, handlePointsUpdate);
+      eventEmitter.off(Events.POINTS_UPDATED, handlePointsUpdate);
+      eventEmitter.off(Events.POINTS_RESET, handlePointsReset);
     };
   }, [session]);
 
   useEffect(() => {
     if (rewardsData?.rewardPoints) {
-      const currentPoints = rewardsData.rewardPoints;
-      const milestone = MILESTONES.find(m => m.points > currentPoints);
-      if (milestone) {
-        setScale(milestone.points);
-      }
+      setScale(REWARDS_CONFIG.REWARD_RATE.POINTS_NEEDED);
     }
   }, [rewardsData?.rewardPoints]);
 
   if (!rewardsData) return null;
 
   const currentPoints = rewardsData.rewardPoints || 0;
-  const currentMilestone = MILESTONES.find(m => m.points > currentPoints) || MILESTONES[MILESTONES.length - 1];
-  const progress = (currentPoints / scale) * 100;
+  const pointsToNextReward = REWARDS_CONFIG.getPointsToNextReward(currentPoints);
+  const availableReward = REWARDS_CONFIG.getRewardAmount(currentPoints);
+  const progress = (currentPoints % REWARDS_CONFIG.REWARD_RATE.POINTS_NEEDED) / REWARDS_CONFIG.REWARD_RATE.POINTS_NEEDED * 100;
 
   return (
     <div className="fixed w-full left-0 top-[175px] md:top-[65px] z-30 bg-white/80 backdrop-blur-md shadow-sm">
@@ -75,7 +72,7 @@ export default function HeaderProgress() {
                 <div className="flex flex-col">
                   <div className="flex items-center space-x-2">
                     <span className="text-lg font-semibold text-gray-800">
-                      {currentPoints}
+                      {currentPoints.toLocaleString()}
                     </span>
                     <FaCoins className="text-[#FF9F43] text-sm" />
                   </div>
@@ -86,7 +83,7 @@ export default function HeaderProgress() {
               </div>
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <FaGift className="text-[#FF9F43]" />
-                <span>${currentMilestone.amount} at {currentMilestone.points}p</span>
+                <span>${availableReward} available</span>
               </div>
             </div>
           </Link>
@@ -113,13 +110,13 @@ export default function HeaderProgress() {
             </div>
             <div className="flex items-center space-x-1 text-xs md:text-sm text-gray-600">
               <FaCoins className="text-[#FF9F43] text-xs" />
-              <span>{scale}</span>
+              <span>{REWARDS_CONFIG.REWARD_RATE.POINTS_NEEDED}</span>
             </div>
           </div>
 
           <div className="text-xs md:text-sm text-gray-600 mt-0.5 text-center flex items-center justify-center space-x-1">
             <FaGift className="text-[#FF9F43] text-xs" />
-            <span>{currentMilestone.points - currentPoints} points to next reward</span>
+            <span>{pointsToNextReward} points to next reward</span>
           </div>
         </motion.div>
       </div>

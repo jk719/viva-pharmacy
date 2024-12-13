@@ -2,6 +2,7 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
+import { REWARDS_CONFIG } from '@/lib/rewards/config';
 
 // Add address schema
 const addressSchema = new mongoose.Schema({
@@ -276,77 +277,111 @@ userSchema.pre('findOneAndUpdate', function() {
 
 // Add new methods for the rewards system
 userSchema.methods.calculateTier = function() {
-  if (this.cumulativePoints >= 10000) {
-    this.currentTier = 'Legend';
-    this.pointsMultiplier = 2.5;
-  } else if (this.cumulativePoints >= 8000) {
-    this.currentTier = 'Diamond';
-    this.pointsMultiplier = 2.25;
-  } else if (this.cumulativePoints >= 6000) {
-    this.currentTier = 'Sapphire';
-    this.pointsMultiplier = 2.0;
-  } else if (this.cumulativePoints >= 4000) {
-    this.currentTier = 'Platinum';
-    this.pointsMultiplier = 1.75;
-  } else if (this.cumulativePoints >= 2000) {
-    this.currentTier = 'Gold';
-    this.pointsMultiplier = 1.5;
-  } else if (this.cumulativePoints >= 1000) {
-    this.currentTier = 'Silver';
-    this.pointsMultiplier = 1.25;
-  } else {
-    this.currentTier = 'Standard';
-    this.pointsMultiplier = 1;
-  }
+  const tierInfo = REWARDS_CONFIG.getMembershipTier(this.cumulativePoints);
+  this.currentTier = tierInfo?.name || 'STANDARD';
+  this.pointsMultiplier = tierInfo?.multiplier || 1.0;
 };
 
 userSchema.methods.calculateNextReward = function() {
-  const milestones = [100, 200, 400, 600, 800, 1000];
-  for (const milestone of milestones) {
-    if (this.rewardPoints < milestone) {
-      this.nextRewardMilestone = milestone;
-      break;
+  try {
+    console.log('Starting calculateNextReward...');
+    console.log('REWARDS_CONFIG structure:', {
+      hasConfig: !!REWARDS_CONFIG,
+      hasRewardRate: !!REWARDS_CONFIG?.REWARD_RATE,
+      pointsNeeded: REWARDS_CONFIG?.REWARD_RATE?.POINTS_NEEDED
+    });
+    
+    // Validate config
+    if (!REWARDS_CONFIG?.REWARD_RATE?.POINTS_NEEDED) {
+      throw new Error('Invalid REWARDS_CONFIG structure');
     }
-  }
-  // If points exceed all milestones, set next milestone to 1000
-  if (this.rewardPoints >= 1000) {
-    this.nextRewardMilestone = 1000;
+    
+    const pointsNeeded = REWARDS_CONFIG.REWARD_RATE.POINTS_NEEDED;
+    const currentPoints = this.rewardPoints || 0;
+    
+    console.log('Current state:', {
+      currentPoints,
+      pointsNeeded,
+      rewardPoints: this.rewardPoints,
+      cumulativePoints: this.cumulativePoints
+    });
+    
+    // Calculate next milestone
+    const nextMilestone = Math.ceil(currentPoints / pointsNeeded) * pointsNeeded;
+    
+    console.log('Calculation details:', {
+      currentPoints,
+      pointsNeeded,
+      nextMilestone,
+      maxMilestone: REWARDS_CONFIG.MAX_MILESTONE,
+      formula: `ceil(${currentPoints} / ${pointsNeeded}) * ${pointsNeeded}`
+    });
+    
+    // Ensure milestone doesn't exceed MAX_MILESTONE
+    this.nextRewardMilestone = Math.min(
+      Math.max(pointsNeeded, nextMilestone),
+      REWARDS_CONFIG.MAX_MILESTONE
+    );
+    
+    console.log('Final milestone set to:', this.nextRewardMilestone);
+    return this.nextRewardMilestone;
+    
+  } catch (error) {
+    console.error('Error in calculateNextReward:', error);
+    console.error('Current state:', {
+      rewardPoints: this.rewardPoints,
+      currentTier: this.currentTier,
+      config: REWARDS_CONFIG?.REWARD_RATE
+    });
+    
+    // Set safe default
+    this.nextRewardMilestone = REWARDS_CONFIG?.REWARD_RATE?.POINTS_NEEDED || 100;
+    return this.nextRewardMilestone;
   }
 };
 
 userSchema.methods.getRewardAmount = function() {
-  const rewardTiers = {
-    100: 5,
-    200: 15,
-    400: 30,
-    600: 50,
-    800: 75,
-    1000: 100
-  };
-  return rewardTiers[this.nextRewardMilestone] || 0;
+  return REWARDS_CONFIG.getRewardAmount(this.rewardPoints);
 };
 
 userSchema.methods.addPoints = async function(points) {
   try {
     console.log('🎯 Adding points:', points);
+    console.log('Initial state:', {
+      rewardPoints: this.rewardPoints,
+      cumulativePoints: this.cumulativePoints,
+      currentTier: this.currentTier
+    });
+    
+    // Get current tier info from REWARDS_CONFIG
+    const tierInfo = REWARDS_CONFIG.getMembershipTier(this.cumulativePoints);
+    const multiplier = tierInfo?.multiplier || 1.0;
+    
+    console.log('Current tier:', tierInfo?.name, 'Multiplier:', multiplier);
     
     // Apply tier multiplier to points
-    const adjustedPoints = Math.floor(points * this.pointsMultiplier);
+    const adjustedPoints = Math.floor(points * multiplier);
     console.log('✨ Adjusted points with multiplier:', adjustedPoints);
     
-    // Update reward points and cumulative points
+    // Update points
     this.rewardPoints += adjustedPoints;
     this.cumulativePoints += adjustedPoints;
     
-    console.log('📊 Current reward points:', this.rewardPoints);
-    console.log('📈 Current cumulative points:', this.cumulativePoints);
+    // Update tier info
+    this.currentTier = tierInfo?.name || 'STANDARD';
+    this.pointsMultiplier = multiplier;
     
-    // Only recalculate tier (no automatic redemption)
-    this.calculateTier();
+    console.log('Before calculateNextReward:', {
+      rewardPoints: this.rewardPoints,
+      currentTier: this.currentTier
+    });
+    
+    // Calculate next reward milestone
     this.calculateNextReward();
     
-    console.log('👑 Current tier:', this.currentTier);
-    console.log('🎯 Next milestone:', this.nextRewardMilestone);
+    console.log('After calculateNextReward:', {
+      nextMilestone: this.nextRewardMilestone
+    });
     
     await this.save();
     return {
@@ -355,7 +390,7 @@ userSchema.methods.addPoints = async function(points) {
       rewardPoints: this.rewardPoints,
       currentTier: this.currentTier,
       nextMilestone: this.nextRewardMilestone,
-      multiplier: this.pointsMultiplier
+      multiplier
     };
   } catch (error) {
     console.error('❌ Error adding points:', error);
@@ -363,45 +398,28 @@ userSchema.methods.addPoints = async function(points) {
   }
 };
 
-// Modify redeemReward to handle specific milestone redemptions
 userSchema.methods.redeemReward = async function() {
   try {
-    const milestones = [100, 200, 400, 600, 800, 1000];
-    let rewardAmount = 0;
-    let reachedMilestone = 0;
-
-    // Find the highest milestone reached
-    for (const milestone of milestones) {
-      if (this.rewardPoints >= milestone) {
-        reachedMilestone = milestone;
-        rewardAmount = this.getRewardAmount();
-      }
-    }
+    const pointsNeeded = REWARDS_CONFIG.REWARD_RATE.POINTS_NEEDED;
+    const rewardAmount = this.getRewardAmount();
     
     if (rewardAmount === 0) {
       return {
         success: false,
-        message: "No reward available to redeem"
+        message: "Not enough points to redeem"
       };
     }
 
     // Add to reward history
     this.rewardHistory.push({
       amount: rewardAmount,
-      pointsUsed: reachedMilestone,
+      pointsUsed: pointsNeeded,
       tier: this.currentTier
     });
 
     // Update VivaBucks and points
     this.vivaBucks += rewardAmount;
-    
-    // Handle points after redemption
-    if (reachedMilestone === 1000) {
-      const overflow = this.rewardPoints - 1000;
-      this.rewardPoints = 100 + overflow; // Bonus points plus any overflow
-    } else {
-      this.rewardPoints -= reachedMilestone; // Only subtract the points used for redemption
-    }
+    this.rewardPoints -= pointsNeeded;
 
     // Recalculate next milestone
     this.calculateNextReward();
@@ -412,7 +430,7 @@ userSchema.methods.redeemReward = async function() {
       success: true,
       rewardAmount,
       remainingPoints: this.rewardPoints,
-      message: `Successfully redeemed $${rewardAmount} for ${reachedMilestone} points`
+      message: `Successfully redeemed $${rewardAmount} for ${pointsNeeded} points`
     };
   } catch (error) {
     console.error('❌ Error redeeming reward:', error);

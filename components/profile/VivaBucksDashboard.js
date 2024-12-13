@@ -6,10 +6,10 @@ import { BsCoin } from 'react-icons/bs';
 import { FaCrown, FaGift, FaTrophy } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 import RewardCard from './rewards/RewardCard';
-import ProgressBar from './rewards/ProgressBar';
 import TierBenefits from './rewards/TierBenefits';
 import RewardHistory from './rewards/RewardHistory';
 import TestPoints from './TestPoints';
+import eventEmitter, { Events } from '@/lib/eventEmitter';
 
 const REWARD_TIERS = [
   { points: 100, amount: 5 },
@@ -19,6 +19,15 @@ const REWARD_TIERS = [
   { points: 800, amount: 75 },
   { points: 1000, amount: 100 }
 ];
+
+const TIER_COLORS = {
+  'Standard': '#6B7280', // gray-500
+  'Silver': '#94A3B8',   // slate-400
+  'Gold': '#F59E0B',     // amber-500
+  'Platinum': '#0EA5E9', // sky-500
+  'Diamond': '#6366F1',  // indigo-500
+  'Legend': '#8B5CF6'    // violet-500
+};
 
 export default function VivaBucksDashboard() {
   const { data: session, status } = useSession();
@@ -105,6 +114,43 @@ export default function VivaBucksDashboard() {
     }
   };
 
+  const handleResetPoints = async () => {
+    if (!confirm('Are you sure you want to reset all your points? This cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/user/vivabucks/test', {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        setRewardsData({
+          ...rewardsData,
+          rewardPoints: 0,
+          cumulativePoints: 0,
+          vivaBucks: 0,
+          currentTier: 'STANDARD',
+          pointsMultiplier: 1,
+          nextRewardMilestone: 100
+        });
+        
+        eventEmitter.emit(Events.POINTS_RESET);
+        
+        toast.success('Points and rewards reset successfully!');
+        
+        refreshData();
+      } else {
+        toast.error('Error resetting points: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Error resetting points');
+    }
+  };
+
   if (status === 'loading' || loading) {
     return <div className="animate-pulse space-y-4">
       <div className="h-32 bg-gray-100 rounded-lg"></div>
@@ -176,15 +222,6 @@ export default function VivaBucksDashboard() {
         </div>
       </div>
 
-      {/* Progress Bar */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-        <ProgressBar
-          currentPoints={rewardsData.rewardPoints}
-          nextMilestone={rewardsData.nextRewardMilestone}
-          animate={true}
-        />
-      </div>
-
       {/* Available Rewards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {REWARD_TIERS.map((tier) => (
@@ -211,14 +248,22 @@ export default function VivaBucksDashboard() {
         <RewardHistory />
       </div>
 
-      {/* Test Points (Development Only) */}
+      {/* Test Points and Reset Button (Development Only) */}
       {process.env.NODE_ENV === 'development' && (
-        <TestPoints 
-          onPointsAdded={() => {
-            refreshData();
-            toast.success('Test points added successfully');
-          }} 
-        />
+        <div className="space-y-4">
+          <TestPoints 
+            onPointsAdded={() => {
+              refreshData();
+              toast.success('Test points added successfully');
+            }} 
+          />
+          <button
+            onClick={handleResetPoints}
+            className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-xl transition-colors duration-200 ease-in-out"
+          >
+            Reset All Points (Dev Only)
+          </button>
+        </div>
       )}
     </div>
   );

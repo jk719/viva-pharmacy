@@ -2,23 +2,25 @@
 
 import { useState } from 'react';
 import eventEmitter, { Events } from '@/lib/eventEmitter';
+import { REWARDS_CONFIG } from '@/lib/rewards/config';
 
 // Add preset point values for common testing scenarios
 const PRESET_POINTS = [
-  { value: 100, label: '100 ($5)' },
-  { value: 200, label: '200 ($15)' },
-  { value: 400, label: '400 ($30)' },
-  { value: 600, label: '600 ($50)' },
-  { value: 800, label: '800 ($75)' },
-  { value: 1000, label: '1000 ($100)' }
+  { value: 100, label: `100 (${REWARDS_CONFIG.formatCurrency(REWARDS_CONFIG.REWARD_RATE.REWARD_AMOUNT)})` },
+  { value: 1000, label: 'Silver Tier' },
+  { value: 2500, label: 'Gold Tier' },
+  { value: 5000, label: 'Platinum Tier' }
 ];
 
 export default function TestPoints({ onPointsAdded }) {
   const [points, setPoints] = useState(100);
   const [loading, setLoading] = useState(false);
+  const [feedback, setFeedback] = useState('');
 
   const handleAddPoints = async (points) => {
     setLoading(true);
+    setFeedback('');
+    
     try {
       const response = await fetch('/api/user/vivabucks/test', {
         method: 'POST',
@@ -28,13 +30,18 @@ export default function TestPoints({ onPointsAdded }) {
         body: JSON.stringify({ points }),
       });
       
+      const data = await response.json();
+      
       if (response.ok) {
         onPointsAdded();
-        // Emit points updated event
-        eventEmitter.dispatchEvent(new Event(Events.POINTS_UPDATED));
+        eventEmitter.emit(Events.POINTS_UPDATED);
+        setFeedback(`Added ${REWARDS_CONFIG.formatPoints(points)} points!`);
+      } else {
+        setFeedback(data.error || 'Failed to add points');
       }
     } catch (error) {
       console.error('Error adding test points:', error);
+      setFeedback('Error adding points');
     } finally {
       setLoading(false);
     }
@@ -45,7 +52,7 @@ export default function TestPoints({ onPointsAdded }) {
       <h3 className="text-sm font-medium text-gray-700 mb-2">Test Points</h3>
       
       {/* Preset buttons */}
-      <div className="grid grid-cols-3 gap-2 mb-3">
+      <div className="grid grid-cols-2 gap-2 mb-3">
         {PRESET_POINTS.map(({ value, label }) => (
           <button
             key={value}
@@ -94,9 +101,17 @@ export default function TestPoints({ onPointsAdded }) {
         </button>
       </div>
 
+      {/* Feedback message */}
+      {feedback && (
+        <p className={`mt-2 text-sm ${feedback.includes('Error') ? 'text-red-500' : 'text-green-500'}`}>
+          {feedback}
+        </p>
+      )}
+
       {/* Help text */}
       <p className="mt-2 text-xs text-gray-500">
-        Use preset buttons for quick testing of reward tiers or enter a custom amount.
+        Use preset buttons to test different membership tiers or enter a custom amount.
+        {REWARDS_CONFIG.REWARD_RATE.POINTS_NEEDED} points = {REWARDS_CONFIG.formatCurrency(REWARDS_CONFIG.REWARD_RATE.REWARD_AMOUNT)}
       </p>
     </div>
   );

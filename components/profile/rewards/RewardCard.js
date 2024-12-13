@@ -1,29 +1,22 @@
 'use client';
 
 import { FaGift } from 'react-icons/fa';
-
-const REWARD_TIERS = {
-  100: { amount: 5, description: 'Basic Reward' },
-  200: { amount: 15, description: 'Bronze Reward' },
-  400: { amount: 30, description: 'Silver Reward' },
-  600: { amount: 50, description: 'Gold Reward' },
-  800: { amount: 75, description: 'Platinum Reward' },
-  1000: { amount: 100, description: 'Diamond Reward' }
-};
+import { REWARDS_CONFIG } from '@/lib/rewards/config';
 
 export default function RewardCard({ 
   points, 
-  milestone, 
   onRedeem, 
   isLoading 
 }) {
-  const canRedeem = points >= milestone;
-  const reward = REWARD_TIERS[milestone];
+  const availableRewards = REWARDS_CONFIG.getRewardAmount(points);
+  const pointsToNext = REWARDS_CONFIG.getPointsToNextReward(points);
+  const nextRewardAmount = REWARDS_CONFIG.REWARD_RATE.REWARD_AMOUNT;
+  const pointsNeeded = REWARDS_CONFIG.REWARD_RATE.POINTS_NEEDED;
 
   return (
     <div className={`
       p-4 rounded-lg border transition-all duration-200
-      ${canRedeem 
+      ${availableRewards > 0
         ? 'border-green-200 bg-green-50 hover:shadow-md' 
         : 'border-gray-200 bg-white'
       }
@@ -32,20 +25,23 @@ export default function RewardCard({
         <div className="flex items-center">
           <FaGift className={`
             text-xl mr-2
-            ${canRedeem ? 'text-green-600' : 'text-gray-400'}
+            ${availableRewards > 0 ? 'text-green-600' : 'text-gray-400'}
           `} />
           <div>
             <h3 className="font-medium text-gray-900">
-              ${reward.amount} Reward
+              ${nextRewardAmount} Reward
             </h3>
             <p className="text-sm text-gray-500">
-              {reward.description}
+              {availableRewards > 0 
+                ? `$${availableRewards} available to redeem`
+                : `${pointsToNext} points to next reward`
+              }
             </p>
           </div>
         </div>
         <div className="text-right">
           <span className="text-sm font-medium text-gray-900">
-            {milestone} points
+            {pointsNeeded} points
           </span>
           <div className="text-xs text-gray-500">
             required
@@ -55,12 +51,12 @@ export default function RewardCard({
 
       <div className="mt-2">
         <button
-          onClick={onRedeem}
-          disabled={!canRedeem || isLoading}
+          onClick={() => onRedeem(availableRewards)}
+          disabled={availableRewards === 0 || isLoading}
           className={`
             w-full py-2 px-4 rounded-md text-sm font-medium
             transition-colors duration-200
-            ${canRedeem
+            ${availableRewards > 0
               ? 'bg-green-600 text-white hover:bg-green-700'
               : 'bg-gray-100 text-gray-400 cursor-not-allowed'
             }
@@ -75,10 +71,10 @@ export default function RewardCard({
               </svg>
               Redeeming...
             </span>
-          ) : canRedeem ? (
-            'Redeem Reward'
+          ) : availableRewards > 0 ? (
+            `Redeem $${availableRewards} Reward`
           ) : (
-            `${milestone - points} points needed`
+            `${pointsToNext} points needed`
           )}
         </button>
       </div>
