@@ -14,8 +14,9 @@ export async function POST(request) {
 
     await dbConnect();
     const userId = request.url.split('/')[6];
-    const user = await User.findById(userId);
+    const { amount } = await request.json(); // Get the amount from request body
 
+    const user = await User.findById(userId);
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
@@ -28,12 +29,33 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    // Use the redeemReward method
-    const result = await user.redeemReward();
-    
-    if (!result.success) {
-      return NextResponse.json({ error: result.message }, { status: 400 });
+    // Validate requested amount
+    if (amount > availableReward) {
+      return NextResponse.json({ 
+        error: "Requested amount exceeds available rewards" 
+      }, { status: 400 });
     }
+
+    // Calculate points to deduct (10 dollars = 100 points)
+    const pointsToDeduct = (amount / 10) * 100;
+
+    // Update user's points and vivaBucks
+    user.rewardPoints -= pointsToDeduct;
+    user.vivaBucks += amount;
+
+    // Add to redemption history
+    if (!user.rewardHistory) {
+      user.rewardHistory = [];
+    }
+    
+    user.rewardHistory.push({
+      type: 'REDEMPTION',
+      amount: amount,
+      points: pointsToDeduct,
+      date: new Date()
+    });
+
+    await user.save();
 
     return NextResponse.json({
       vivaBucks: user.vivaBucks,
@@ -41,7 +63,7 @@ export async function POST(request) {
       cumulativePoints: user.cumulativePoints,
       currentTier: user.currentTier,
       pointsMultiplier: REWARDS_CONFIG.MEMBERSHIP_TIERS[user.currentTier].multiplier,
-      redeemedAmount: result.rewardAmount,
+      redeemedAmount: amount,
       nextMilestone: user.nextRewardMilestone
     });
 

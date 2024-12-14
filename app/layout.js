@@ -10,23 +10,6 @@ import { Toaster } from 'react-hot-toast';
 import "./globals.css";
 import HeaderProgress from '@/components/HeaderProgress';
 import RewardAlert from '@/components/RewardAlert';
-import ProductFilter from '@/components/products/ProductFilter';
-import { useCategory } from '@/context/CategoryContext';
-import products from '../lib/products/data';
-
-// Create a wrapper component for the filter to use the context
-function FilterWrapper() {
-  const { selectedCategory, setSelectedCategory } = useCategory();
-  const categories = ["All", ...new Set(products.map(product => product.category))];
-
-  return (
-    <ProductFilter 
-      categories={categories}
-      selectedCategory={selectedCategory}
-      onChange={(e) => setSelectedCategory(e.target.value)}
-    />
-  );
-}
 
 export default function RootLayout({ children }) {
   return (
@@ -38,20 +21,16 @@ export default function RootLayout({ children }) {
       <body className="bg-white text-primary-color">
         <Providers>
           <header className="fixed top-0 left-0 right-0 w-full bg-white z-50">
-            <div className="bg-primary-color w-full">
+            <div className="bg-primary-color">
               <Navbar />
             </div>
             
-            <div className="bg-white w-full border-b py-2">
+            <div className="bg-white border-b">
               <HeaderProgress />
-            </div>
-
-            <div className="bg-white w-full border-b shadow-md py-2">
-              <FilterWrapper />
             </div>
           </header>
 
-          <div className="h-[400px] sm:h-[320px]" />
+          <div className="h-[250px] sm:h-[250px]" />
 
           <main className="min-h-screen w-full">
             <div className="container mx-auto px-4">

@@ -1,12 +1,26 @@
 // src/app/page.js
 "use client";
 
-import FeaturedProducts from '../components/products/FeaturedProducts'; // Import the FeaturedProducts component
-import Link from 'next/link'; // Import Link for internal navigation
+import FeaturedProducts from '../components/products/FeaturedProducts';
+import ProductFilter from '@/components/products/ProductFilter';
+import Link from 'next/link';
+import { useCategory } from '@/context/CategoryContext';
+import products from '../lib/products/data';
 
 export default function Home() {
+  const { selectedCategory, setSelectedCategory } = useCategory();
+  const categories = ["All", ...new Set(products.map(product => product.category))];
+
   return (
     <div className="min-h-screen bg-white">
+      <div className="bg-white border-b shadow-sm">
+        <ProductFilter 
+          categories={categories}
+          selectedCategory={selectedCategory}
+          onChange={(e) => setSelectedCategory(e.target.value)}
+        />
+      </div>
+
       {/* FeaturedProducts component now handles the heading */}
       <FeaturedProducts />
 
