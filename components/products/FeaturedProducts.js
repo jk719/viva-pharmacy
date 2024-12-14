@@ -3,13 +3,12 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCart } from '../../context/CartContext';
+import { useCategory } from '../../context/CategoryContext';
 import products from '../../lib/products/data';
-import { useState } from 'react';
-import ProductFilter from './ProductFilter';
 
 export default function FeaturedProducts() {
   const { addToCart, decrement, items = [] } = useCart();
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const { selectedCategory } = useCategory();
 
   const categoriesWithCounts = [...new Set(products.map((product) => product.category))]
     .map((category) => ({
@@ -18,7 +17,9 @@ export default function FeaturedProducts() {
     }))
     .sort((a, b) => b.count - a.count);
 
-  const categories = ['All', ...categoriesWithCounts.map(category => category.name)];
+  const filteredCategories = selectedCategory === 'All' 
+    ? categoriesWithCounts 
+    : categoriesWithCounts.filter(category => category.name === selectedCategory);
 
   const getItemQuantity = (productId) => {
     const item = items?.find((item) => item?.id === productId);
@@ -40,21 +41,9 @@ export default function FeaturedProducts() {
     decrement(productId);
   };
 
-  const handleCategoryChange = (event) => {
-    setSelectedCategory(event.target.value);
-  };
-
   return (
     <section className="py-4">
-      <ProductFilter
-        categories={categories}
-        selectedCategory={selectedCategory}
-        onChange={handleCategoryChange}
-      />
-
-      {categoriesWithCounts
-        .filter(category => selectedCategory === 'All' || category.name === selectedCategory)
-        .map((category) => (
+      {filteredCategories.map((category) => (
           <div key={category.name} className="mb-8 mt-4">
             <h2 className="text-2xl font-bold mb-4 text-primary">{category.name}</h2>
 

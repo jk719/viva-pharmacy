@@ -10,26 +10,50 @@ import { Toaster } from 'react-hot-toast';
 import "./globals.css";
 import HeaderProgress from '@/components/HeaderProgress';
 import RewardAlert from '@/components/RewardAlert';
+import ProductFilter from '@/components/products/ProductFilter';
+import { useCategory } from '@/context/CategoryContext';
+import products from '../lib/products/data';
+
+// Create a wrapper component for the filter to use the context
+function FilterWrapper() {
+  const { selectedCategory, setSelectedCategory } = useCategory();
+  const categories = ["All", ...new Set(products.map(product => product.category))];
+
+  return (
+    <ProductFilter 
+      categories={categories}
+      selectedCategory={selectedCategory}
+      onChange={(e) => setSelectedCategory(e.target.value)}
+    />
+  );
+}
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <head>
         <meta name="source-map-support" content="false" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
       </head>
       <body className="bg-white text-primary-color">
         <Providers>
-          <div className="w-full bg-white">
-            <div className="bg-primary-color">
+          <header className="fixed top-0 left-0 right-0 w-full bg-white z-50">
+            <div className="bg-primary-color w-full">
               <Navbar />
             </div>
             
-            <div className="bg-white border-b">
+            <div className="bg-white w-full border-b py-2">
               <HeaderProgress />
             </div>
-          </div>
 
-          <main className="min-h-screen">
+            <div className="bg-white w-full border-b shadow-md py-2">
+              <FilterWrapper />
+            </div>
+          </header>
+
+          <div className="h-[400px] sm:h-[320px]" />
+
+          <main className="min-h-screen w-full">
             <div className="container mx-auto px-4">
               <Suspense fallback={
                 <div className="flex items-center justify-center min-h-[60vh]">
@@ -93,6 +117,9 @@ export default function RootLayout({ children }) {
           <div id="modal-root" className="relative z-50" />
           <Toaster 
             position="top-right"
+            containerStyle={{
+              top: '400px',
+            }}
             toastOptions={{
               duration: 3000,
               style: {
