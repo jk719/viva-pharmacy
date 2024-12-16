@@ -64,14 +64,14 @@ export function AuthButtons() {
 
   const handleSignOut = async () => {
     try {
-      const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
       await signOut({
-        callbackUrl: baseUrl,
-        redirect: false
+        redirect: true,
+        callbackUrl: '/'
       });
-      router.push(baseUrl);
     } catch (error) {
       console.error('Sign out error:', error);
+      // Fallback: force refresh the page
+      window.location.href = '/';
     }
   };
 

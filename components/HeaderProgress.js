@@ -68,6 +68,18 @@ export default function HeaderProgress() {
     }
   }, [rewardsData?.rewardPoints]);
 
+  useEffect(() => {
+    const handleRewardRestored = () => {
+      fetchRewardsData();
+    };
+
+    eventEmitter.on(Events.REWARD_RESTORED, handleRewardRestored);
+    
+    return () => {
+      eventEmitter.off(Events.REWARD_RESTORED, handleRewardRestored);
+    };
+  }, []);
+
   const currentPoints = rewardsData?.rewardPoints || 0;
   const pointsToNextReward = REWARDS_CONFIG.getPointsToNextReward(currentPoints);
   const availableReward = REWARDS_CONFIG.getRewardAmount(currentPoints);
@@ -94,7 +106,10 @@ export default function HeaderProgress() {
       if (response.ok) {
         setRedeemAmount(amount);
         setIsRedeeming(true);
-        setActiveReward(amount);
+        
+        const currentActiveReward = useRewardsStore.getState().activeReward || 0;
+        setActiveReward(currentActiveReward + amount);
+        
         setIsOpen(false);
         setCurrentPage(0);
         

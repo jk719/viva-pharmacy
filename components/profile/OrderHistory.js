@@ -7,17 +7,19 @@ import Image from 'next/image';
 export default function OrderHistory({ userId }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchOrders = async () => {
       if (!userId) {
-        console.log('No userId provided');
+        console.log('No userId provided to OrderHistory component');
         setLoading(false);
+        setError('User ID is required');
         return;
       }
 
       try {
-        console.log('Fetching orders for userId:', userId);
+        console.log('Attempting to fetch orders for userId:', userId);
         const response = await fetch(`/api/orders/${userId}`);
         const data = await response.json();
         
@@ -25,11 +27,18 @@ export default function OrderHistory({ userId }) {
           throw new Error(data.error || `HTTP error! status: ${response.status}`);
         }
         
+        if (!Array.isArray(data)) {
+          console.error('Unexpected data format:', data);
+          throw new Error('Invalid data format received from server');
+        }
+
+        console.log('Orders successfully fetched:', data);
         setOrders(data);
-        console.log('Orders fetched from DB:', data);
+        setError(null);
       } catch (error) {
-        console.error('Error fetching orders:', error);
-        toast.error('Failed to load order history: ' + error.message);
+        console.error('Error in OrderHistory:', error);
+        setError(error.message);
+        toast.error('Failed to load order history');
       } finally {
         setLoading(false);
       }
@@ -39,11 +48,25 @@ export default function OrderHistory({ userId }) {
   }, [userId]);
 
   if (loading) {
-    return <div className="text-center py-4">Loading orders...</div>;
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+      </div>
+    );
   }
 
-  if (!userId) {
-    return <div className="text-center py-4">Unable to fetch orders. Please try again later.</div>;
+  if (error) {
+    return (
+      <div className="text-center py-4 text-red-600">
+        <p>Error loading orders: {error}</p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="mt-2 text-sm text-blue-600 hover:underline"
+        >
+          Try again
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -69,6 +92,9 @@ export default function OrderHistory({ userId }) {
                 }`}>
                   {order.status}
                 </span>
+                <span className="text-xs text-gray-500">
+                  {new Date(order.createdAt).toLocaleDateString()}
+                </span>
               </div>
               <span className="font-semibold text-lg">${order.total.toFixed(2)}</span>
             </div>
@@ -76,8 +102,8 @@ export default function OrderHistory({ userId }) {
 
           {/* Order Items */}
           <div className="divide-y divide-gray-100">
-            {order.items.map(item => (
-              <div key={item._id} className="p-4 flex gap-4">
+            {order.items.map((item, index) => (
+              <div key={item._id || index} className="p-4 flex gap-4">
                 {item.image ? (
                   <div className="relative h-16 w-16 flex-shrink-0">
                     <Image
