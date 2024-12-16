@@ -148,25 +148,43 @@ export default function HeaderProgress() {
         <div className="w-full max-w-7xl mx-auto px-4 py-3">
           {!session ? (
             <motion.div 
-              className="flex flex-col md:flex-row items-center justify-between gap-4"
+              className="flex flex-col md:flex-row items-center justify-between gap-2 py-1 md:py-3"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
             >
-              <div className="flex items-center gap-4">
-                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-r from-[#FF9F43] to-[#FFB976] shadow-lg">
-                  <FaGift className="text-white text-xl" />
+              {/* Mobile View */}
+              <div className="flex md:hidden w-full items-center justify-between px-1">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-r from-[#FF9F43] to-[#FFB976] shadow-md">
+                    <FaGift className="text-white text-sm" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-semibold text-gray-900">
+                        Join VIVA Rewards
+                      </h3>
+                      <div className="flex items-center gap-1">
+                        <FaCoins className="text-[#FF9F43] text-[10px]" />
+                        <span className="text-[10px] text-gray-600">$1 = 1 VIVAbuck</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-600">
+                      Get $5 off + 100 VIVAbucks
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Join VIVA Rewards Today!
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    Get $5 off your first purchase + 100 VIVAbucks
-                  </p>
-                </div>
+                <Link
+                  href="/register"
+                  className="px-4 py-1.5 bg-primary text-white rounded-lg text-xs font-medium 
+                    hover:bg-primary/90 transition-all duration-200 shadow-sm
+                    active:scale-95"
+                >
+                  Join
+                </Link>
               </div>
 
-              <div className="flex flex-col md:flex-row items-center gap-4">
+              {/* Desktop View - remains the same */}
+              <div className="hidden md:flex items-center gap-4">
                 <div className="flex items-center gap-6">
                   <div className="flex items-center gap-2">
                     <FaCoins className="text-[#FF9F43]" />
