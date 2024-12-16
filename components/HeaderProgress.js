@@ -10,6 +10,7 @@ import { Dialog } from '@headlessui/react';
 import confetti from 'canvas-confetti';
 import { useRewardsStore } from '@/lib/stores/rewardsStore';
 import { createPortal } from 'react-dom';
+import Link from 'next/link';
 
 export default function HeaderProgress() {
   const { data: session } = useSession();
@@ -137,170 +138,152 @@ export default function HeaderProgress() {
   };
 
   return (
-    <div className="w-full bg-white border-b">
-      <div className="w-full max-w-7xl mx-auto px-4 py-2">
-        <motion.div className="relative" layout>
-          {/* Mobile Layout */}
-          <div className="md:hidden">
-            <div className="flex justify-between items-center mb-1.5">
-              <div className="flex items-center space-x-2">
-                <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-r from-[#FF9F43] to-[#FFB976] shadow-md">
-                  <FaStar className="text-white text-sm" />
+    <AnimatePresence>
+      <motion.div 
+        className="w-full bg-white/95 backdrop-blur-sm border-b shadow-sm"
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        exit={{ y: -100 }}
+      >
+        <div className="w-full max-w-7xl mx-auto px-4 py-3">
+          {!session ? (
+            <motion.div 
+              className="flex flex-col md:flex-row items-center justify-between gap-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              <div className="flex items-center gap-4">
+                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-r from-[#FF9F43] to-[#FFB976] shadow-lg">
+                  <FaGift className="text-white text-xl" />
                 </div>
-                <div className="flex flex-col">
-                  <div className="flex items-center space-x-1">
-                    <span className="text-base font-semibold text-gray-800">
-                      {REWARDS_CONFIG.formatPoints(currentPoints)}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Join VIVA Rewards Today!
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    Get $5 off your first purchase + 100 VIVAbucks
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-col md:flex-row items-center gap-4">
+                <div className="flex items-center gap-6">
+                  <div className="flex items-center gap-2">
+                    <FaCoins className="text-[#FF9F43]" />
+                    <span className="text-sm text-gray-600 whitespace-nowrap">
+                      $1 = 1 VIVAbuck
                     </span>
-                    <FaCoins className="text-[#FF9F43] text-xs" />
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-[10px] text-gray-500">
-                      Lifetime Points
+                  <div className="flex items-center gap-2">
+                    <FaStar className="text-[#FF9F43]" />
+                    <span className="text-sm text-gray-600">
+                      Instant Savings
                     </span>
-                    <div className="flex items-center space-x-1 border-l border-gray-200 pl-2">
-                      <FaStar className={`text-[9px] ${tierColor}`} />
-                      <span className="text-[10px] text-gray-500">
-                        {rewardsData?.currentTier || 'STANDARD'}
+                  </div>
+                </div>
+                <Link
+                  href="/register"
+                  className="px-6 py-2.5 bg-primary text-white rounded-xl text-sm font-medium 
+                    hover:bg-primary/90 transition-all duration-200 shadow-md hover:shadow-lg
+                    active:scale-95"
+                >
+                  Join Now
+                </Link>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div 
+              className="space-y-3"
+              layout
+            >
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <motion.div 
+                    className="flex items-center justify-center w-10 h-10 rounded-xl 
+                      bg-gradient-to-r from-[#FF9F43] to-[#FFB976] shadow-md"
+                    whileHover={{ scale: 1.05 }}
+                  >
+                    <FaStar className="text-white text-lg" />
+                  </motion.div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl font-bold text-gray-900">
+                        {REWARDS_CONFIG.formatPoints(currentPoints)}
                       </span>
+                      <FaCoins className="text-[#FF9F43]" />
                     </div>
-                    {availableReward > 0 && (
-                      <div 
-                        onClick={handleRewardClick}
-                        className="flex items-center space-x-1 border-l border-gray-200 pl-2 
-                          cursor-pointer rounded-full px-2 py-0.5 
-                          transition-all duration-300 ease-in-out group
-                          hover:bg-emerald-50 hover:shadow-sm hover:scale-105 
-                          active:scale-95 hover:border-emerald-200"
-                      >
-                        <div className="relative">
-                          <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-emerald-400 rounded-full 
-                            animate-ping opacity-75"></div>
-                          <FaGift className="text-emerald-500 text-[9px] 
-                            group-hover:scale-110 group-hover:rotate-12 
-                            transition-all duration-300" />
-                        </div>
-                        <span className="text-[10px] text-emerald-600 font-medium 
-                          group-hover:text-emerald-700 group-hover:font-semibold
-                          transition-all duration-300">
-                          {REWARDS_CONFIG.formatCurrency(availableReward)} Available
+                    <div className="flex items-center gap-3 text-sm">
+                      <span className="text-gray-500">Points Balance</span>
+                      <div className="h-4 w-px bg-gray-200" />
+                      <div className="flex items-center gap-1">
+                        <FaStar className={`${tierColor}`} />
+                        <span className="text-gray-500">
+                          {rewardsData?.currentTier}
                         </span>
                       </div>
-                    )}
+                      {availableReward > 0 && (
+                        <motion.button
+                          onClick={handleRewardClick}
+                          className="flex items-center gap-1.5 ml-2 px-3 py-1 rounded-full
+                            bg-emerald-50 text-emerald-600 font-medium
+                            hover:bg-emerald-100 transition-all duration-200"
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          <FaGift className="text-emerald-500" />
+                          <span>
+                            {REWARDS_CONFIG.formatCurrency(availableReward)} Ready
+                          </span>
+                        </motion.button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Progress bar with reward circle */}
-            <div className="relative">
-              <div className="h-5 bg-gray-100 rounded-full overflow-hidden shadow-inner">
-                <div className="relative h-full">
+              <div className="relative">
+                <motion.div 
+                  className="h-6 bg-gray-100 rounded-xl overflow-hidden shadow-inner"
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 1 }}
+                >
                   <motion.div
-                    className="absolute h-full bg-gradient-to-r from-[#FF9F43] to-[#FFB976] rounded-full"
+                    className="h-full bg-gradient-to-r from-[#FF9F43] to-[#FFB976] rounded-xl"
                     initial={{ width: 0 }}
                     animate={{ width: `${Math.min(progress, 100)}%` }}
                     transition={{ duration: 0.8, ease: "easeOut" }}
                   >
-                    <div 
-                      className="absolute -right-2.5 top-1/2 -translate-y-1/2"
-                      style={{ 
-                        filter: 'drop-shadow(0 0 1px rgba(0,0,0,0.3))'
+                    <motion.div
+                      className="absolute right-0 top-1/2 -translate-y-1/2 -translate-x-1/2
+                        flex items-center justify-center w-8 h-8 bg-white rounded-full
+                        shadow-lg border-2 border-[#FFB976]"
+                      animate={{
+                        scale: [1, 1.1, 1],
+                        rotate: [0, -10, 10, 0],
+                      }}
+                      transition={{
+                        duration: 0.5,
+                        ease: "easeOut",
                       }}
                     >
-                      <div className="flex items-center justify-center w-5 h-5 bg-white rounded-full border border-[#FFB976]">
-                        <span className="text-[10px] font-bold text-[#FF9F43]">
-                          {currentProgressPoints}
-                        </span>
-                      </div>
-                    </div>
-                  </motion.div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Desktop Layout */}
-          <div className="hidden md:block">
-            <div className="flex justify-between items-center mb-1.5">
-              <div className="flex items-center space-x-3">
-                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-r from-[#FF9F43] to-[#FFB976] shadow-md">
-                  <FaStar className="text-white text-lg" />
-                </div>
-                <div className="flex flex-col">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-lg font-semibold text-gray-800">
-                      {REWARDS_CONFIG.formatPoints(currentPoints)}
-                    </span>
-                    <FaCoins className="text-[#FF9F43] text-sm" />
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-xs text-gray-500">
-                      Lifetime Points
-                    </span>
-                    <div className="flex items-center space-x-1 border-l border-gray-200 pl-2">
-                      <FaStar className={`text-[11px] ${tierColor}`} />
-                      <span className="text-xs text-gray-500">
-                        {rewardsData?.currentTier || 'STANDARD'}
+                      <span className="text-sm font-bold text-[#FF9F43]">
+                        {currentProgressPoints}
                       </span>
-                    </div>
-                    {availableReward > 0 && (
-                      <div 
-                        onClick={handleRewardClick}
-                        className="flex items-center space-x-1 border-l border-gray-200 pl-2 
-                          cursor-pointer rounded-full px-2 py-0.5 
-                          transition-all duration-300 ease-in-out group
-                          hover:bg-emerald-50 hover:shadow-sm hover:scale-105 
-                          active:scale-95 hover:border-emerald-200"
-                      >
-                        <div className="relative">
-                          <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-emerald-400 rounded-full 
-                            animate-ping opacity-75"></div>
-                          <FaGift className="text-emerald-500 text-[9px] 
-                            group-hover:scale-110 group-hover:rotate-12 
-                            transition-all duration-300" />
-                        </div>
-                        <span className="text-[10px] text-emerald-600 font-medium 
-                          group-hover:text-emerald-700 group-hover:font-semibold
-                          transition-all duration-300">
-                          {REWARDS_CONFIG.formatCurrency(availableReward)} Available
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Progress bar with reward circle */}
-            <div className="relative">
-              <div className="h-5 bg-gray-100 rounded-full overflow-hidden shadow-inner">
-                <div className="relative h-full">
-                  <motion.div
-                    className="absolute h-full bg-gradient-to-r from-[#FF9F43] to-[#FFB976] rounded-full"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${Math.min(progress, 100)}%` }}
-                    transition={{ duration: 0.8, ease: "easeOut" }}
-                  >
-                    <div 
-                      className="absolute -right-2.5 top-1/2 -translate-y-1/2"
-                      style={{ 
-                        filter: 'drop-shadow(0 0 1px rgba(0,0,0,0.3))'
-                      }}
-                    >
-                      <div className="flex items-center justify-center w-5 h-5 bg-white rounded-full border border-[#FFB976]">
-                        <span className="text-[10px] font-bold text-[#FF9F43]">
-                          {currentProgressPoints}
-                        </span>
-                      </div>
-                    </div>
+                    </motion.div>
                   </motion.div>
+                </motion.div>
+                
+                <div className="flex justify-between mt-1 px-1">
+                  <span className="text-xs text-gray-500">0</span>
+                  <span className="text-xs text-gray-500">
+                    {REWARDS_CONFIG.REWARD_RATE.POINTS_NEEDED}
+                  </span>
                 </div>
               </div>
-            </div>
-          </div>
-        </motion.div>
-      </div>
+            </motion.div>
+          )}
+        </div>
+      </motion.div>
 
       {/* Redemption Modal */}
       {isOpen && createPortal(
@@ -396,6 +379,6 @@ export default function HeaderProgress() {
         </div>,
         document.getElementById('modal-root')
       )}
-    </div>
+    </AnimatePresence>
   );
 }

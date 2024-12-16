@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { FaMapMarkerAlt } from 'react-icons/fa';
+import { FaMapMarkerAlt, FaPlus } from 'react-icons/fa';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function ShippingAddress({ onAddressSelect }) {
   const { data: session } = useSession();
@@ -113,203 +114,184 @@ export default function ShippingAddress({ onAddressSelect }) {
   const displayedAddresses = showAll ? addresses : addresses.slice(0, 3);
 
   return (
-    <div className="space-y-6 p-4">
-      <h2 className="text-xl font-semibold">Shipping Address</h2>
+    <div className="space-y-6">
+      <h2 className="text-lg font-bold text-gray-900">Shipping Address</h2>
       
       {/* Existing Addresses */}
       {addresses.length > 0 && (
         <div className="space-y-4">
-          <h3 className="text-lg font-medium">Saved Addresses</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {displayedAddresses.map((address, index) => (
-              <button
+              <motion.button
                 key={index}
                 onClick={() => handleAddressSelect(address)}
-                className={`relative p-4 rounded-lg border transition-all text-left ${
-                  selectedAddress === address
-                    ? 'border-[#289d44] bg-white shadow-md'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
+                className={`relative p-4 rounded-2xl border-2 transition-all duration-200 text-left
+                  ${selectedAddress === address 
+                    ? 'border-primary bg-primary/5' 
+                    : 'border-gray-100 hover:border-primary/20'}`}
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.98 }}
               >
-                <div className="flex items-center space-x-3">
-                  <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
-                    selectedAddress === address ? 'bg-[#289d44] text-white' : 'bg-gray-100 text-gray-600'
-                  }`}>
+                <div className="flex items-center space-x-4">
+                  <div className={`flex items-center justify-center w-12 h-12 rounded-xl
+                    transition-colors duration-200 ${
+                      selectedAddress === address 
+                        ? 'bg-primary text-white' 
+                        : 'bg-gray-50 text-gray-600'
+                    }`}
+                  >
                     <FaMapMarkerAlt className="text-xl" />
                   </div>
                   <div className="flex-1">
-                    <div className="font-semibold">{address.fullName}</div>
-                    <div className="text-sm text-gray-600">
+                    <div className="font-medium text-gray-900">{address.fullName}</div>
+                    <div className="text-sm text-gray-500">
                       {address.street}{address.apartment && `, ${address.apartment}`}
                     </div>
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-gray-500">
                       {address.city}, {address.state} {address.zipCode}
                     </div>
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-gray-500">
                       {formatPhoneNumber(address.phone)}
                     </div>
                   </div>
-                  <div className={`w-5 h-5 rounded-full border-2 ${
-                    selectedAddress === address
-                      ? 'border-[#289d44] bg-[#289d44]'
-                      : 'border-gray-300'
-                  }`}>
-                    {selectedAddress === address && (
-                      <div className="w-full h-full relative">
-                        <div className="absolute inset-0 m-auto w-2 h-2 rounded-full bg-white"></div>
-                      </div>
-                    )}
-                  </div>
                 </div>
+
                 {selectedAddress === address && (
-                  <div className="absolute -top-2 -right-2">
-                    <div className="bg-[#289d44] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                      ✓
-                    </div>
-                  </div>
+                  <motion.div 
+                    className="absolute -top-2 -right-2 bg-primary text-white rounded-full w-6 h-6 
+                      flex items-center justify-center"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                  >
+                    ✓
+                  </motion.div>
                 )}
-              </button>
+              </motion.button>
             ))}
             
             {/* Add New Address Card */}
             {addresses.length < 5 && !showNewAddressForm && (
-              <button
+              <motion.button
                 onClick={() => setShowNewAddressForm(true)}
-                className="relative p-4 rounded-lg border-2 border-dashed border-gray-200 hover:border-gray-300 transition-all flex items-center justify-center"
+                className="relative p-4 rounded-2xl border-2 border-dashed border-gray-200 
+                  hover:border-primary/20 transition-all duration-200"
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.98 }}
               >
-                <div className="text-center">
-                  <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-2">
-                    <span className="text-2xl text-gray-600">+</span>
+                <div className="flex flex-col items-center justify-center h-full space-y-2">
+                  <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center">
+                    <FaPlus className="text-xl text-gray-400" />
                   </div>
-                  <span className="block text-sm text-gray-600">Add New Address</span>
+                  <span className="text-sm font-medium text-gray-600">Add New Address</span>
                 </div>
-              </button>
+              </motion.button>
             )}
           </div>
           
           {addresses.length > 3 && !showAll && (
-            <button 
+            <motion.button 
               onClick={() => setShowAll(true)}
-              className="text-[#289d44] hover:text-opacity-80 font-medium"
+              className="w-full text-primary font-medium py-2 hover:text-primary/80 transition-colors"
+              whileHover={{ y: -1 }}
             >
               Show More Addresses
-            </button>
+            </motion.button>
           )}
         </div>
       )}
 
       {/* Show Add New Address button if no addresses exist */}
       {addresses.length === 0 && !showNewAddressForm && (
-        <button
+        <motion.button
           onClick={() => setShowNewAddressForm(true)}
-          className="w-full py-2 px-4 bg-[#F3F4F6] text-[#003366] rounded-md hover:bg-gray-100"
+          className="w-full py-3 rounded-xl font-medium bg-gray-50 text-gray-900
+            hover:bg-gray-100 transition-all duration-200"
+          whileHover={{ y: -2 }}
+          whileTap={{ scale: 0.98 }}
         >
-          + Add New Address
-        </button>
+          Add New Address
+        </motion.button>
       )}
 
       {/* New Address Form Modal */}
-      {showNewAddressForm && (
-        <div 
-          className="absolute inset-0 bg-black/50 flex items-center justify-center p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="new-address-title"
-        >
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 id="new-address-title" className="text-lg font-medium mb-4">
-              Add New Address
-            </h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <input
-                type="text"
-                name="fullName"
-                value={newAddress.fullName}
-                onChange={handleInputChange}
-                placeholder="Full Name"
-                required
-                className="w-full p-2 border rounded"
-              />
-              <input
-                type="text"
-                name="street"
-                value={newAddress.street}
-                onChange={handleInputChange}
-                placeholder="Street Address"
-                required
-                className="w-full p-2 border rounded"
-              />
-              <input
-                type="text"
-                name="apartment"
-                value={newAddress.apartment}
-                onChange={handleInputChange}
-                placeholder="Apartment, Suite, etc. (optional)"
-                className="w-full p-2 border rounded"
-              />
-              <div className="grid grid-cols-2 gap-4">
-                <input
-                  type="text"
-                  name="city"
-                  value={newAddress.city}
-                  onChange={handleInputChange}
-                  placeholder="City"
-                  required
-                  className="w-full p-2 border rounded"
-                />
-                <input
-                  type="text"
-                  name="state"
-                  value={newAddress.state}
-                  onChange={handleInputChange}
-                  placeholder="State"
-                  required
-                  className="w-full p-2 border rounded"
-                />
-              </div>
-              <input
-                type="text"
-                name="zipCode"
-                value={newAddress.zipCode}
-                onChange={handleInputChange}
-                placeholder="ZIP Code"
-                required
-                className="w-full p-2 border rounded"
-              />
-              <input
-                type="tel"
-                name="phone"
-                value={formatPhoneNumber(newAddress.phone)}
-                onChange={handleInputChange}
-                placeholder="Phone Number"
-                required
-                className="w-full p-2 border rounded"
-                maxLength="14"
-              />
+      <AnimatePresence>
+        {showNewAddressForm && (
+          <motion.div 
+            className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div 
+              className="bg-white rounded-3xl p-6 max-w-md w-full"
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+            >
+              <h3 className="text-lg font-bold text-gray-900 mb-6">Add New Address</h3>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {[
+                  { name: 'fullName', placeholder: 'Full Name', required: true },
+                  { name: 'street', placeholder: 'Street Address', required: true },
+                  { name: 'apartment', placeholder: 'Apartment, Suite, etc. (optional)', required: false },
+                  { name: 'city', placeholder: 'City', required: true, half: true },
+                  { name: 'state', placeholder: 'State', required: true, half: true },
+                  { name: 'zipCode', placeholder: 'ZIP Code', required: true },
+                  { name: 'phone', placeholder: 'Phone Number', required: true, type: 'tel' }
+                ].map((field, index) => (
+                  <div key={field.name} className={field.half ? 'grid grid-cols-2 gap-4' : ''}>
+                    <input
+                      type={field.type || 'text'}
+                      name={field.name}
+                      value={field.name === 'phone' ? formatPhoneNumber(newAddress[field.name]) : newAddress[field.name]}
+                      onChange={handleInputChange}
+                      placeholder={field.placeholder}
+                      required={field.required}
+                      className="w-full p-3 rounded-xl border-2 border-gray-100 
+                        focus:border-primary/20 focus:ring-0 transition-colors
+                        placeholder:text-gray-400"
+                      maxLength={field.name === 'phone' ? 14 : undefined}
+                    />
+                  </div>
+                ))}
 
-              <div className="flex gap-4 mt-6">
-                <button
-                  type="submit"
-                  className="flex-1 bg-[#289d44] text-white py-2 px-4 rounded-md hover:opacity-90"
-                >
-                  Save Address
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowNewAddressForm(false)}
-                  className="flex-1 border border-gray-300 py-2 px-4 rounded-md hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+                <div className="flex gap-4 mt-6">
+                  <motion.button
+                    type="submit"
+                    className="flex-1 bg-primary text-white py-3 rounded-xl font-medium
+                      hover:bg-primary/90 transition-all duration-200"
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Save Address
+                  </motion.button>
+                  <motion.button
+                    type="button"
+                    onClick={() => setShowNewAddressForm(false)}
+                    className="flex-1 bg-gray-50 text-gray-900 py-3 rounded-xl font-medium
+                      hover:bg-gray-100 transition-all duration-200"
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Cancel
+                  </motion.button>
+                </div>
+              </form>
 
-      {error && (
-        <p className="text-red-500 mt-2">{error}</p>
-      )}
+              {error && (
+                <motion.p 
+                  className="text-red-500 mt-4 text-sm"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  {error}
+                </motion.p>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 } 
