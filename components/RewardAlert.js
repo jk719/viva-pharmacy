@@ -3,9 +3,38 @@
 import { useRewardsStore } from '@/lib/stores/rewardsStore';
 import { motion } from 'framer-motion';
 import { FaTimes } from 'react-icons/fa';
+import { useSession } from 'next-auth/react';
+import eventEmitter, { Events } from '@/lib/eventEmitter';
 
 export default function RewardAlert() {
+  const { data: session } = useSession();
   const { activeReward, clearActiveReward } = useRewardsStore();
+
+  const handleClearReward = async () => {
+    // First clear the active reward from the store
+    clearActiveReward();
+
+    // Then restore the points in the database
+    if (session?.user?.id) {
+      try {
+        const response = await fetch(`/api/user/vivabucks/${session.user.id}/restore`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ amount: activeReward })
+        });
+
+        if (response.ok) {
+          // Emit events to update UI
+          eventEmitter.emit(Events.POINTS_UPDATED);
+          eventEmitter.emit(Events.REWARD_RESTORED);
+        }
+      } catch (error) {
+        console.error('Error restoring reward:', error);
+      }
+    }
+  };
 
   if (!activeReward) return null;
 
@@ -26,7 +55,7 @@ export default function RewardAlert() {
             </span>
           </div>
           <button
-            onClick={clearActiveReward}
+            onClick={handleClearReward}
             className="flex items-center space-x-2 text-white/90 hover:text-white transition-colors px-2 py-1 rounded-lg hover:bg-white/10"
           >
             <span className="text-sm hidden md:inline">Don't use reward</span>

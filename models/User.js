@@ -55,24 +55,35 @@ const addressSchema = new mongoose.Schema({
   }
 });
 
-// Add new schema for reward history
+// Update the rewardHistory schema
 const rewardHistorySchema = new mongoose.Schema({
-  amount: {
-    type: Number,
-    required: true
+  type: {
+    type: String,
+    required: true,
+    enum: [
+      'POINTS_EARNED',
+      'REWARD_REDEEMED',
+      'TIER_CHANGED',
+      'REWARD_RESTORED'
+    ]
   },
-  pointsUsed: {
-    type: Number,
-    required: true
-  },
-  redeemedAt: {
+  timestamp: {
     type: Date,
     default: Date.now
   },
-  tier: {
-    type: String,
-    required: true
-  }
+  // Optional fields based on type
+  points: Number,         // For POINTS_EARNED
+  adjustedPoints: Number, // For POINTS_EARNED
+  multiplier: Number,     // For POINTS_EARNED
+  amount: Number,         // For REWARD_REDEEMED and REWARD_RESTORED
+  pointsUsed: Number,     // For REWARD_REDEEMED
+  pointsRestored: Number, // Add this for REWARD_RESTORED
+  oldTier: String,        // For TIER_CHANGED
+  newTier: String,        // For TIER_CHANGED
+  tier: String,           // Current tier at time of action
+  source: String         // Source of points/reward
+}, { 
+  timestamps: true 
 });
 
 const userSchema = new mongoose.Schema({
@@ -344,46 +355,50 @@ userSchema.methods.getRewardAmount = function() {
   return REWARDS_CONFIG.getRewardAmount(this.rewardPoints);
 };
 
-userSchema.methods.addPoints = async function(points) {
+// Update the addPoints method to handle both regular and test points
+userSchema.methods.addPoints = async function(points, isTest = false) {
   try {
-    console.log('🎯 Adding points:', points);
-    console.log('Initial state:', {
-      rewardPoints: this.rewardPoints,
-      cumulativePoints: this.cumulativePoints,
-      currentTier: this.currentTier
-    });
+    console.log(`🎯 Adding ${isTest ? 'test' : ''} points:`, points);
     
-    // Get current tier info from REWARDS_CONFIG
     const tierInfo = REWARDS_CONFIG.getMembershipTier(this.cumulativePoints);
     const multiplier = tierInfo?.multiplier || 1.0;
-    
-    console.log('Current tier:', tierInfo?.name, 'Multiplier:', multiplier);
-    
-    // Apply tier multiplier to points
     const adjustedPoints = Math.floor(points * multiplier);
-    console.log('✨ Adjusted points with multiplier:', adjustedPoints);
     
     // Update points
     this.rewardPoints += adjustedPoints;
     this.cumulativePoints += adjustedPoints;
     
-    // Update tier info
-    this.currentTier = tierInfo?.name || 'STANDARD';
-    this.pointsMultiplier = multiplier;
+    // Only add to history if not a test
+    if (!isTest) {
+      // Add points history entry
+      this.rewardHistory.push({
+        type: 'POINTS_EARNED',
+        points: points,
+        adjustedPoints: adjustedPoints,
+        multiplier: multiplier,
+        tier: this.currentTier,
+        source: isTest ? 'test' : 'purchase'
+      });
+    }
     
-    console.log('Before calculateNextReward:', {
-      rewardPoints: this.rewardPoints,
-      currentTier: this.currentTier
-    });
+    // Check for tier change
+    const newTierInfo = REWARDS_CONFIG.getMembershipTier(this.cumulativePoints);
+    if (newTierInfo?.name !== this.currentTier) {
+      if (!isTest) {
+        this.rewardHistory.push({
+          type: 'TIER_CHANGED',
+          oldTier: this.currentTier,
+          newTier: newTierInfo.name,
+          tier: newTierInfo.name
+        });
+      }
+      this.currentTier = newTierInfo.name;
+      this.pointsMultiplier = newTierInfo.multiplier;
+    }
     
-    // Calculate next reward milestone
     this.calculateNextReward();
-    
-    console.log('After calculateNextReward:', {
-      nextMilestone: this.nextRewardMilestone
-    });
-    
     await this.save();
+    
     return {
       adjustedPoints,
       vivaBucks: this.vivaBucks,
@@ -398,6 +413,7 @@ userSchema.methods.addPoints = async function(points) {
   }
 };
 
+// Update the redeemReward method to use the new schema
 userSchema.methods.redeemReward = async function() {
   try {
     const pointsNeeded = REWARDS_CONFIG.REWARD_RATE.POINTS_NEEDED;
@@ -410,18 +426,16 @@ userSchema.methods.redeemReward = async function() {
       };
     }
 
-    // Add to reward history
+    // Add redemption history entry
     this.rewardHistory.push({
+      type: 'REWARD_REDEEMED',
       amount: rewardAmount,
       pointsUsed: pointsNeeded,
       tier: this.currentTier
     });
 
-    // Update VivaBucks and points
     this.vivaBucks += rewardAmount;
     this.rewardPoints -= pointsNeeded;
-
-    // Recalculate next milestone
     this.calculateNextReward();
     
     await this.save();

@@ -15,7 +15,9 @@ export default function HeaderProgress() {
   const { data: session } = useSession();
   const [rewardsData, setRewardsData] = useState({
     rewardPoints: 0,
-    currentTier: 'STANDARD'
+    currentTier: 'STANDARD',
+    cumulativePoints: 0,
+    vivaBucks: 0
   });
   const [scale, setScale] = useState(100);
   const [isOpen, setIsOpen] = useState(false);
@@ -41,16 +43,22 @@ export default function HeaderProgress() {
     fetchRewardsData();
     const handlePointsUpdate = () => fetchRewardsData();
     const handlePointsReset = () => {
-      setRewardsData(null);
-      fetchRewardsData();
+      setRewardsData({
+        rewardPoints: 0,
+        currentTier: 'STANDARD',
+        cumulativePoints: 0,
+        vivaBucks: 0
+      });
     };
 
     eventEmitter.on(Events.POINTS_UPDATED, handlePointsUpdate);
     eventEmitter.on(Events.POINTS_RESET, handlePointsReset);
+    eventEmitter.on(Events.REWARD_RESTORED, handlePointsUpdate);
     
     return () => {
       eventEmitter.off(Events.POINTS_UPDATED, handlePointsUpdate);
       eventEmitter.off(Events.POINTS_RESET, handlePointsReset);
+      eventEmitter.off(Events.REWARD_RESTORED, handlePointsUpdate);
     };
   }, [session]);
 
@@ -65,6 +73,7 @@ export default function HeaderProgress() {
   const availableReward = REWARDS_CONFIG.getRewardAmount(currentPoints);
   const progress = (currentPoints % REWARDS_CONFIG.REWARD_RATE.POINTS_NEEDED) / REWARDS_CONFIG.REWARD_RATE.POINTS_NEEDED * 100;
   const currentProgressPoints = currentPoints % REWARDS_CONFIG.REWARD_RATE.POINTS_NEEDED;
+  const tierColor = REWARDS_CONFIG.MEMBERSHIP_TIERS[rewardsData?.currentTier]?.color || 'text-gray-500';
 
   const handleRewardClick = () => {
     if (availableReward > 0) {
@@ -72,23 +81,44 @@ export default function HeaderProgress() {
     }
   };
 
-  const handleRewardRedeem = (amount) => {
-    setRedeemAmount(amount);
-    setIsRedeeming(true);
-    setActiveReward(amount);
-    setIsOpen(false);
-    setCurrentPage(0);
-    
-    confetti({
-      particleCount: 100,
-      spread: 70,
-      origin: { y: 0.6 },
-      colors: ['#10B981', '#34D399', '#6EE7B7', '#FFB976', '#FF9F43']
-    });
+  const handleRewardRedeem = async (amount) => {
+    try {
+      const response = await fetch(`/api/user/vivabucks/${session.user.id}/redeem`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ amount })
+      });
 
-    setTimeout(() => {
-      setIsRedeeming(false);
-    }, 2000);
+      if (response.ok) {
+        setRedeemAmount(amount);
+        setIsRedeeming(true);
+        setActiveReward(amount);
+        setIsOpen(false);
+        setCurrentPage(0);
+        
+        eventEmitter.emit(Events.REWARD_REDEEMED);
+        eventEmitter.emit(Events.POINTS_UPDATED);
+
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#10B981', '#34D399', '#6EE7B7', '#FFB976', '#FF9F43']
+        });
+
+        await fetchRewardsData();
+        
+        setTimeout(() => {
+          setIsRedeeming(false);
+        }, 2000);
+      } else {
+        console.error('Failed to redeem reward');
+      }
+    } catch (error) {
+      console.error('Error redeeming reward:', error);
+    }
   };
 
   return (
@@ -105,7 +135,7 @@ export default function HeaderProgress() {
                 <div className="flex flex-col">
                   <div className="flex items-center space-x-1">
                     <span className="text-base font-semibold text-gray-800">
-                      {currentPoints.toLocaleString()}
+                      {REWARDS_CONFIG.formatPoints(currentPoints)}
                     </span>
                     <FaCoins className="text-[#FF9F43] text-xs" />
                   </div>
@@ -114,9 +144,9 @@ export default function HeaderProgress() {
                       Lifetime Points
                     </span>
                     <div className="flex items-center space-x-1 border-l border-gray-200 pl-2">
-                      <FaStar className="text-[#FF9F43] text-[9px]" />
+                      <FaStar className={`text-[9px] ${tierColor}`} />
                       <span className="text-[10px] text-gray-500">
-                        {rewardsData.currentTier}
+                        {rewardsData?.currentTier || 'STANDARD'}
                       </span>
                     </div>
                     {availableReward > 0 && (
@@ -129,7 +159,6 @@ export default function HeaderProgress() {
                           active:scale-95 hover:border-emerald-200"
                       >
                         <div className="relative">
-                          {/* Ping animation */}
                           <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-emerald-400 rounded-full 
                             animate-ping opacity-75"></div>
                           <FaGift className="text-emerald-500 text-[9px] 
@@ -139,7 +168,7 @@ export default function HeaderProgress() {
                         <span className="text-[10px] text-emerald-600 font-medium 
                           group-hover:text-emerald-700 group-hover:font-semibold
                           transition-all duration-300">
-                          ${availableReward} Available
+                          {REWARDS_CONFIG.formatCurrency(availableReward)} Available
                         </span>
                       </div>
                     )}
@@ -158,7 +187,6 @@ export default function HeaderProgress() {
                     animate={{ width: `${Math.min(progress, 100)}%` }}
                     transition={{ duration: 0.8, ease: "easeOut" }}
                   >
-                    {/* Circular points at the tip */}
                     <div 
                       className="absolute -right-2.5 top-1/2 -translate-y-1/2"
                       style={{ 
@@ -187,7 +215,7 @@ export default function HeaderProgress() {
                 <div className="flex flex-col">
                   <div className="flex items-center space-x-2">
                     <span className="text-lg font-semibold text-gray-800">
-                      {currentPoints.toLocaleString()}
+                      {REWARDS_CONFIG.formatPoints(currentPoints)}
                     </span>
                     <FaCoins className="text-[#FF9F43] text-sm" />
                   </div>
@@ -196,9 +224,9 @@ export default function HeaderProgress() {
                       Lifetime Points
                     </span>
                     <div className="flex items-center space-x-1 border-l border-gray-200 pl-2">
-                      <FaStar className="text-[#FF9F43] text-[11px]" />
+                      <FaStar className={`text-[11px] ${tierColor}`} />
                       <span className="text-xs text-gray-500">
-                        {rewardsData.currentTier}
+                        {rewardsData?.currentTier || 'STANDARD'}
                       </span>
                     </div>
                     {availableReward > 0 && (
@@ -211,7 +239,6 @@ export default function HeaderProgress() {
                           active:scale-95 hover:border-emerald-200"
                       >
                         <div className="relative">
-                          {/* Ping animation */}
                           <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-emerald-400 rounded-full 
                             animate-ping opacity-75"></div>
                           <FaGift className="text-emerald-500 text-[9px] 
@@ -221,7 +248,7 @@ export default function HeaderProgress() {
                         <span className="text-[10px] text-emerald-600 font-medium 
                           group-hover:text-emerald-700 group-hover:font-semibold
                           transition-all duration-300">
-                          ${availableReward} Available
+                          {REWARDS_CONFIG.formatCurrency(availableReward)} Available
                         </span>
                       </div>
                     )}
@@ -240,7 +267,6 @@ export default function HeaderProgress() {
                     animate={{ width: `${Math.min(progress, 100)}%` }}
                     transition={{ duration: 0.8, ease: "easeOut" }}
                   >
-                    {/* Circular points at the tip */}
                     <div 
                       className="absolute -right-2.5 top-1/2 -translate-y-1/2"
                       style={{ 
@@ -277,8 +303,8 @@ export default function HeaderProgress() {
               </Dialog.Title>
 
               <div className="space-y-3">
-                {[...Array(Math.floor(availableReward / 10))].map((_, index) => {
-                  const amount = (index + 1) * 10;
+                {[...Array(Math.floor(availableReward / REWARDS_CONFIG.REWARD_RATE.REWARD_AMOUNT))].map((_, index) => {
+                  const amount = (index + 1) * REWARDS_CONFIG.REWARD_RATE.REWARD_AMOUNT;
                   return (
                     <button 
                       key={index}
@@ -287,10 +313,10 @@ export default function HeaderProgress() {
                     >
                       <div className="flex items-center space-x-3">
                         <FaGift className="text-emerald-500" />
-                        <span className="font-medium">${amount}</span>
+                        <span className="font-medium">{REWARDS_CONFIG.formatCurrency(amount)}</span>
                       </div>
                       <span className="text-sm text-gray-500">
-                        Redeem {amount/10} reward{amount > 10 ? 's' : ''}
+                        Redeem {amount/REWARDS_CONFIG.REWARD_RATE.REWARD_AMOUNT} reward{amount > REWARDS_CONFIG.REWARD_RATE.REWARD_AMOUNT ? 's' : ''}
                       </span>
                     </button>
                   );
@@ -340,7 +366,7 @@ export default function HeaderProgress() {
               className="bg-gradient-to-r from-[#FF9F43] to-[#FFB976] p-8 rounded-2xl shadow-lg mb-4"
             >
               <span className="text-6xl font-bold text-white">
-                ${redeemAmount}
+                {REWARDS_CONFIG.formatCurrency(redeemAmount)}
               </span>
             </motion.div>
             <motion.div

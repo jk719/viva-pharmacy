@@ -5,20 +5,10 @@ import { useSession } from 'next-auth/react';
 import { BsCoin } from 'react-icons/bs';
 import { FaCrown, FaGift, FaTrophy } from 'react-icons/fa';
 import toast from 'react-hot-toast';
-import RewardCard from './rewards/RewardCard';
 import TierBenefits from './rewards/TierBenefits';
 import RewardHistory from './rewards/RewardHistory';
 import TestPoints from './TestPoints';
 import eventEmitter, { Events } from '@/lib/eventEmitter';
-
-const REWARD_TIERS = [
-  { points: 100, amount: 5 },
-  { points: 200, amount: 15 },
-  { points: 400, amount: 30 },
-  { points: 600, amount: 50 },
-  { points: 800, amount: 75 },
-  { points: 1000, amount: 100 }
-];
 
 const TIER_COLORS = {
   'Standard': '#6B7280', // gray-500
@@ -33,7 +23,6 @@ export default function VivaBucksDashboard() {
   const { data: session, status } = useSession();
   const [rewardsData, setRewardsData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [redeeming, setRedeeming] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const refreshData = () => {
@@ -70,49 +59,6 @@ export default function VivaBucksDashboard() {
 
     fetchRewardsData();
   }, [session, status, refreshTrigger]);
-
-  const handleRedeemReward = async (milestone) => {
-    if (!rewardsData || redeeming) return;
-
-    const rewardAmount = REWARD_TIERS.find(tier => tier.points === milestone)?.amount;
-    
-    setRedeeming(true);
-    const redeemToast = toast.loading('Redeeming reward...');
-    
-    try {
-      const response = await fetch(`/api/user/vivabucks/${session.user.id}/redeem`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ milestone })
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setRewardsData(data);
-        refreshData();
-        toast.success(
-          `Successfully redeemed $${rewardAmount} reward!`, 
-          { id: redeemToast }
-        );
-      } else {
-        toast.error(
-          data.error || 'Failed to redeem reward', 
-          { id: redeemToast }
-        );
-      }
-    } catch (error) {
-      console.error('Error redeeming reward:', error);
-      toast.error(
-        'An error occurred while redeeming reward', 
-        { id: redeemToast }
-      );
-    } finally {
-      setRedeeming(false);
-    }
-  };
 
   const handleResetPoints = async () => {
     if (!confirm('Are you sure you want to reset all your points? This cannot be undone.')) {
@@ -197,19 +143,6 @@ export default function VivaBucksDashboard() {
 
         <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-xl">
           <div className="flex items-center gap-2 mb-2">
-            <FaGift className="text-primary-color text-xl" />
-            <span className="text-gray-600">Next Reward</span>
-          </div>
-          <div className="text-xl font-semibold text-[#003366]">
-            ${rewardsData.nextRewardAmount}
-            <span className="text-sm text-gray-500 ml-2">
-              in {rewardsData.nextRewardMilestone - rewardsData.rewardPoints} points
-            </span>
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-xl">
-          <div className="flex items-center gap-2 mb-2">
             <FaTrophy className="text-yellow-500 text-xl" />
             <span className="text-gray-600">Lifetime Points</span>
           </div>
@@ -220,19 +153,6 @@ export default function VivaBucksDashboard() {
             </span>
           </div>
         </div>
-      </div>
-
-      {/* Available Rewards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {REWARD_TIERS.map((tier) => (
-          <RewardCard
-            key={tier.points}
-            points={rewardsData.rewardPoints}
-            milestone={tier.points}
-            onRedeem={() => handleRedeemReward(tier.points)}
-            isLoading={redeeming}
-          />
-        ))}
       </div>
 
       {/* Tier Benefits */}

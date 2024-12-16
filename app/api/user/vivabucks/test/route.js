@@ -26,7 +26,7 @@ export async function POST(request) {
     }
 
     // Add points and get updated user data
-    const result = await user.addPoints(points);
+    const result = await user.addPoints(points, true);
 
     return NextResponse.json({
       success: true,

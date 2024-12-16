@@ -4,56 +4,73 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { FaGift } from 'react-icons/fa';
 import { REWARDS_CONFIG } from '@/lib/rewards/config';
+import eventEmitter, { Events } from '@/lib/eventEmitter';
 
 export default function RewardHistory() {
   const { data: session } = useSession();
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const fetchRewardHistory = async () => {
+    console.log('🔄 Fetching reward history...');
+    if (!session?.user?.id) {
+      setLoading(false);
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await fetch(`/api/user/vivabucks/${session.user.id}/redeem`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch reward history');
+      }
+
+      const data = await response.json();
+      console.log('📥 Raw history data:', data.history);
+
+      const filteredHistory = (data.history || []).filter(entry => 
+        entry.type === 'REWARD_REDEEMED' && entry.source === 'redemption'
+      );
+      console.log('🔍 Filtered history:', filteredHistory);
+
+      setHistory(filteredHistory);
+    } catch (err) {
+      console.error('❌ Error fetching reward history:', err);
+      setError('Unable to load reward history');
+      setHistory([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchRewardHistory = async () => {
-      if (!session?.user?.id) {
-        setLoading(false);
-        return;
-      }
-      
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const response = await fetch(`/api/user/vivabucks/${session.user.id}/history`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.message || 'Failed to fetch history');
-        }
-
-        const data = await response.json();
-        
-        // Validate data structure
-        if (!data || !Array.isArray(data.history)) {
-          console.error('Invalid response format:', data);
-          throw new Error('Invalid response format');
-        }
-
-        setHistory(data.history);
-      } catch (err) {
-        console.error('Error fetching reward history:', err);
-        setError(err.message || 'Unable to load reward history');
-        setHistory([]);
-      } finally {
-        setLoading(false);
-      }
+    const handleRewardRedeemed = () => {
+      console.log('🎯 Reward redeemed event received');
+      setRefreshKey(prev => prev + 1);
     };
 
+    eventEmitter.on(Events.REWARD_REDEEMED, handleRewardRedeemed);
+    eventEmitter.on(Events.POINTS_UPDATED, handleRewardRedeemed);
+    
+    return () => {
+      eventEmitter.off(Events.REWARD_REDEEMED, handleRewardRedeemed);
+      eventEmitter.off(Events.POINTS_UPDATED, handleRewardRedeemed);
+    };
+  }, []);
+
+  useEffect(() => {
     fetchRewardHistory();
-  }, [session?.user?.id]);
+  }, [session?.user?.id, refreshKey]);
 
   if (loading) {
     return (
@@ -93,12 +110,12 @@ export default function RewardHistory() {
     );
   }
 
-  if (history.length === 0) {
+  if (!history || history.length === 0) {
     return (
       <div className="bg-white rounded-lg border border-gray-200">
         <div className="p-4">
           <div className="text-center py-6">
-            <FaGift className="mx-auto text-gray-400 text-3xl mb-2" />
+            <FaGift className="mx-auto text-[#FF9F43] text-3xl mb-2" />
             <p className="text-gray-500">No rewards redeemed yet</p>
             <p className="text-sm text-gray-400 mt-1">
               Earn {REWARDS_CONFIG.REWARD_RATE.POINTS_NEEDED} points to get your first ${REWARDS_CONFIG.REWARD_RATE.REWARD_AMOUNT} reward
@@ -118,30 +135,25 @@ export default function RewardHistory() {
         </p>
       </div>
       <div className="divide-y divide-gray-200">
-        {history.map((reward) => (
-          <div key={reward._id || reward.id} className="p-4 hover:bg-gray-50">
+        {history.map((reward, index) => (
+          <div key={reward._id || reward.id || index} className="p-4 hover:bg-gray-50">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <FaGift className="text-[#FF9F43]" />
                 <div>
                   <p className="text-sm font-medium text-gray-900">
-                    ${reward.amount} Reward Redeemed
+                    ${reward.amount} Reward {reward.status || 'Redeemed'}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {new Date(reward.redeemedAt).toLocaleDateString()} at{' '}
-                    {new Date(reward.redeemedAt).toLocaleTimeString()}
+                    {new Date(reward.timestamp || reward.createdAt).toLocaleDateString()} at{' '}
+                    {new Date(reward.timestamp || reward.createdAt).toLocaleTimeString()}
                   </p>
                 </div>
               </div>
               <div className="text-right">
                 <span className="text-sm text-gray-500">
-                  {reward.pointsUsed?.toLocaleString()} points
+                  {(reward.pointsUsed || reward.points)?.toLocaleString()} points
                 </span>
-                {reward.orderId && (
-                  <p className="text-xs text-gray-400">
-                    Order #{reward.orderId}
-                  </p>
-                )}
               </div>
             </div>
           </div>
