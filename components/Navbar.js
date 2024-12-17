@@ -51,41 +51,42 @@ export default function Navbar() {
         <div className="container mx-auto px-4">
           {/* Mobile Layout */}
           <div className="flex flex-col md:hidden space-y-3">
-            <div className="flex items-center justify-between">
-              <Link href="/">
+            <div className="flex items-center justify-between px-1">
+              <Link href="/" className="flex items-center">
                 <Image
                   src="/images/viva-online-logo.png"
                   alt="VIVA Logo"
                   width={140}
                   height={42}
-                  className="h-9 w-auto"
+                  className="h-7 w-auto -ml-1"
                   priority
                 />
               </Link>
-
-              <div className="flex items-center space-x-3">
-                <AuthButtons />
-                <Link href="/cart">
+              
+              <div className="flex items-center gap-3">
+                <AuthButtons className="flex items-center text-sm" />
+                <Link 
+                  href="/cart"
+                  className="flex items-center justify-center w-8 h-8"
+                >
                   <ClientCartIcon />
                 </Link>
               </div>
             </div>
 
             <div className="relative">
-              <div className="relative">
-                <input
-                  type="text"
-                  value={query}
-                  onChange={handleInputChange}
-                  onFocus={() => setIsFocused(true)}
-                  onBlur={() => setTimeout(() => setIsFocused(false), 200)}
-                  placeholder="Search products..."
-                  className="w-full h-10 pl-10 pr-4 text-gray-900 placeholder-gray-500 
-                    bg-white/90 backdrop-blur-sm rounded-xl border-2 border-white/50
-                    focus:border-white focus:outline-none focus:ring-0 transition-all"
-                />
-                <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              </div>
+              <input
+                type="text"
+                value={query}
+                onChange={handleInputChange}
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => setTimeout(() => setIsFocused(false), 200)}
+                placeholder="Search products..."
+                className="w-full h-9 pl-10 pr-4 text-gray-900 placeholder-gray-500 
+                  bg-white/90 backdrop-blur-sm rounded-xl border-2 border-white/50
+                  focus:border-white focus:outline-none focus:ring-0 transition-all"
+              />
+              <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             </div>
           </div>
 
