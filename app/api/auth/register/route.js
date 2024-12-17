@@ -8,6 +8,7 @@ import {
   sendVerificationEmail,
   AUTH_ERRORS 
 } from '@/lib/auth';
+import { REWARDS_CONFIG } from '@/lib/rewards/config';
 
 export async function POST(request) {
   try {
@@ -15,21 +16,27 @@ export async function POST(request) {
     const body = await request.json();
     const { email, password, phoneNumber } = body;
 
-    // Validate email
-    if (!email || !email.includes('@')) {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Valid email is required' 
-      }, { status: 400 });
+    // Input validation
+    const validationErrors = {
+      email: !email || !email.includes('@') ? 'Valid email is required' : null,
+      password: validatePassword(password),
+      phoneNumber: !phoneNumber ? 'Phone number is required' : null
+    };
+
+    // Check for validation errors
+    const errors = Object.entries(validationErrors)
+      .filter(([key, value]) => value && key !== 'password')
+      .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
+
+    if (validationErrors.password && !validationErrors.password.isValid) {
+      errors.password = validationErrors.password.errors;
     }
 
-    // Validate password
-    const passwordValidation = validatePassword(password);
-    if (!passwordValidation.isValid) {
+    if (Object.keys(errors).length > 0) {
       return NextResponse.json({ 
         success: false, 
-        message: passwordValidation.message,
-        errors: passwordValidation.errors 
+        message: 'Validation failed',
+        errors 
       }, { status: 400 });
     }
 
@@ -45,14 +52,33 @@ export async function POST(request) {
     // Generate verification token
     const verificationToken = generateVerificationToken();
 
-    // Create new user
+    // Initialize rewards data
+    const rewardsData = {
+      vivaBucks: REWARDS_CONFIG.WELCOME_BONUS.VIVABUCKS,
+      rewardPoints: REWARDS_CONFIG.WELCOME_BONUS.VIVABUCKS,
+      cumulativePoints: REWARDS_CONFIG.WELCOME_BONUS.VIVABUCKS,
+      currentTier: REWARDS_CONFIG.DEFAULT_TIER,
+      welcomeBonus: REWARDS_CONFIG.WELCOME_BONUS.AMOUNT,
+      welcomeBonusRedeemed: false,
+      rewardsHistory: [{
+        type: 'welcome_bonus',
+        amount: REWARDS_CONFIG.WELCOME_BONUS.VIVABUCKS,
+        description: 'Welcome Bonus Points',
+        date: new Date()
+      }]
+    };
+
+    // Create new user with rewards
     const user = new User({
       email: email.toLowerCase(),
       password,
       phoneNumber,
       verificationToken,
       isVerified: false,
-      role: 'user'
+      role: 'user',
+      ...rewardsData,
+      createdAt: new Date(),
+      updatedAt: new Date()
     });
 
     await user.save();
@@ -64,17 +90,27 @@ export async function POST(request) {
       console.log('Verification email sent successfully');
     } catch (emailError) {
       console.error('Failed to send verification email:', emailError);
-      // Still return success but with a warning
       return NextResponse.json({
         success: true,
-        message: 'Account created but verification email failed to send. Please use resend verification option.',
+        userId: user._id,
+        rewards: {
+          vivaBucks: rewardsData.vivaBucks,
+          welcomeBonus: rewardsData.welcomeBonus
+        },
+        message: 'Account created with rewards! Verification email failed to send. Please use resend option.',
         emailError: true
       }, { status: 201 });
     }
 
+    // Success response with rewards info
     return NextResponse.json({
       success: true,
-      message: 'Account created successfully. Please check your email for verification instructions.'
+      userId: user._id,
+      rewards: {
+        vivaBucks: rewardsData.vivaBucks,
+        welcomeBonus: rewardsData.welcomeBonus
+      },
+      message: 'Account created successfully with rewards! Please check your email for verification.'
     }, { status: 201 });
 
   } catch (error) {

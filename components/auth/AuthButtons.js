@@ -53,6 +53,7 @@ export function AuthButtons() {
         setError(result.error);
       } else {
         setShowLogin(false);
+        router.push('/');
         router.refresh();
       }
     } catch (err) {
@@ -64,15 +65,28 @@ export function AuthButtons() {
 
   const handleSignOut = async () => {
     try {
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin;
+      
       await signOut({
-        redirect: true,
-        callbackUrl: '/'
+        callbackUrl: `${baseUrl}/`,
+        redirect: false
       });
+      
+      // Clear any local state/storage if needed
+      // Force navigation and refresh
+      router.push('/');
+      router.refresh();
+      
     } catch (error) {
       console.error('Sign out error:', error);
-      // Fallback: force refresh the page
+      // Ultimate fallback
       window.location.href = '/';
     }
+  };
+
+  // Add navigation handler
+  const handleNavigation = () => {
+    setShowLogin(false);
   };
 
   if (session) {
@@ -278,6 +292,7 @@ export function AuthButtons() {
                   <div className="flex items-center justify-between">
                     <Link 
                       href="/forgot-password"
+                      onClick={handleNavigation}
                       className="font-medium text-primary hover:text-primary-light
                                transition-all duration-200 hover:scale-105 inline-block
                                hover:underline decoration-2 underline-offset-4
@@ -317,6 +332,7 @@ export function AuthButtons() {
                       Don't have an account?{' '}
                       <Link 
                         href="/register"
+                        onClick={handleNavigation}
                         className="font-medium text-primary hover:text-primary-light
                                  transition-all duration-200 hover:scale-105 inline-block
                                  hover:underline decoration-2 underline-offset-4
