@@ -56,9 +56,10 @@ export default function Navbar() {
                 <Image
                   src="/images/viva-online-logo.png"
                   alt="VIVA Logo"
-                  width={100}
-                  height={30}
-                  className="h-6 w-auto"
+                  width={140}
+                  height={42}
+                  className="h-9 w-auto"
+                  priority
                 />
               </Link>
 
