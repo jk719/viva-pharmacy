@@ -7,7 +7,8 @@ import Image from 'next/image';
 import { calculateTax, formatTaxRate, getTaxRate } from '@/lib/tax/taxRates';
 import ShippingAddress from '@/components/checkout/ShippingAddress';
 import { useSession } from 'next-auth/react';
-import { FaClock, FaTruck, FaStore, FaMapMarkerAlt, FaRegClock } from 'react-icons/fa';
+import { FaClock, FaTruck, FaStore, FaMapMarkerAlt, FaRegClock, FaBox } from 'react-icons/fa';
+import { motion, AnimatePresence } from 'framer-motion';
 
 function CheckoutContent() {
   const { 
@@ -35,16 +36,13 @@ function CheckoutContent() {
       : INCREMENT_SIZE.desktop
   );
 
-  // Add window width state
   const [windowWidth, setWindowWidth] = useState(
     typeof window !== 'undefined' ? window.innerWidth : 0
   );
 
-  // Add resize listener
   useEffect(() => {
     const handleResize = () => {
       setWindowWidth(window.innerWidth);
-      // Reset display count when screen size changes
       setDisplayCount(window.innerWidth < 768 ? INCREMENT_SIZE.mobile : INCREMENT_SIZE.desktop);
     };
 
@@ -62,15 +60,6 @@ function CheckoutContent() {
     setDisplayCount(initialCount);
   };
 
-  // Calculate initial display count based on device and delivery method
-  const getInitialDisplayCount = () => {
-    const isMobile = windowWidth < 768; // md breakpoint
-    return deliveryMethod === 'pickup'
-      ? isMobile ? INCREMENT_SIZE.mobile : INCREMENT_SIZE.desktop
-      : isMobile ? INCREMENT_SIZE.mobile : INCREMENT_SIZE.desktop;
-  };
-
-  // Add timeSlots calculation
   const timeSlots = useMemo(() => {
     const slots = [];
     const start = 9 * 60 + 30;
@@ -95,254 +84,262 @@ function CheckoutContent() {
         return;
       }
       
-      // Calculate subtotal
       const newSubtotal = items.reduce((sum, item) => {
         return sum + (parseFloat(item.price) * parseInt(item.quantity));
       }, 0);
       
-      // Calculate tax based on shipping address
       const taxAmount = shippingAddress 
-        ? calculateTax(newSubtotal, shippingAddress.state, 'NYC') // You can adjust the region logic as needed
+        ? calculateTax(newSubtotal, shippingAddress.state, 'NYC')
         : 0;
       
       setSubtotal(newSubtotal);
       setTax(taxAmount);
       setCartTotal(newSubtotal + taxAmount);
     }
-  }, [items, loading, shippingAddress]); // Added shippingAddress to dependencies
+  }, [items, loading, shippingAddress]);
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">Loading cart...</div>
-      </div>
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="container mx-auto px-4 py-8"
+      >
+        <div className="text-center">
+          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading your cart...</p>
+        </div>
+      </motion.div>
     );
   }
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-red-500 text-center">{error}</div>
-      </div>
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="container mx-auto px-4 py-8"
+      >
+        <div className="text-center text-red-500">{error}</div>
+      </motion.div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-4">Checkout</h1>
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="container mx-auto px-4 py-8 max-w-4xl"
+    >
+      <h1 className="text-3xl font-bold mb-8 text-gray-800">Checkout</h1>
       
-      <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">Delivery Method</h2>
+      <motion.div 
+        className="mb-8 bg-white rounded-2xl shadow-lg p-6"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+          <FaBox className="text-primary" />
+          Delivery Method
+        </h2>
+        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <button
-            onClick={() => setDeliveryMethod('delivery')}
-            className={`relative p-4 rounded-lg border transition-all ${
-              deliveryMethod === 'delivery'
-                ? 'border-[#289d44] bg-white shadow-md'
-                : 'border-gray-200 hover:border-gray-300'
-            }`}
-          >
-            <div className="flex items-center space-x-3">
-              <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
-                deliveryMethod === 'delivery' ? 'bg-[#289d44] text-white' : 'bg-gray-100 text-gray-600'
-              }`}>
-                <FaTruck className="text-xl" />
-              </div>
-              <div className="flex-1 text-left">
-                <div className="font-semibold">Home Delivery</div>
-                <div className="text-sm text-gray-600">Delivered to your address</div>
-              </div>
-              <div className={`w-5 h-5 rounded-full border-2 ${
-                deliveryMethod === 'delivery'
-                  ? 'border-[#289d44] bg-[#289d44]'
-                  : 'border-gray-300'
-              }`}>
-                {deliveryMethod === 'delivery' && (
-                  <div className="w-full h-full relative">
-                    <div className="absolute inset-0 m-auto w-2 h-2 rounded-full bg-white"></div>
-                  </div>
-                )}
-              </div>
-            </div>
-            {deliveryMethod === 'delivery' && (
-              <div className="absolute -top-2 -right-2">
-                <div className="bg-[#289d44] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  ✓
+          {[
+            { id: 'delivery', icon: FaTruck, title: 'Home Delivery', desc: 'Delivered to your address' },
+            { id: 'pickup', icon: FaStore, title: 'Store Pickup', desc: 'Pick up at our location' }
+          ].map((option) => (
+            <motion.button
+              key={option.id}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setDeliveryMethod(option.id)}
+              className={`relative p-6 rounded-xl border-2 transition-all ${
+                deliveryMethod === option.id
+                  ? 'border-primary bg-primary/5 shadow-lg'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center gap-4">
+                <div className={`p-3 rounded-full ${
+                  deliveryMethod === option.id 
+                    ? 'bg-primary text-white' 
+                    : 'bg-gray-100 text-gray-500'
+                }`}>
+                  <option.icon className="text-xl" />
+                </div>
+                <div className="text-left">
+                  <div className="font-semibold text-gray-800">{option.title}</div>
+                  <div className="text-sm text-gray-600">{option.desc}</div>
                 </div>
               </div>
-            )}
-          </button>
-          
-          <button
-            onClick={() => setDeliveryMethod('pickup')}
-            className={`relative p-4 rounded-lg border transition-all ${
-              deliveryMethod === 'pickup'
-                ? 'border-[#289d44] bg-white shadow-md'
-                : 'border-gray-200 hover:border-gray-300'
-            }`}
-          >
-            <div className="flex items-center space-x-3">
-              <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
-                deliveryMethod === 'pickup' ? 'bg-[#289d44] text-white' : 'bg-gray-100 text-gray-600'
-              }`}>
-                <FaStore className="text-xl" />
-              </div>
-              <div className="flex-1 text-left">
-                <div className="font-semibold">Store Pickup</div>
-                <div className="text-sm text-gray-600">Pick up at our location</div>
-              </div>
-              <div className={`w-5 h-5 rounded-full border-2 ${
-                deliveryMethod === 'pickup'
-                  ? 'border-[#289d44] bg-[#289d44]'
-                  : 'border-gray-300'
-              }`}>
-                {deliveryMethod === 'pickup' && (
-                  <div className="w-full h-full relative">
-                    <div className="absolute inset-0 m-auto w-2 h-2 rounded-full bg-white"></div>
-                  </div>
-                )}
-              </div>
-            </div>
-            {deliveryMethod === 'pickup' && (
-              <div className="absolute -top-2 -right-2">
-                <div className="bg-[#289d44] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  ✓
-                </div>
-              </div>
-            )}
-          </button>
+              
+              {deliveryMethod === option.id && (
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="absolute -top-2 -right-2 bg-primary text-white rounded-full p-1"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </motion.div>
+              )}
+            </motion.button>
+          ))}
         </div>
-      </div>
+      </motion.div>
 
-      <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">Select Time</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {timeSlots
-            .slice(0, displayCount)
-            .map((time) => (
-              <button
+      <motion.div 
+        className="mb-8 bg-white rounded-2xl shadow-lg p-6"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+      >
+        <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+          <FaClock className="text-primary" />
+          Select Time
+        </h2>
+
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          <AnimatePresence>
+            {timeSlots.slice(0, displayCount).map((time) => (
+              <motion.button
                 key={time}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => setSelectedTime(time)}
-                className={`relative p-4 rounded-lg border transition-all ${
+                className={`p-4 rounded-xl border-2 transition-all ${
                   selectedTime === time
-                    ? 'border-[#289d44] bg-white shadow-md'
+                    ? 'border-primary bg-primary/5 shadow-md'
                     : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
-                <div className="flex items-center space-x-3">
-                  <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
-                    selectedTime === time ? 'bg-[#289d44] text-white' : 'bg-gray-100 text-gray-600'
+                <div className="flex flex-col items-center gap-2">
+                  <div className={`p-2 rounded-full ${
+                    selectedTime === time 
+                      ? 'bg-primary text-white' 
+                      : 'bg-gray-100 text-gray-500'
                   }`}>
-                    {selectedTime === time ? <FaClock className="text-xl" /> : <FaRegClock className="text-xl" />}
+                    <FaClock className="text-lg" />
                   </div>
-                  <div className="flex-1 text-left">
-                    <div className="font-semibold">{time}</div>
-                    <div className="text-sm text-gray-600">
-                      {deliveryMethod === 'delivery' ? 'Delivery Time' : 'Pickup Time'}
+                  <div className="text-center">
+                    <div className="font-medium text-gray-800">{time}</div>
+                    <div className="text-xs text-gray-500">
+                      {deliveryMethod === 'delivery' ? 'Delivery' : 'Pickup'}
                     </div>
-                  </div>
-                  <div className={`w-5 h-5 rounded-full border-2 ${
-                    selectedTime === time
-                      ? 'border-[#289d44] bg-[#289d44]'
-                      : 'border-gray-300'
-                  }`}>
-                    {selectedTime === time && (
-                      <div className="w-full h-full relative">
-                        <div className="absolute inset-0 m-auto w-2 h-2 rounded-full bg-white"></div>
-                      </div>
-                    )}
                   </div>
                 </div>
-                {selectedTime === time && (
-                  <div className="absolute -top-2 -right-2">
-                    <div className="bg-[#289d44] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                      ✓
-                    </div>
-                  </div>
-                )}
-              </button>
+              </motion.button>
             ))}
+          </AnimatePresence>
         </div>
+
+        <div className="mt-4 flex justify-center">
+          {timeSlots.length > displayCount ? (
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleShowMore}
+              className="text-primary hover:text-primary/80 flex items-center gap-2 px-4 py-2 rounded-full
+                       border-2 border-primary/20 hover:border-primary/30 transition-colors"
+            >
+              <FaClock />
+              View More Times ({timeSlots.length - displayCount})
+            </motion.button>
+          ) : displayCount > INCREMENT_SIZE[windowWidth < 768 ? 'mobile' : 'desktop'] && (
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleShowLess}
+              className="text-gray-600 hover:text-gray-800 flex items-center gap-2 px-4 py-2"
+            >
+              <FaRegClock />
+              Show Less Times
+            </motion.button>
+          )}
+        </div>
+      </motion.div>
+
+      <motion.div 
+        className="mb-8 bg-white rounded-2xl shadow-lg p-6"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <h2 className="text-xl font-semibold mb-6">Order Summary</h2>
         
-        {timeSlots.length > displayCount && (
-          <button
-            onClick={handleShowMore}
-            className="mt-4 text-[#289d44] hover:text-[#1e7433] flex items-center justify-center w-full py-2 border border-[#289d44] rounded-lg transition-colors"
-          >
-            <FaClock className="mr-2" />
-            View More Times ({timeSlots.length - displayCount} available)
-          </button>
-        )}
-
-        {displayCount > (windowWidth < 768 ? INCREMENT_SIZE.mobile : INCREMENT_SIZE.desktop) && (
-          <button
-            onClick={handleShowLess}
-            className="mt-2 text-gray-600 hover:text-gray-800 flex items-center justify-center w-full py-2"
-          >
-            <FaRegClock className="mr-2" />
-            Show Less Times
-          </button>
-        )}
-      </div>
-
-      <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-2">Order Summary</h2>
-        <div className="border rounded-lg shadow-sm">
+        <div className="space-y-4">
           {items.map((item) => (
-            <div key={item.id || item._id} className="flex items-center p-4 border-b last:border-b-0">
-              <div className="relative h-20 w-20 flex-shrink-0">
+            <motion.div
+              key={item.id || item._id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl"
+            >
+              <div className="relative h-20 w-20 bg-white rounded-lg p-2 shadow-sm">
                 <Image
                   src={item.image}
                   alt={item.name}
                   fill
-                  className="object-contain rounded-md"
+                  className="object-contain"
                   sizes="80px"
                 />
               </div>
-              <div className="ml-4 flex-grow">
-                <h3 className="font-medium">{item.name}</h3>
+              <div className="flex-grow">
+                <h3 className="font-medium text-gray-800">{item.name}</h3>
                 <div className="flex justify-between items-center mt-1">
-                  <div className="text-gray-600">
-                    Quantity: {item.quantity}
-                  </div>
-                  <div className="font-semibold">
+                  <div className="text-gray-600">Qty: {item.quantity}</div>
+                  <div className="font-semibold text-primary">
                     ${(parseFloat(item.price) * parseInt(item.quantity)).toFixed(2)}
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
 
-        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <span>Subtotal:</span>
-              <span>${subtotal.toFixed(2)}</span>
+        <div className="mt-6 p-4 bg-gray-50 rounded-xl space-y-3">
+          <div className="flex justify-between items-center text-gray-600">
+            <span>Subtotal</span>
+            <span>${subtotal.toFixed(2)}</span>
+          </div>
+          {shippingAddress && (
+            <div className="flex justify-between items-center text-gray-600">
+              <span>Tax ({formatTaxRate(getTaxRate(shippingAddress.state, 'NYC'))})</span>
+              <span>${tax.toFixed(2)}</span>
             </div>
-            {shippingAddress && (
-              <div className="flex justify-between items-center text-gray-600">
-                <span>Tax ({formatTaxRate(getTaxRate(shippingAddress.state, 'NYC'))}):</span>
-                <span>${tax.toFixed(2)}</span>
-              </div>
-            )}
-            <div className="flex justify-between items-center font-bold text-lg pt-2 border-t">
-              <span>Total:</span>
-              <span>${cartTotal.toFixed(2)}</span>
-            </div>
+          )}
+          <div className="flex justify-between items-center text-xl font-bold text-primary pt-3 border-t">
+            <span>Total</span>
+            <span>${cartTotal.toFixed(2)}</span>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {deliveryMethod === 'delivery' && (
-        <ShippingAddress onAddressSelect={setShippingAddress} />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="mb-8 bg-white rounded-2xl shadow-lg p-6"
+        >
+          <ShippingAddress onAddressSelect={setShippingAddress} />
+        </motion.div>
       )}
 
       {((deliveryMethod === 'delivery' && shippingAddress) || 
          deliveryMethod === 'pickup') && 
        selectedTime && 
        cartTotal > 0 && (
-        <div className="mt-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="mt-8 bg-white rounded-2xl shadow-lg p-6"
+        >
           <PaymentForm 
             amount={cartTotal} 
             items={items}
@@ -350,9 +347,9 @@ function CheckoutContent() {
             deliveryMethod={deliveryMethod}
             selectedTime={selectedTime}
           />
-        </div>
+        </motion.div>
       )}
-    </div>
+    </motion.div>
   );
 }
 
@@ -361,13 +358,11 @@ export default function CheckoutPage() {
     <Suspense 
       fallback={
         <div className="container mx-auto px-4 py-8">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-48 mb-4"></div>
-            <div className="space-y-4">
-              <div className="h-32 bg-gray-200 rounded"></div>
-              <div className="h-24 bg-gray-200 rounded"></div>
-              <div className="h-48 bg-gray-200 rounded"></div>
-            </div>
+          <div className="animate-pulse space-y-6">
+            <div className="h-8 bg-gray-200 rounded w-48"></div>
+            <div className="h-32 bg-gray-200 rounded"></div>
+            <div className="h-24 bg-gray-200 rounded"></div>
+            <div className="h-48 bg-gray-200 rounded"></div>
           </div>
         </div>
       }

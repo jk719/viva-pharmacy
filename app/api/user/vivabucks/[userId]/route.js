@@ -66,9 +66,9 @@ export async function POST(request) {
     const data = await request.json();
     const { points, source } = data;
     
-    // Webhook auth check
-    const headersList = headers();
-    const webhookAuth = headersList.get('authorization');
+    // Webhook auth check - Fix the headers handling
+    const headersList = await headers();
+    const webhookAuth = await headersList.get('authorization');
     const INTERNAL_KEY = process.env.INTERNAL_API_KEY || 'stripe-webhook-key';
     const isWebhook = webhookAuth === `Bearer ${INTERNAL_KEY}`;
     
@@ -76,6 +76,11 @@ export async function POST(request) {
       const session = await getServerSession(authOptions);
       if (!session) {
         return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+      }
+      
+      // Verify the user is updating their own points
+      if (userId !== session.user.id) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
       }
     }
 
@@ -90,11 +95,13 @@ export async function POST(request) {
 
     // Apply tier multiplier if applicable
     const multiplier = REWARDS_CONFIG.MEMBERSHIP_TIERS[user.currentTier]?.multiplier || 1;
-    const adjustedPoints = points * multiplier;
+    const adjustedPoints = Math.floor(points * multiplier); // Ensure points are whole numbers
 
+    console.log('🎯 Adding points:', adjustedPoints);
     const result = await user.addPoints(adjustedPoints);
     
     return NextResponse.json({
+      success: true,
       ...result,
       multiplier,
       originalPoints: points,

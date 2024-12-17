@@ -39,81 +39,88 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="bg-primary-color text-white py-2 w-full">
-        <div className="container mx-auto px-4">
-          {/* Mobile Layout - Super Compact */}
-          <div className="flex flex-col md:hidden">
-            <div className="flex items-center justify-between h-12 px-2">
-              {/* Left: Logo */}
-              <Link href="/">
+      <nav className="bg-primary-color shadow-lg">
+        <div className="container mx-auto px-4 py-3">
+          {/* Mobile Layout */}
+          <div className="flex flex-col md:hidden space-y-3">
+            <div className="flex items-center justify-between">
+              <Link href="/" className="flex-shrink-0">
                 <Image
                   src="/images/viva-online-logo.png"
                   alt="VIVA Logo"
-                  width={100}
-                  height={30}
-                  className="h-6 w-auto"
+                  width={120}
+                  height={40}
+                  className="h-8 w-auto"
                 />
               </Link>
 
-              {/* Right: Icons */}
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-4">
                 <AuthButtons />
-                <Link href="/cart">
+                <Link href="/cart" className="relative hover:opacity-80 transition-opacity">
                   <ClientCartIcon />
                 </Link>
               </div>
             </div>
 
-            {/* Search bar - inline */}
-            <div className="px-2 pb-1">
-              <input
-                type="text"
-                value={query}
-                onChange={handleInputChange}
-                placeholder="Search..."
-                className="w-full h-8 px-3 text-sm rounded-lg"
-              />
-            </div>
-          </div>
-
-          {/* Desktop Layout */}
-          <div className="hidden md:flex md:items-center md:justify-between">
-            <Link href="/">
-              <Image
-                src="/images/viva-online-logo.png"
-                alt="VIVA Pharmacy & Wellness Logo"
-                width={180}
-                height={60}
-              />
-            </Link>
-
-            <div className="flex-1 max-w-xl mx-8">
+            <div className="relative">
               <input
                 type="text"
                 value={query}
                 onChange={handleInputChange}
                 placeholder="Search products..."
-                className="w-full p-2 rounded-lg bg-white text-blue-900 placeholder-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full h-10 px-4 rounded-full text-gray-800 bg-white/90 backdrop-blur-sm
+                         border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400
+                         placeholder:text-gray-500 text-sm"
+              />
+            </div>
+          </div>
+
+          {/* Desktop Layout */}
+          <div className="hidden md:flex md:items-center md:justify-between md:gap-8">
+            <Link href="/" className="flex-shrink-0">
+              <Image
+                src="/images/viva-online-logo.png"
+                alt="VIVA Pharmacy & Wellness Logo"
+                width={200}
+                height={70}
+                className="h-12 w-auto"
+              />
+            </Link>
+
+            <div className="flex-1 max-w-2xl relative">
+              <input
+                type="text"
+                value={query}
+                onChange={handleInputChange}
+                placeholder="Search products..."
+                className="w-full h-11 px-6 rounded-full text-gray-800 bg-white/90 backdrop-blur-sm
+                         border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400
+                         placeholder:text-gray-500 transition-all duration-200"
               />
             </div>
 
-            <div className="flex items-center space-x-6">
-              <Link href="/cart" className="text-white hover:text-gray-200 transition-colors duration-300">
+            <div className="flex items-center gap-6">
+              <Link 
+                href="/cart" 
+                className="relative hover:opacity-80 transition-opacity p-2"
+              >
                 <ClientCartIcon />
               </Link>
               <AuthButtons />
             </div>
           </div>
 
-          {/* Search Results Dropdown */}
+          {/* Search Results Dropdown - Improved styling */}
           {filteredProducts.length > 0 && (
             <div className="relative z-50">
-              <ul className="absolute left-4 right-4 mt-1 bg-white text-blue-900 rounded-lg shadow-lg overflow-hidden max-h-48 overflow-y-auto">
+              <ul className="absolute left-0 right-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-100
+                           max-h-[60vh] overflow-y-auto">
                 {filteredProducts.map((product) => (
                   <li
                     key={product.id}
                     onClick={() => handleProductClick(product.id)}
-                    className="px-3 py-1.5 text-sm cursor-pointer hover:bg-blue-100"
+                    className="px-4 py-2.5 text-gray-700 hover:bg-gray-50 cursor-pointer
+                             transition-colors duration-150 border-b border-gray-100 last:border-none"
                   >
                     {product.name}
                   </li>

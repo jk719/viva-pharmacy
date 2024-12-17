@@ -5,7 +5,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
 import { useState, useEffect, Suspense } from 'react';
-import { FaStore, FaTruck } from 'react-icons/fa';
+import { FaShoppingBag } from 'react-icons/fa';
+import { motion, AnimatePresence } from 'framer-motion';
+import { HiMinusSm, HiPlusSm, HiOutlineTrash } from 'react-icons/hi';
 
 function CartContent() {
     const router = useRouter();
@@ -36,152 +38,136 @@ function CartContent() {
     };
 
     return (
-        <div className="container mx-auto px-4 md:px-6">
-            <div className="bg-white rounded-lg shadow-sm p-4 md:p-6">
-                <h1 className="text-2xl font-bold mb-6 text-primary">Your Cart</h1>
+        <div className="container mx-auto px-4 md:px-6 py-8">
+            <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white rounded-2xl shadow-lg p-4 md:p-6"
+            >
+                <h1 className="text-2xl font-bold mb-8 text-primary flex items-center gap-3">
+                    <FaShoppingBag className="text-xl" />
+                    Your Cart
+                </h1>
+
                 {!items?.length ? (
-                    <div className="text-center py-8">
-                        <p className="text-gray-600 mb-4">Your cart is empty</p>
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="text-center py-12"
+                    >
+                        <div className="mb-6">
+                            <FaShoppingBag className="text-6xl text-gray-300 mx-auto mb-4" />
+                            <p className="text-gray-500 mb-6">Your cart is empty</p>
+                        </div>
                         <Link 
                             href="/" 
-                            className="inline-block bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors"
+                            className="inline-flex items-center gap-2 bg-primary text-white px-6 py-3 
+                                     rounded-full hover:bg-primary/90 transition-all duration-300
+                                     shadow-lg hover:shadow-xl"
                         >
                             Continue Shopping
                         </Link>
-                    </div>
+                    </motion.div>
                 ) : (
-                    <div>
-                        {items.map((item) => (
-                            <div key={item.id} className="flex flex-col sm:flex-row border-b py-4">
-                                {/* Product Image */}
-                                <div className="flex-shrink-0 w-24 h-24 relative mx-auto sm:mx-0">
-                                    <Image
-                                        src={item.image}
-                                        alt={item.name}
-                                        fill
-                                        className="object-contain"
-                                    />
-                                </div>
-                                
-                                {/* Product Details */}
-                                <div className="flex flex-col flex-grow ml-0 sm:ml-4 mt-4 sm:mt-0 text-center sm:text-left">
-                                    <h2 className="font-semibold mb-2 truncate">{item.name}</h2>
-                                    <p className="text-gray-600 mb-4">${item.price?.toFixed(2)}</p>
+                    <div className="space-y-6">
+                        <AnimatePresence>
+                            {items.map((item) => (
+                                <motion.div
+                                    key={item.id}
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: 20 }}
+                                    className="flex flex-col sm:flex-row items-center gap-4 
+                                             bg-gray-50 rounded-xl p-4 relative group"
+                                >
+                                    {/* Product Image */}
+                                    <div className="w-24 h-24 relative bg-white rounded-lg p-2
+                                                  shadow-sm group-hover:shadow-md transition-shadow">
+                                        <Image
+                                            src={item.image}
+                                            alt={item.name}
+                                            fill
+                                            className="object-contain p-2"
+                                        />
+                                    </div>
                                     
-                                    {/* Quantity Controls and Remove Button in one line */}
-                                    <div className="flex items-center justify-center sm:justify-start space-x-4">
-                                        {/* Quantity Controls Group */}
-                                        <div className="flex items-center bg-gray-100 rounded-full">
-                                            <button
-                                                onClick={() => handleQuantityChange(item.id, (item.quantity || 0) - 1)}
-                                                className="text-white bg-red-500 hover:bg-red-600 px-3 py-1 rounded-full"
-                                                aria-label="Decrease quantity"
-                                            >
-                                                -
-                                            </button>
-                                            <span className="w-12 text-center text-lg">{item.quantity}</span>
-                                            <button
-                                                onClick={() => handleQuantityChange(item.id, (item.quantity || 0) + 1)}
-                                                className="text-white bg-green-500 hover:bg-green-600 px-3 py-1 rounded-full"
-                                                aria-label="Increase quantity"
-                                            >
-                                                +
-                                            </button>
-                                        </div>
+                                    {/* Product Details */}
+                                    <div className="flex-grow space-y-2 text-center sm:text-left">
+                                        <h2 className="font-medium text-gray-800">{item.name}</h2>
+                                        <p className="text-primary font-semibold">
+                                            ${item.price?.toFixed(2)}
+                                        </p>
                                         
-                                        <button
-                                            onClick={() => removeFromCart(item.id)}
-                                            className="text-white bg-red-500 hover:bg-red-600 px-4 py-1 rounded-full transition-colors"
-                                        >
-                                            Remove
-                                        </button>
+                                        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
+                                            {/* Quantity Controls */}
+                                            <div className="flex items-center bg-white rounded-full shadow-sm">
+                                                <motion.button
+                                                    whileTap={{ scale: 0.95 }}
+                                                    onClick={() => handleQuantityChange(item.id, (item.quantity || 0) - 1)}
+                                                    className="w-8 h-8 flex items-center justify-center text-red-500 
+                                                             hover:bg-red-50 rounded-full transition-colors"
+                                                >
+                                                    <HiMinusSm className="text-lg" />
+                                                </motion.button>
+                                                <span className="w-12 text-center font-medium">
+                                                    {item.quantity}
+                                                </span>
+                                                <motion.button
+                                                    whileTap={{ scale: 0.95 }}
+                                                    onClick={() => handleQuantityChange(item.id, (item.quantity || 0) + 1)}
+                                                    className="w-8 h-8 flex items-center justify-center text-green-500 
+                                                             hover:bg-green-50 rounded-full transition-colors"
+                                                >
+                                                    <HiPlusSm className="text-lg" />
+                                                </motion.button>
+                                            </div>
+                                            
+                                            <motion.button
+                                                whileTap={{ scale: 0.95 }}
+                                                onClick={() => removeFromCart(item.id)}
+                                                className="flex items-center gap-1 text-red-500 px-3 py-1.5 
+                                                         rounded-full hover:bg-red-50 transition-colors"
+                                            >
+                                                <HiOutlineTrash />
+                                                <span>Remove</span>
+                                            </motion.button>
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
-                        ))}
-
-                        {/* Delivery Options */}
-                        <div className="mt-6 delivery-options">
-                            <h2 className="text-lg font-bold mb-2">Delivery Options</h2>
-                            
-                            <div className="flex space-x-6 mb-4">
-                                <label className="flex items-center cursor-pointer group">
-                                    <input
-                                        type="radio"
-                                        name="deliveryOption"
-                                        value="pickup"
-                                        checked={deliveryOption === 'pickup'}
-                                        onChange={(e) => setDeliveryOption(e.target.value)}
-                                        className="hidden"
-                                    />
-                                    <div className={`flex items-center p-3 rounded-lg transition-all ${
-                                        deliveryOption === 'pickup' 
-                                            ? 'bg-[#289d44] text-white' 
-                                            : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'
-                                    }`}>
-                                        <FaStore className="text-xl mr-2" />
-                                        <span>Pickup</span>
-                                    </div>
-                                </label>
-                                <label className="flex items-center cursor-pointer group">
-                                    <input
-                                        type="radio"
-                                        name="deliveryOption"
-                                        value="delivery"
-                                        checked={deliveryOption === 'delivery'}
-                                        onChange={(e) => setDeliveryOption(e.target.value)}
-                                        className="hidden"
-                                    />
-                                    <div className={`flex items-center p-3 rounded-lg transition-all ${
-                                        deliveryOption === 'delivery' 
-                                            ? 'bg-[#289d44] text-white' 
-                                            : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'
-                                    }`}>
-                                        <FaTruck className="text-xl mr-2" />
-                                        <span>Delivery</span>
-                                    </div>
-                                </label>
-                            </div>
-                        </div>
+                                </motion.div>
+                            ))}
+                        </AnimatePresence>
 
                         {/* Order Summary */}
-                        <div className="mt-6 border-t pt-4">
-                            <div className="flex justify-between mb-2">
-                                <span>Subtotal:</span>
-                                <span>${subtotal.toFixed(2)}</span>
-                            </div>
-                            {deliveryOption === 'delivery' && (
-                                <div className="flex justify-between mb-2">
-                                    <span>Delivery Fee:</span>
-                                    <span>${deliveryFee.toFixed(2)}</span>
-                                </div>
-                            )}
-                            <div className="flex justify-between text-xl font-bold">
-                                <span>Total:</span>
+                        <div className="mt-8 space-y-3 border-t pt-6">
+                            <div className="flex justify-between text-xl font-bold text-primary">
+                                <span>Total</span>
                                 <span>${total.toFixed(2)}</span>
                             </div>
                         </div>
 
-                        <div className="mt-6 flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
+                        <div className="mt-8 flex flex-col sm:flex-row gap-4">
                             <Link 
                                 href="/"
-                                className="w-full sm:w-auto text-white px-6 py-2 rounded hover:opacity-90 transition-opacity text-center"
-                                style={{ backgroundColor: '#003366' }}
+                                className="flex-1 text-center bg-gray-100 text-gray-700 px-6 py-3 
+                                         rounded-full hover:bg-gray-200 transition-colors duration-300"
                             >
                                 Continue Shopping
                             </Link>
                             
-                            <button
+                            <motion.button
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
                                 onClick={handleCheckout}
-                                className="w-full sm:w-auto text-white px-6 py-2 rounded hover:opacity-90 transition-opacity"
-                                style={{ backgroundColor: '#003366' }}
+                                className="flex-1 bg-primary text-white px-6 py-3 rounded-full 
+                                         hover:bg-primary/90 transition-colors duration-300
+                                         shadow-lg hover:shadow-xl"
                             >
                                 Proceed to Checkout
-                            </button>
+                            </motion.button>
                         </div>
                     </div>
                 )}
-            </div>
+            </motion.div>
         </div>
     );
 }

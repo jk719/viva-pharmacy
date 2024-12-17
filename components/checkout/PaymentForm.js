@@ -4,12 +4,43 @@ import { useState, useEffect } from 'react';
 import { Elements } from '@stripe/react-stripe-js';
 import { PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import stripePromise from '@/lib/stripe/client';
+import eventEmitter, { Events } from '@/lib/eventEmitter';
+import { useSession } from "next-auth/react";
 
-const CheckoutForm = () => {
+const CheckoutForm = ({ amount }) => {
   const stripe = useStripe();
   const elements = useElements();
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const { data: session } = useSession();
+
+  const updatePoints = async () => {
+    if (!session?.user?.id) return;
+    
+    try {
+      // Use the exact amount passed from checkout
+      const points = Math.floor(amount);
+      
+      const response = await fetch(`/api/user/vivabucks/${session.user.id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          points,
+          source: 'purchase'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update points');
+      }
+
+      eventEmitter.emit(Events.POINTS_UPDATED);
+    } catch (error) {
+      console.error('Error updating points:', error);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -22,15 +53,19 @@ const CheckoutForm = () => {
     setError(null);
 
     try {
-      const { error: submitError } = await stripe.confirmPayment({
+      const { error: submitError, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: {
           return_url: `${window.location.origin}/checkout/success`,
         },
+        redirect: 'if_required'
       });
 
       if (submitError) {
         setError(submitError.message);
+      } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+        await updatePoints();
+        window.location.href = `${window.location.origin}/checkout/success`;
       }
     } catch (err) {
       setError('An unexpected error occurred.');
@@ -119,7 +154,7 @@ const PaymentForm = ({ amount, items, shippingAddress, deliveryMethod, selectedT
             },
           }}
         >
-          <CheckoutForm />
+          <CheckoutForm amount={amount} />
         </Elements>
       )}
     </div>

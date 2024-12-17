@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { useCart } from '../../context/CartContext';
 import { useCategory } from '../../context/CategoryContext';
 import products from '../../lib/products/data';
+import { motion } from 'framer-motion';
+import { IoMdAdd } from 'react-icons/io';
+import { HiMinusSm, HiPlusSm } from 'react-icons/hi';
 
 export default function FeaturedProducts() {
   const { addToCart, decrement, items = [] } = useCart();
@@ -42,92 +45,112 @@ export default function FeaturedProducts() {
   };
 
   return (
-    <section className="py-4">
+    <section className="py-6">
       {filteredCategories.map((category) => (
-          <div key={category.name} className="mb-8 mt-4">
-            <h2 className="text-2xl font-bold mb-4 text-primary">{category.name}</h2>
+        <div key={category.name} className="mb-12">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-primary relative">
+              {category.name}
+              <span className="absolute -bottom-2 left-0 w-1/3 h-1 bg-primary rounded-full"></span>
+            </h2>
+            <span className="text-sm text-gray-500">
+              {category.count} items
+            </span>
+          </div>
 
-            <div className="flex overflow-x-auto gap-4 scroll-snap-x px-2">
-              {products
-                .filter((product) => product.category === category.name)
-                .map((product) => {
-                  const quantity = getItemQuantity(product.id);
+          <div className="flex overflow-x-auto gap-6 scroll-snap-x px-2 pb-4 -mx-2">
+            {products
+              .filter((product) => product.category === category.name)
+              .map((product) => {
+                const quantity = getItemQuantity(product.id);
 
-                  return (
-                    <div
-                      key={product.id}
-                      className="card bg-white shadow-lg rounded-lg p-4 hover:shadow-xl transition-all duration-300 min-w-[70%] max-w-[70%] sm:w-1/4 scroll-snap-align transform hover:scale-105"
-                    >
-                      <div className="flex flex-col items-center">
-                        <Link href={`/products/${product.id}`}>
-                          <div className="relative h-40 w-full mb-2 flex items-center justify-center overflow-hidden rounded-lg cursor-pointer">
-                            <Image
-                              src={product.image}
-                              alt={product.name}
-                              width={250}
-                              height={250}
-                              priority
-                              className="object-contain w-auto h-auto"
-                            />
-                          </div>
-                        </Link>
+                return (
+                  <motion.div
+                    key={product.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="card bg-white rounded-2xl p-4 hover:shadow-lg transition-all duration-300 
+                             min-w-[70%] max-w-[70%] sm:min-w-[280px] sm:max-w-[280px] scroll-snap-align-start 
+                             border border-gray-100 relative group"
+                  >
+                    <Link href={`/products/${product.id}`}>
+                      <div className="relative h-48 w-full mb-4 rounded-xl overflow-hidden 
+                                    group-hover:shadow-md transition-all duration-300">
+                        <Image
+                          src={product.image}
+                          alt={product.name}
+                          fill
+                          priority
+                          className="object-contain p-2 transform group-hover:scale-105 transition-transform duration-300"
+                          sizes="(max-width: 640px) 70vw, 280px"
+                        />
+                      </div>
+                    </Link>
 
-                        <div className="flex items-center space-x-2 mt-2">
-                          {quantity === 0 ? (
-                            <button
-                              onClick={() => handleAddToCart(product)}
-                              className="text-white px-4 py-1 rounded transition-colors"
-                              style={{ backgroundColor: 'var(--primary-color)' }}
-                              aria-label="Add to cart"
-                            >
-                              Add +
-                            </button>
-                          ) : (
-                            <div className="flex items-center space-x-2">
-                              <button
-                                onClick={() => handleDecrement(product.id)}
-                                className="text-white px-3 py-1 rounded transition-colors"
-                                style={{ backgroundColor: 'var(--button-red)' }}
-                                aria-label="Decrease quantity"
-                              >
-                                -
-                              </button>
-                              <span className="w-8 text-center">{quantity}</span>
-                              <button
-                                onClick={() => handleAddToCart(product)}
-                                className="text-white px-3 py-1 rounded transition-colors"
-                                style={{ backgroundColor: 'var(--button-green)' }}
-                                aria-label="Increase quantity"
-                              >
-                                +
-                              </button>
-                            </div>
-                          )}
-                        </div>
-
-                        <p className="text-lg font-bold text-secondary text-center mb-1">
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <p className="text-lg font-bold text-primary">
                           ${product.price.toFixed(2)}
                         </p>
-                        
-                        <h3 className="product-name text-md font-semibold text-primary text-center mb-1 line-clamp-2">
-                          {product.name}
-                        </h3>
+                        <Link 
+                          href={`/products/${product.id}`}
+                          className="block group-hover:text-primary transition-colors duration-200"
+                        >
+                          <h3 className="text-base font-medium text-gray-800 line-clamp-2 leading-snug">
+                            {product.name}
+                          </h3>
+                        </Link>
+                      </div>
 
-                        <p className="product-description text-gray-600 text-center line-clamp-2 hover:line-clamp-none transition-all duration-200 mb-2">
+                      <div className="relative">
+                        <p className="text-sm text-gray-500 line-clamp-2 hover:line-clamp-none 
+                                    transition-all duration-200 leading-relaxed">
                           {product.description}
                         </p>
+                        <div className="absolute inset-x-0 bottom-0 h-4 bg-gradient-to-t from-white to-transparent 
+                                      pointer-events-none group-hover:opacity-0 transition-opacity duration-200"></div>
+                      </div>
 
-                        <div className="flex justify-center items-center text-yellow-500">
-                          <span className="text-sm">★★★★★</span>
-                          <span className="text-xs text-gray-500 ml-1">(20)</span>
-                        </div>
+                      <div className="flex justify-end pt-2">
+                        {quantity === 0 ? (
+                          <motion.button
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => handleAddToCart(product)}
+                            className="flex items-center gap-1 bg-primary text-white px-4 py-2 rounded-full
+                                     hover:bg-primary/90 transition-colors duration-200"
+                          >
+                            <IoMdAdd className="text-lg" />
+                            <span>Add</span>
+                          </motion.button>
+                        ) : (
+                          <div className="flex items-center gap-2 bg-gray-100 rounded-full p-1">
+                            <motion.button
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => handleDecrement(product.id)}
+                              className="w-8 h-8 flex items-center justify-center bg-white rounded-full
+                                       text-red-500 hover:bg-red-50 transition-colors"
+                            >
+                              <HiMinusSm className="text-lg" />
+                            </motion.button>
+                            <span className="w-8 text-center font-medium">{quantity}</span>
+                            <motion.button
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => handleAddToCart(product)}
+                              className="w-8 h-8 flex items-center justify-center bg-white rounded-full
+                                       text-green-500 hover:bg-green-50 transition-colors"
+                            >
+                              <HiPlusSm className="text-lg" />
+                            </motion.button>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  );
-                })}
-            </div>
+                  </motion.div>
+                );
+              })}
           </div>
-        ))}
+        </div>
+      ))}
     </section>
   );
 }
