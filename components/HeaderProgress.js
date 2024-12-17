@@ -183,29 +183,50 @@ export default function HeaderProgress() {
                 </Link>
               </div>
 
-              {/* Desktop View - remains the same */}
-              <div className="hidden md:flex items-center gap-4">
-                <div className="flex items-center gap-6">
-                  <div className="flex items-center gap-2">
-                    <FaCoins className="text-[#FF9F43]" />
-                    <span className="text-sm text-gray-600 whitespace-nowrap">
-                      $1 = 1 VIVAbuck
-                    </span>
+              {/* Desktop View - Mobile-Inspired but More Descriptive */}
+              <div className="hidden md:flex w-full items-center justify-between py-2">
+                <div className="flex items-center gap-5">
+                  <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-r from-[#FF9F43] to-[#FFB976] shadow-md">
+                    <FaGift className="text-white text-xl" />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <FaStar className="text-[#FF9F43]" />
-                    <span className="text-sm text-gray-600">
-                      Instant Savings
-                    </span>
+                  <div>
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        Join VIVA Rewards Today
+                      </h3>
+                      <div className="flex items-center gap-2 px-3 py-1 bg-gray-50 rounded-lg border border-gray-100">
+                        <FaCoins className="text-[#FF9F43] text-sm" />
+                        <span className="text-sm text-gray-600 whitespace-nowrap">
+                          $1 spent = 1 VIVAbuck earned
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 mt-0.5">
+                      <div className="flex items-center gap-2">
+                        <FaGift className="text-emerald-500 text-sm" />
+                        <span className="text-sm text-gray-600">
+                          Get $5 off your first purchase
+                        </span>
+                      </div>
+                      <div className="h-3.5 w-px bg-gray-200" />
+                      <div className="flex items-center gap-2">
+                        <FaStar className="text-[#FF9F43] text-sm" />
+                        <span className="text-sm text-gray-600">
+                          Earn 100 bonus VIVAbucks instantly
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
+
                 <Link
                   href="/register"
-                  className="px-6 py-2.5 bg-primary text-white rounded-xl text-sm font-medium 
-                    hover:bg-primary/90 transition-all duration-200 shadow-md hover:shadow-lg
-                    active:scale-95"
+                  className="px-5 py-2 bg-primary text-white rounded-xl text-sm font-medium 
+                    hover:bg-primary/90 transition-all duration-200 shadow-md
+                    active:scale-95 flex flex-col items-center -space-y-0.5"
                 >
-                  Join Now
+                  <span>Join Free</span>
+                  <span className="text-[10px] opacity-75">Start Earning Now</span>
                 </Link>
               </div>
             </motion.div>

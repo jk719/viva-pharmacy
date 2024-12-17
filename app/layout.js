@@ -36,20 +36,11 @@ export default function RootLayout({ children }) {
             <div className="bg-white border-b">
               <HeaderProgress />
             </div>
-            <div className="bg-white border-b shadow-sm mt-4">
-              <div className="w-full max-w-7xl mx-auto px-3 md:px-4 py-2">
-                <div className="flex items-center overflow-x-auto scrollbar-hide">
-                  <div className="flex space-x-2 pb-0.5">
-                    {/* Category buttons here */}
-                  </div>
-                </div>
-              </div>
-            </div>
           </header>
 
-          <div className="h-[220px] sm:h-[200px]" />
+          <div className="h-[240px] md:h-[200px]" />
 
-          <main className="flex-grow w-full max-w-7xl mx-auto pb-12">
+          <main className="flex-grow w-full max-w-7xl mx-auto pb-12 px-4 sm:px-6 lg:px-8">
             <Suspense fallback={<LoadingSpinner />}>
               <AnimatePresence mode="wait">
                 <motion.div
