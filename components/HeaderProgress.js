@@ -232,47 +232,44 @@ export default function HeaderProgress() {
             </motion.div>
           ) : (
             <motion.div 
-              className="space-y-3"
+              className="space-y-2 md:space-y-3"
               layout
             >
+              {/* Points and Status */}
               <div className="flex justify-between items-center">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 md:gap-3">
                   <motion.div 
-                    className="flex items-center justify-center w-10 h-10 rounded-xl 
+                    className="flex items-center justify-center w-8 h-8 md:w-9 md:h-9 rounded-xl 
                       bg-gradient-to-r from-[#FF9F43] to-[#FFB976] shadow-md"
                     whileHover={{ scale: 1.05 }}
                   >
-                    <FaStar className="text-white text-lg" />
+                    <FaStar className="text-white text-base" />
                   </motion.div>
                   <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl font-bold text-gray-900">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-lg md:text-xl font-bold text-gray-900">
                         {REWARDS_CONFIG.formatPoints(currentPoints)}
                       </span>
-                      <FaCoins className="text-[#FF9F43]" />
+                      <FaCoins className="text-[#FF9F43] text-base" />
                     </div>
-                    <div className="flex items-center gap-3 text-sm">
+                    <div className="flex items-center gap-2 text-xs">
                       <span className="text-gray-500">Points Balance</span>
-                      <div className="h-4 w-px bg-gray-200" />
+                      <div className="h-3 w-px bg-gray-200" />
                       <div className="flex items-center gap-1">
-                        <FaStar className={`${tierColor}`} />
-                        <span className="text-gray-500">
-                          {rewardsData?.currentTier}
-                        </span>
+                        <FaStar className={`${tierColor} text-xs`} />
+                        <span className="text-gray-500">{rewardsData?.currentTier}</span>
                       </div>
                       {availableReward > 0 && (
                         <motion.button
                           onClick={handleRewardClick}
-                          className="flex items-center gap-1.5 ml-2 px-3 py-1 rounded-full
-                            bg-emerald-50 text-emerald-600 font-medium
+                          className="flex items-center gap-1 ml-1.5 px-2 py-0.5 rounded-full
+                            bg-emerald-50 text-emerald-600 text-xs font-medium
                             hover:bg-emerald-100 transition-all duration-200"
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
                         >
-                          <FaGift className="text-emerald-500" />
-                          <span>
-                            {REWARDS_CONFIG.formatCurrency(availableReward)} Ready
-                          </span>
+                          <FaGift className="text-emerald-500 text-xs" />
+                          <span>{REWARDS_CONFIG.formatCurrency(availableReward)} Ready</span>
                         </motion.button>
                       )}
                     </div>
@@ -280,44 +277,41 @@ export default function HeaderProgress() {
                 </div>
               </div>
 
-              <div className="relative">
+              {/* Progress Bar with Points */}
+              <div className="relative mt-4">
+                {/* Reward Icon */}
+                <div className="absolute right-0 -top-2 flex items-center" style={{ zIndex: 50 }}>
+                  <div className={`flex items-center justify-center w-8 h-8 rounded-full 
+                    ${progress > 95 ? 'bg-white text-[#FF9F43]' : 'bg-white text-gray-400'}
+                    shadow-md border-2 border-[#FFB976] transition-colors duration-300`}
+                  >
+                    <div className="flex flex-col items-center justify-center -mt-0.5">
+                      <FaGift className="text-xs mb-0.5" />
+                      <span className="text-[10px] font-bold leading-none">$10</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Progress Bar */}
                 <motion.div 
-                  className="h-6 bg-gray-100 rounded-xl overflow-hidden shadow-inner"
+                  className="h-4 bg-gray-100 rounded-xl overflow-hidden shadow-inner relative"
                   initial={{ scaleX: 0 }}
                   animate={{ scaleX: 1 }}
                 >
                   <motion.div
-                    className="h-full bg-gradient-to-r from-[#FF9F43] to-[#FFB976] rounded-xl"
+                    className="h-full bg-gradient-to-r from-[#FF9F43] to-[#FFB976] rounded-xl relative"
                     initial={{ width: 0 }}
                     animate={{ width: `${Math.min(progress, 100)}%` }}
                     transition={{ duration: 0.8, ease: "easeOut" }}
                   >
-                    <motion.div
-                      className="absolute right-0 top-1/2 -translate-y-1/2 -translate-x-1/2
-                        flex items-center justify-center w-8 h-8 bg-white rounded-full
-                        shadow-lg border-2 border-[#FFB976]"
-                      animate={{
-                        scale: [1, 1.1, 1],
-                        rotate: [0, -10, 10, 0],
-                      }}
-                      transition={{
-                        duration: 0.5,
-                        ease: "easeOut",
-                      }}
-                    >
-                      <span className="text-sm font-bold text-[#FF9F43]">
+                    {/* Points Number */}
+                    <div className="absolute inset-y-0 right-0 flex items-center">
+                      <span className="text-sm font-bold text-white mr-2 drop-shadow">
                         {currentProgressPoints}
                       </span>
-                    </motion.div>
+                    </div>
                   </motion.div>
                 </motion.div>
-                
-                <div className="flex justify-between mt-1 px-1">
-                  <span className="text-xs text-gray-500">0</span>
-                  <span className="text-xs text-gray-500">
-                    {REWARDS_CONFIG.REWARD_RATE.POINTS_NEEDED}
-                  </span>
-                </div>
               </div>
             </motion.div>
           )}

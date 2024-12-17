@@ -50,17 +50,10 @@ export default function FeaturedProducts() {
     <section className="py-6 bg-white">
       {filteredCategories.map((category) => (
         <div key={category.name} className="mb-10">
-          <div className="flex justify-between items-center mb-6 px-4">
+          <div className="mb-6 px-4">
             <h2 className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
               {category.name}
             </h2>
-            <Link 
-              href={`/category/${category.name}`}
-              className="text-primary hover:text-primary/80 text-sm font-medium transition-all 
-                hover:translate-x-1 duration-200 flex items-center gap-1"
-            >
-              View All <span className="text-lg">→</span>
-            </Link>
           </div>
 
           <div className="relative bg-white">
