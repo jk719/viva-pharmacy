@@ -171,12 +171,11 @@ export function AuthButtons() {
         aria-expanded={showLogin}
         aria-controls="login-form"
         className="inline-flex items-center justify-center px-6 py-2.5 text-sm font-medium
-                 bg-white text-primary rounded-full
-                 hover:bg-blue-50 active:bg-blue-100
+                 text-white rounded-full
+                 bg-gradient-to-r from-[#FF9F43] to-[#FFB976]
+                 hover:from-[#ff9429] hover:to-[#ffa851]
                  transform transition-all duration-200 hover:scale-105
-                 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary
-                 shadow-lg hover:shadow-xl shadow-primary/10
-                 animate-bounce-subtle"
+                 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#FF9F43]"
       >
         Sign In
       </button>
