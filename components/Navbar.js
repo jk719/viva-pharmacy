@@ -10,10 +10,13 @@ import { useState } from "react";
 import products from "../data/products";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { motion, AnimatePresence } from "framer-motion";
+import { FaSearch } from "react-icons/fa";
 
 export default function Navbar() {
   const [query, setQuery] = useState("");
   const [filteredProducts, setFilteredProducts] = useState([]);
+  const [isFocused, setIsFocused] = useState(false);
   const router = useRouter();
   const { data: session } = useSession();
 
@@ -39,24 +42,33 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="bg-primary-color shadow-lg">
-        <div className="container mx-auto px-4 py-3">
+      <motion.nav 
+        className="bg-primary text-white py-3 w-full shadow-sm"
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      >
+        <div className="container mx-auto px-4">
           {/* Mobile Layout */}
           <div className="flex flex-col md:hidden space-y-3">
-            <div className="flex items-center justify-between">
-              <Link href="/" className="flex-shrink-0">
+            <div className="flex items-center justify-between px-1">
+              <Link href="/" className="flex items-center">
                 <Image
                   src="/images/viva-online-logo.png"
                   alt="VIVA Logo"
-                  width={120}
-                  height={40}
-                  className="h-8 w-auto"
+                  width={140}
+                  height={42}
+                  className="h-7 w-auto -ml-1"
+                  priority
                 />
               </Link>
-
-              <div className="flex items-center gap-4">
-                <AuthButtons />
-                <Link href="/cart" className="relative hover:opacity-80 transition-opacity">
+              
+              <div className="flex items-center gap-3">
+                <AuthButtons className="flex items-center text-sm" />
+                <Link 
+                  href="/cart"
+                  className="flex items-center justify-center w-8 h-8"
+                >
                   <ClientCartIcon />
                 </Link>
               </div>
@@ -67,42 +79,50 @@ export default function Navbar() {
                 type="text"
                 value={query}
                 onChange={handleInputChange}
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => setTimeout(() => setIsFocused(false), 200)}
                 placeholder="Search products..."
-                className="w-full h-10 px-4 rounded-full text-gray-800 bg-white/90 backdrop-blur-sm
-                         border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400
-                         placeholder:text-gray-500 text-sm"
+                className="w-full h-9 pl-10 pr-4 text-gray-900 placeholder-gray-500 
+                  bg-white/90 backdrop-blur-sm rounded-xl border-2 border-white/50
+                  focus:border-white focus:outline-none focus:ring-0 transition-all"
               />
+              <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             </div>
           </div>
 
           {/* Desktop Layout */}
-          <div className="hidden md:flex md:items-center md:justify-between md:gap-8">
-            <Link href="/" className="flex-shrink-0">
+          <div className="hidden md:flex md:items-center md:justify-between">
+            <Link href="/">
               <Image
                 src="/images/viva-online-logo.png"
                 alt="VIVA Pharmacy & Wellness Logo"
-                width={200}
-                height={70}
+                width={180}
+                height={60}
                 className="h-12 w-auto"
               />
             </Link>
 
-            <div className="flex-1 max-w-2xl relative">
-              <input
-                type="text"
-                value={query}
-                onChange={handleInputChange}
-                placeholder="Search products..."
-                className="w-full h-11 px-6 rounded-full text-gray-800 bg-white/90 backdrop-blur-sm
-                         border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400
-                         placeholder:text-gray-500 transition-all duration-200"
-              />
+            <div className="flex-1 max-w-xl mx-8 relative">
+              <div className="relative">
+                <input
+                  type="text"
+                  value={query}
+                  onChange={handleInputChange}
+                  onFocus={() => setIsFocused(true)}
+                  onBlur={() => setTimeout(() => setIsFocused(false), 200)}
+                  placeholder="Search products..."
+                  className="w-full h-12 pl-12 pr-4 text-gray-900 placeholder-gray-500 
+                    bg-white/90 backdrop-blur-sm rounded-xl border-2 border-white/50
+                    focus:border-white focus:outline-none focus:ring-0 transition-all"
+                />
+                <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+              </div>
             </div>
 
-            <div className="flex items-center gap-6">
+            <div className="flex items-center space-x-6">
               <Link 
                 href="/cart" 
-                className="relative hover:opacity-80 transition-opacity p-2"
+                className="text-white hover:text-white/80 transition-colors duration-300"
               >
                 <ClientCartIcon />
               </Link>
@@ -110,26 +130,46 @@ export default function Navbar() {
             </div>
           </div>
 
-          {/* Search Results Dropdown - Improved styling */}
-          {filteredProducts.length > 0 && (
-            <div className="relative z-50">
-              <ul className="absolute left-0 right-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-100
-                           max-h-[60vh] overflow-y-auto">
-                {filteredProducts.map((product) => (
-                  <li
-                    key={product.id}
-                    onClick={() => handleProductClick(product.id)}
-                    className="px-4 py-2.5 text-gray-700 hover:bg-gray-50 cursor-pointer
-                             transition-colors duration-150 border-b border-gray-100 last:border-none"
-                  >
-                    {product.name}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          {/* Search Results Dropdown */}
+          <AnimatePresence>
+            {filteredProducts.length > 0 && isFocused && (
+              <motion.div 
+                className="absolute left-4 right-4 mt-2 z-50"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className="bg-white rounded-2xl shadow-lg overflow-hidden 
+                  border-2 border-gray-100 max-h-[300px] overflow-y-auto">
+                  {filteredProducts.map((product) => (
+                    <motion.button
+                      key={product.id}
+                      onClick={() => handleProductClick(product.id)}
+                      className="w-full px-4 py-3 text-left text-gray-900 hover:bg-gray-50 
+                        flex items-center space-x-3 transition-colors"
+                      whileHover={{ x: 4 }}
+                    >
+                      <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-gray-50">
+                        <Image
+                          src={product.image}
+                          alt={product.name}
+                          fill
+                          className="object-contain p-1"
+                        />
+                      </div>
+                      <div>
+                        <div className="font-medium">{product.name}</div>
+                        <div className="text-sm text-gray-500">${product.price}</div>
+                      </div>
+                    </motion.button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
-      </nav>
+      </motion.nav>
 
       <VerificationAlert />
     </>

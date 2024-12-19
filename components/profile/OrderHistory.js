@@ -3,11 +3,21 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import Image from 'next/image';
+import products from '@/lib/products/data';
 
 export default function OrderHistory({ userId }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Helper function to find product image
+  const findProductImage = (productId, productName) => {
+    const product = products.find(p => 
+      p.id.toString() === productId.toString() || 
+      p.name.toLowerCase() === productName.toLowerCase()
+    );
+    return product?.image || null;
+  };
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -32,8 +42,17 @@ export default function OrderHistory({ userId }) {
           throw new Error('Invalid data format received from server');
         }
 
-        console.log('Orders successfully fetched:', data);
-        setOrders(data);
+        // Enhance orders with product images
+        const ordersWithImages = data.map(order => ({
+          ...order,
+          items: order.items.map(item => ({
+            ...item,
+            image: findProductImage(item.productId, item.name)
+          }))
+        }));
+
+        console.log('Orders successfully fetched:', ordersWithImages);
+        setOrders(ordersWithImages);
         setError(null);
       } catch (error) {
         console.error('Error in OrderHistory:', error);

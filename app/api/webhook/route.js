@@ -4,9 +4,13 @@ import Stripe from 'stripe';
 import dbConnect from '@/lib/dbConnect';
 import User from '@/models/User';
 import Order from '@/models/Order';
+import products from '@/lib/products/data';
+import { generateOrderConfirmationEmail } from '@/lib/email-templates/order-confirmation';
+import { sendOrderConfirmationEmail } from '@/lib/email/sendEmail';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const WEBHOOK_SECRET = process.env.STRIPE_SIGNING_SECRET;
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
 export async function POST(request) {
     try {
@@ -56,19 +60,23 @@ export async function POST(request) {
 
                 await dbConnect();
 
-                // Parse cart items
+                // Parse cart items and add product images with full URLs using BASE_URL
                 const cartItems = JSON.parse(fullPaymentIntent.metadata.cartItemIds);
-                console.log('📦 Cart items:', cartItems);
-
-                // Base order data
-                const orderData = {
-                    userId: fullPaymentIntent.metadata.userId,
-                    items: cartItems.map(item => ({
+                const itemsWithImages = cartItems.map(item => {
+                    const product = products.find(p => p.id.toString() === item.id.toString());
+                    return {
                         productId: item.id.toString(),
                         name: item.name,
                         quantity: item.qty,
-                        price: parseFloat(item.price)
-                    })),
+                        price: parseFloat(item.price),
+                        image: product?.image ? `${BASE_URL}${product.image}` : null // Use BASE_URL
+                    };
+                });
+
+                // Base order data with enhanced items
+                const orderData = {
+                    userId: fullPaymentIntent.metadata.userId,
+                    items: itemsWithImages, // Use enhanced items with images
                     total: fullPaymentIntent.amount / 100,
                     status: 'Pending',
                     paymentStatus: 'Paid',
@@ -106,6 +114,32 @@ export async function POST(request) {
                     const pointsToAdd = Math.floor(fullPaymentIntent.amount / 100);
                     const pointsResult = await user.addPoints(pointsToAdd);
                     console.log('✨ Points updated:', pointsResult);
+
+                    // Generate and send order confirmation email
+                    try {
+                        const emailHtml = generateOrderConfirmationEmail({
+                            orderNumber: order._id,
+                            customerName: user.name || user.email.split('@')[0],
+                            items: itemsWithImages, // Pass enhanced items with images
+                            subtotal: orderData.total,
+                            tax: orderData.total * 0.08875, // NYC tax rate
+                            total: orderData.total,
+                            shippingAddress: orderData.shippingAddress,
+                            deliveryMethod: orderData.deliveryMethod,
+                            selectedTime: orderData.selectedTime
+                        });
+
+                        await sendOrderConfirmationEmail(
+                            user.email,
+                            'Your Viva Pharmacy Order Confirmation',
+                            emailHtml
+                        );
+                        
+                        console.log('📧 Order confirmation email sent to:', user.email);
+                    } catch (emailError) {
+                        // Log email error but don't fail the order process
+                        console.error('❌ Error sending confirmation email:', emailError);
+                    }
                 }
 
                 return NextResponse.json({ 
