@@ -42,6 +42,12 @@ export async function POST(request) {
         if (event.type === 'payment_intent.succeeded') {
             const paymentIntent = event.data.object;
             
+            console.log('💰 Payment Intent Succeeded:', {
+                id: paymentIntent.id,
+                amount: paymentIntent.amount,
+                status: paymentIntent.status
+            });
+
             try {
                 // Retrieve the complete payment intent
                 const fullPaymentIntent = await stripe.paymentIntents.retrieve(paymentIntent.id);
@@ -115,31 +121,32 @@ export async function POST(request) {
                     const pointsResult = await user.addPoints(pointsToAdd);
                     console.log('✨ Points updated:', pointsResult);
 
-                    // Generate and send order confirmation email
-                    try {
-                        const emailHtml = generateOrderConfirmationEmail({
-                            orderNumber: order._id,
-                            customerName: user.name || user.email.split('@')[0],
-                            items: itemsWithImages, // Pass enhanced items with images
-                            subtotal: orderData.total,
-                            tax: orderData.total * 0.08875, // NYC tax rate
-                            total: orderData.total,
-                            shippingAddress: orderData.shippingAddress,
-                            deliveryMethod: orderData.deliveryMethod,
-                            selectedTime: orderData.selectedTime
-                        });
+                    // Before sending email
+                    console.log('📧 Preparing to send order confirmation email:', {
+                        userEmail: user.email,
+                        orderNumber: order._id,
+                        itemCount: itemsWithImages.length
+                    });
 
-                        await sendOrderConfirmationEmail(
-                            user.email,
-                            'Your Viva Pharmacy Order Confirmation',
-                            emailHtml
-                        );
-                        
-                        console.log('📧 Order confirmation email sent to:', user.email);
-                    } catch (emailError) {
-                        // Log email error but don't fail the order process
-                        console.error('❌ Error sending confirmation email:', emailError);
-                    }
+                    const emailHtml = generateOrderConfirmationEmail({
+                        orderNumber: order._id,
+                        customerName: user.name || user.email.split('@')[0],
+                        items: itemsWithImages,
+                        subtotal: orderData.total,
+                        tax: orderData.total * 0.08875,
+                        total: orderData.total,
+                        shippingAddress: orderData.shippingAddress,
+                        deliveryMethod: orderData.deliveryMethod,
+                        selectedTime: orderData.selectedTime
+                    });
+
+                    await sendOrderConfirmationEmail(
+                        user.email,
+                        'Your Viva Pharmacy Order Confirmation',
+                        emailHtml
+                    );
+                    
+                    console.log('✅ Order confirmation email sent successfully to:', user.email);
                 }
 
                 return NextResponse.json({ 

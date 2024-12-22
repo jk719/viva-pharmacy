@@ -4,7 +4,14 @@ import dbConnect from '@/lib/dbConnect';
 import User from '@/models/User';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { REWARDS_CONFIG } from '@/lib/rewards/config';
+
+// Define tiers directly if REWARDS_CONFIG is not working
+const TIERS = {
+  STANDARD: { name: 'STANDARD', threshold: 0, multiplier: 1 },
+  SILVER: { name: 'SILVER', threshold: 1000, multiplier: 1.2 },
+  GOLD: { name: 'GOLD', threshold: 2500, multiplier: 1.5 },
+  PLATINUM: { name: 'PLATINUM', threshold: 5000, multiplier: 2 }
+};
 
 export async function GET(request) {
   try {
@@ -61,54 +68,69 @@ export async function GET(request) {
 // Add POST method for adding points
 export async function POST(request) {
   try {
+    console.log('🔄 Processing POST request...');
+    
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      console.error('❌ Not authenticated');
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
     await dbConnect();
     const userId = request.url.split('/').pop();
     const data = await request.json();
-    const { points, source } = data;
-    
-    // Webhook auth check - Fix the headers handling
-    const headersList = await headers();
-    const webhookAuth = await headersList.get('authorization');
-    const INTERNAL_KEY = process.env.INTERNAL_API_KEY || 'stripe-webhook-key';
-    const isWebhook = webhookAuth === `Bearer ${INTERNAL_KEY}`;
-    
-    if (!isWebhook) {
-      const session = await getServerSession(authOptions);
-      if (!session) {
-        return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-      }
-      
-      // Verify the user is updating their own points
-      if (userId !== session.user.id) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-      }
-    }
+    console.log('Request Data:', data);
 
+    const { points, source } = data;
     if (!points || typeof points !== 'number') {
+      console.error('❌ Invalid points value:', points);
       return NextResponse.json({ error: "Invalid points value" }, { status: 400 });
     }
 
     const user = await User.findById(userId);
     if (!user) {
+      console.error('❌ User not found for ID:', userId);
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Apply tier multiplier if applicable
-    const multiplier = REWARDS_CONFIG.MEMBERSHIP_TIERS[user.currentTier]?.multiplier || 1;
-    const adjustedPoints = Math.floor(points * multiplier); // Ensure points are whole numbers
+    // Calculate points with multiplier
+    const multiplier = user.pointsMultiplier || 1;
+    const adjustedPoints = points * multiplier;
 
-    console.log('🎯 Adding points:', adjustedPoints);
-    const result = await user.addPoints(adjustedPoints);
+    // Update user's points
+    user.vivaBucks = (user.vivaBucks || 0) + adjustedPoints;
+    user.rewardPoints = (user.rewardPoints || 0) + adjustedPoints;
+    user.cumulativePoints = (user.cumulativePoints || 0) + adjustedPoints;
+
+    // Check and update tier
+    const currentPoints = user.cumulativePoints;
+    let newTier = TIERS.STANDARD;
     
+    for (const tier of Object.values(TIERS)) {
+      if (currentPoints >= tier.threshold) {
+        newTier = tier;
+      }
+    }
+
+    user.currentTier = newTier.name;
+    user.pointsMultiplier = newTier.multiplier;
+
+    // Update next reward milestone
+    user.nextRewardMilestone = Math.ceil(user.rewardPoints / 100) * 100;
+
+    await user.save();
+
+    console.log('✅ Points updated successfully');
     return NextResponse.json({
       success: true,
-      ...result,
-      multiplier,
-      originalPoints: points,
-      adjustedPoints
+      vivaBucks: user.vivaBucks,
+      rewardPoints: user.rewardPoints,
+      currentTier: user.currentTier,
+      nextRewardMilestone: user.nextRewardMilestone
     });
+
   } catch (error) {
-    console.error('Error adding points:', error);
+    console.error('❌ Error processing request:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

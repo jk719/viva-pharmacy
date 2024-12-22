@@ -13,8 +13,9 @@ function SuccessContent() {
   const router = useRouter();
   const { data: session } = useSession();
   const [countdown, setCountdown] = useState(5);
+  const [pointsUpdated, setPointsUpdated] = useState(false);
 
-  // Trigger confetti effect
+  // Confetti effect
   useEffect(() => {
     const duration = 3 * 1000;
     const end = Date.now() + duration;
@@ -44,45 +45,68 @@ function SuccessContent() {
     frame();
   }, []);
 
-  // Handle points update and auto-redirect
+  // Points update effect
   useEffect(() => {
+    let isMounted = true;
+
     const updatePoints = async () => {
-      if (session?.user?.id) {
+      if (session?.user?.id && items.length > 0 && !pointsUpdated) {
         try {
-          const amount = items.reduce((sum, item) => 
-            sum + (parseFloat(item.price) * parseInt(item.quantity)), 0);
+          const amount = items.reduce((sum, item) => {
+            const itemPrice = parseFloat(item.price) || 0;
+            const itemQuantity = parseInt(item.quantity) || 0;
+            return sum + (itemPrice * itemQuantity);
+          }, 0);
+          
           const points = Math.floor(amount);
 
-          await fetch(`/api/user/vivabucks/${session.user.id}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ points, source: 'purchase' })
-          });
+          if (points > 0) {
+            const response = await fetch(`/api/user/vivabucks/${session.user.id}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ points, source: 'purchase' })
+            });
 
-          eventEmitter.emit(Events.POINTS_UPDATED);
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            if (isMounted) {
+              setPointsUpdated(true);
+              clearCart();
+            }
+          }
         } catch (error) {
           console.error('Error updating points:', error);
         }
       }
     };
 
-    // Update points immediately
     updatePoints();
-    clearCart();
 
-    // Start countdown
-    const timer = setInterval(() => {
-      setCountdown(prev => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          router.push('/');
-        }
-        return prev - 1;
-      });
-    }, 1000);
+    return () => {
+      isMounted = false;
+    };
+  }, [session, items, pointsUpdated, clearCart]);
 
-    return () => clearInterval(timer);
-  }, [session]);
+  // Separate countdown effect
+  useEffect(() => {
+    let timeoutId;
+    
+    if (countdown > 0) {
+      timeoutId = setTimeout(() => {
+        setCountdown(prev => prev - 1);
+      }, 1000);
+    } else {
+      timeoutId = setTimeout(() => {
+        router.push('/');
+      }, 0);
+    }
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [countdown, router]);
 
   return (
     <motion.div 
@@ -159,7 +183,7 @@ function SuccessContent() {
                 className="flex flex-col sm:flex-row gap-4 justify-center"
               >
                 <button
-                  onClick={() => router.push('/account/orders')}
+                  onClick={() => router.push('/profile')}
                   className="px-6 py-3 rounded-lg border border-primary text-primary hover:bg-primary/5 
                            transition-colors duration-200"
                 >
