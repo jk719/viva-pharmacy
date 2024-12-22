@@ -59,6 +59,11 @@ export default function HeaderProgress() {
       fetchRewardsData();
     };
 
+    const handlePaymentSuccess = () => {
+      console.log('Payment success event received');
+      fetchRewardsData();
+    };
+
     const handleVivaBucksReset = () => {
       setRewardsData({
         vivaBucks: 0,
@@ -71,11 +76,13 @@ export default function HeaderProgress() {
     };
 
     eventEmitter.on(Events.POINTS_UPDATED, handleVivaBucksUpdate);
+    eventEmitter.on(Events.PAYMENT_SUCCESS, handlePaymentSuccess);
     eventEmitter.on(Events.POINTS_RESET, handleVivaBucksReset);
     eventEmitter.on(Events.REWARD_RESTORED, handleVivaBucksUpdate);
     
     return () => {
       eventEmitter.off(Events.POINTS_UPDATED, handleVivaBucksUpdate);
+      eventEmitter.off(Events.PAYMENT_SUCCESS, handlePaymentSuccess);
       eventEmitter.off(Events.POINTS_RESET, handleVivaBucksReset);
       eventEmitter.off(Events.REWARD_RESTORED, handleVivaBucksUpdate);
     };
@@ -99,11 +106,11 @@ export default function HeaderProgress() {
     };
   }, []);
 
-  const currentVivaBucks = rewardsData?.rewardPoints || 0;
+  const currentVivaBucks = Math.floor(rewardsData?.rewardPoints || 0);
   const vivaBucksToNextReward = REWARDS_CONFIG.getPointsToNextReward(currentVivaBucks);
   const availableReward = REWARDS_CONFIG.getRewardAmount(currentVivaBucks);
   const progress = (currentVivaBucks % REWARDS_CONFIG.REWARD_RATE.POINTS_NEEDED) / REWARDS_CONFIG.REWARD_RATE.POINTS_NEEDED * 100;
-  const currentProgressVivaBucks = currentVivaBucks % REWARDS_CONFIG.REWARD_RATE.POINTS_NEEDED;
+  const currentProgressVivaBucks = Math.floor(currentVivaBucks % REWARDS_CONFIG.REWARD_RATE.POINTS_NEEDED);
   const tierColor = REWARDS_CONFIG.MEMBERSHIP_TIERS[rewardsData?.currentTier]?.color || 'text-gray-500';
 
   const handleRewardClick = () => {
