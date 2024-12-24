@@ -358,24 +358,23 @@ export default function HeaderProgress() {
                     {availableReward > 0 && (
                       <div 
                         onClick={handleRewardClick}
-                        className="flex items-center space-x-1 border-l border-gray-200 pl-2 
-                                cursor-pointer rounded-full px-2 py-0.5 
-                                transition-all duration-300 ease-in-out group
-                                hover:bg-gradient-to-r hover:from-emerald-50 hover:to-emerald-100
-                                hover:shadow-md hover:scale-105 
-                                active:scale-95 hover:border-emerald-200"
+                        className="flex items-center space-x-2 border-l border-gray-200 pl-3 
+                                  cursor-pointer rounded-full px-3 py-1.5 
+                                  transition-all duration-300 ease-in-out group
+                                  hover:bg-gradient-to-r hover:from-emerald-50 hover:to-emerald-100
+                                  hover:shadow-md hover:scale-105 active:scale-95 hover:border-emerald-200"
                       >
                         <div className="relative">
-                          <div className="absolute -top-0.5 -right-0.5 w-2 h-2 
-                                      bg-gradient-to-r from-emerald-400 to-emerald-500 
-                                      rounded-full animate-pulse"></div>
-                          <FaGift className="text-emerald-500 text-[9px] 
-                                     group-hover:scale-110 group-hover:rotate-12 
-                                     transition-all duration-300" />
+                          <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 
+                                        bg-gradient-to-r from-emerald-400 to-emerald-500 
+                                        rounded-full animate-pulse"></div>
+                          <FaGift className="text-emerald-500 text-sm 
+                                         group-hover:scale-110 group-hover:rotate-12 
+                                         transition-all duration-300" />
                         </div>
-                        <span className="text-[10px] text-emerald-600 font-medium 
-                                     group-hover:text-emerald-700 group-hover:font-semibold
-                                     transition-all duration-300">
+                        <span className="text-sm text-emerald-600 font-medium 
+                                       group-hover:text-emerald-700 group-hover:font-semibold
+                                       transition-all duration-300">
                           {REWARDS_CONFIG.formatCurrency(availableReward)} Available
                         </span>
                       </div>
@@ -467,22 +466,22 @@ export default function HeaderProgress() {
                     {availableReward > 0 && (
                       <div 
                         onClick={handleRewardClick}
-                        className="flex items-center space-x-1 border-l border-gray-200 pl-2 
-                                cursor-pointer rounded-full px-3 py-1
-                                transition-all duration-300 ease-in-out group
-                                hover:bg-gradient-to-r hover:from-emerald-50 hover:to-emerald-100
-                                hover:shadow-md hover:scale-105 active:scale-95"
+                        className="flex items-center space-x-2 border-l border-gray-200 pl-3 
+                                  cursor-pointer rounded-full px-4 py-2 
+                                  transition-all duration-300 ease-in-out group
+                                  hover:bg-gradient-to-r hover:from-emerald-50 hover:to-emerald-100
+                                  hover:shadow-md hover:scale-105 active:scale-95"
                       >
                         <div className="relative">
-                          <div className="absolute -top-0.5 -right-0.5 w-2 h-2 
-                                      bg-emerald-400 rounded-full animate-ping"></div>
-                          <FaGift className="text-emerald-500 text-sm
+                          <div className="absolute -top-0.5 -right-0.5 w-3 h-3 
+                                        bg-emerald-400 rounded-full animate-ping"></div>
+                          <FaGift className="text-emerald-500 text-base 
                                          group-hover:scale-110 group-hover:rotate-12 
                                          transition-all duration-300" />
                         </div>
-                        <span className="text-sm text-emerald-600 font-medium 
-                                     group-hover:text-emerald-700
-                                     transition-all duration-300">
+                        <span className="text-base text-emerald-600 font-medium 
+                                       group-hover:text-emerald-700
+                                       transition-all duration-300">
                           {REWARDS_CONFIG.formatCurrency(availableReward)} Available
                         </span>
                       </div>
