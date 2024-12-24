@@ -28,6 +28,7 @@ export default function HeaderProgress() {
   const [isRedeeming, setIsRedeeming] = useState(false);
   const [redeemAmount, setRedeemAmount] = useState(0);
   const { setActiveReward } = useRewardsStore();
+  const ITEMS_PER_PAGE = 5;
 
   const fetchRewardsData = async () => {
     if (!session?.user?.id) return;
@@ -560,35 +561,68 @@ export default function HeaderProgress() {
                 Redeem Rewards
               </Dialog.Title>
 
-              <div className="space-y-3">
-                {[...Array(Math.floor(availableReward / REWARDS_CONFIG.REWARD_RATE.REWARD_AMOUNT))].map((_, index) => {
-                  const amount = (index + 1) * REWARDS_CONFIG.REWARD_RATE.REWARD_AMOUNT;
+              <div className="space-y-4">
+                {[...Array(Math.floor(availableReward / REWARDS_CONFIG.REWARD_RATE.REWARD_AMOUNT))]
+                  .slice(currentPage * ITEMS_PER_PAGE, (currentPage + 1) * ITEMS_PER_PAGE)
+                  .map((_, index) => {
+                  const actualIndex = currentPage * ITEMS_PER_PAGE + index;
+                  const amount = (actualIndex + 1) * REWARDS_CONFIG.REWARD_RATE.REWARD_AMOUNT;
                   return (
                     <motion.button 
-                      key={index}
+                      key={actualIndex}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.1 }}
                       onClick={() => handleRewardRedeem(amount)}
-                      className="flex items-center justify-between w-full px-4 py-3 
+                      className="flex items-center justify-between w-full px-6 py-4
                               rounded-xl border border-gray-200 
                               hover:bg-gradient-to-r hover:from-emerald-50 hover:to-emerald-100
                               hover:border-emerald-200 hover:shadow-md
                               transition-all duration-300 group"
                     >
-                      <div className="flex items-center space-x-3">
-                        <FaGift className="text-emerald-500 group-hover:scale-110 
+                      <div className="flex items-center space-x-4 min-w-[120px]">
+                        <FaGift className="text-emerald-500 text-lg
+                                       group-hover:scale-110 
                                        group-hover:rotate-12 transition-all duration-300" />
-                        <span className="font-medium text-gray-700 group-hover:text-gray-900">
+                        <span className="font-medium text-gray-700 text-base whitespace-nowrap">
                           {REWARDS_CONFIG.formatCurrency(amount)}
                         </span>
                       </div>
-                      <span className="text-sm text-gray-500 group-hover:text-gray-700">
+                      <span className="text-sm text-gray-500 group-hover:text-gray-700 ml-4">
                         Redeem {amount/REWARDS_CONFIG.REWARD_RATE.REWARD_AMOUNT} reward{amount > REWARDS_CONFIG.REWARD_RATE.REWARD_AMOUNT ? 's' : ''}
                       </span>
                     </motion.button>
                   );
                 })}
+
+                {/* Pagination controls */}
+                {Math.floor(availableReward / REWARDS_CONFIG.REWARD_RATE.REWARD_AMOUNT) > ITEMS_PER_PAGE && (
+                  <div className="flex justify-between items-center mt-6 pt-4 border-t border-gray-100">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
+                      disabled={currentPage === 0}
+                      className={`px-4 py-2 text-sm rounded-lg transition-all duration-200
+                                ${currentPage === 0 
+                                  ? 'text-gray-400 cursor-not-allowed' 
+                                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'}`}
+                    >
+                      Previous
+                    </button>
+                    <span className="text-sm text-gray-500">
+                      Page {currentPage + 1} of {Math.ceil(Math.floor(availableReward / REWARDS_CONFIG.REWARD_RATE.REWARD_AMOUNT) / ITEMS_PER_PAGE)}
+                    </span>
+                    <button
+                      onClick={() => setCurrentPage(prev => prev + 1)}
+                      disabled={((currentPage + 1) * ITEMS_PER_PAGE) >= Math.floor(availableReward / REWARDS_CONFIG.REWARD_RATE.REWARD_AMOUNT)}
+                      className={`px-4 py-2 text-sm rounded-lg transition-all duration-200
+                                ${((currentPage + 1) * ITEMS_PER_PAGE) >= Math.floor(availableReward / REWARDS_CONFIG.REWARD_RATE.REWARD_AMOUNT)
+                                  ? 'text-gray-400 cursor-not-allowed' 
+                                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'}`}
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
               </div>
 
               <motion.button
