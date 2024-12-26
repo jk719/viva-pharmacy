@@ -9,24 +9,79 @@ export async function GET(request) {
     await dbConnect();
     const { searchParams } = new URL(request.url);
     
-    // Build query based on search parameters
+    // Log incoming request
+    console.log('API Request:', {
+      url: request.url,
+      params: Object.fromEntries(searchParams.entries())
+    });
+    
+    // Filter parameters
     const query = {};
     const category = searchParams.get('category');
     const search = searchParams.get('search');
+    const featured = searchParams.get('featured');
+    const minPrice = searchParams.get('minPrice');
+    const maxPrice = searchParams.get('maxPrice');
     
+    // Build query
     if (category) query.category = category;
+    if (featured) query.isFeatured = featured === 'true';
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } }
       ];
     }
+    if (minPrice || maxPrice) {
+      query.price = {};
+      if (minPrice) query.price.$gte = parseFloat(minPrice);
+      if (maxPrice) query.price.$lte = parseFloat(maxPrice);
+    }
 
-    const products = await Product.find(query);
+    // Log the MongoDB query
+    console.log('MongoDB Query:', {
+      query,
+      hasFilters: Object.keys(query).length > 0
+    });
+
+    // Execute query without pagination
+    const products = await Product.find(query)
+      .sort({ createdAt: -1 });
     
+    // Get total count and detailed stats
+    const total = products.length;
+    const categoryStats = {};
+    products.forEach(product => {
+      if (!categoryStats[product.category]) {
+        categoryStats[product.category] = {
+          count: 0,
+          minPrice: Infinity,
+          maxPrice: -Infinity
+        };
+      }
+      categoryStats[product.category].count++;
+      categoryStats[product.category].minPrice = Math.min(categoryStats[product.category].minPrice, product.price);
+      categoryStats[product.category].maxPrice = Math.max(categoryStats[product.category].maxPrice, product.price);
+    });
+    
+    console.log('Found products:', {
+      total,
+      categories: Object.keys(categoryStats),
+      categoryStats,
+      firstProduct: products[0]?.name,
+      lastProduct: products[products.length - 1]?.name
+    });
+
     return NextResponse.json({
       success: true,
-      products
+      products,
+      pagination: {
+        total,
+        pages: 1,
+        currentPage: 1,
+        perPage: total,
+        hasMore: false
+      }
     });
 
   } catch (error) {
