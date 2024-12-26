@@ -4,7 +4,7 @@ import Stripe from 'stripe';
 import dbConnect from '@/lib/dbConnect';
 import User from '@/models/User';
 import Order from '@/models/Order';
-import products from '@/lib/products/data';
+import Product from '@/models/Product';
 import { generateOrderConfirmationEmail } from '@/lib/email-templates/order-confirmation';
 import { sendOrderConfirmationEmail } from '@/lib/email/sendEmail';
 
@@ -66,16 +66,21 @@ export async function POST(request) {
 
                 await dbConnect();
 
-                // Parse cart items and add product images with full URLs using BASE_URL
+                // Parse cart items and add product images
                 const cartItems = JSON.parse(fullPaymentIntent.metadata.cartItemIds);
+                
+                // Fetch all products at once
+                const productIds = cartItems.map(item => item.id);
+                const products = await Product.find({ _id: { $in: productIds } });
+                
                 const itemsWithImages = cartItems.map(item => {
-                    const product = products.find(p => p.id.toString() === item.id.toString());
+                    const product = products.find(p => p._id.toString() === item.id.toString());
                     return {
                         productId: item.id.toString(),
                         name: item.name,
                         quantity: item.qty,
                         price: parseFloat(item.price),
-                        image: product?.image ? `${BASE_URL}${product.image}` : null // Use BASE_URL
+                        image: product?.image || null // Image URL should already be complete from MongoDB
                     };
                 });
 

@@ -23,35 +23,35 @@ export const authOptions = {
           
           if (!user) {
             console.log('No user found:', credentials.email);
-            throw new Error('No user found with this email');
+            return null;
           }
 
           const isValid = await comparePasswords(credentials.password, user.password);
           
           if (!isValid) {
             console.log('Invalid password for user:', credentials.email);
-            throw new Error('Invalid password');
+            return null;
           }
 
           if (!user.isVerified) {
             console.log('User not verified:', credentials.email);
-            throw new Error('Please verify your email before logging in');
+            return null;
           }
 
-          // Return complete user object with all necessary fields
+          // Return user object with only necessary fields
           return {
             id: user._id.toString(),
             email: user.email,
-            role: user.role,
+            role: user.role || 'user',
             isVerified: user.isVerified,
             vivaBucks: user.vivaBucks || 0,
             rewardPoints: user.rewardPoints || 0,
             cumulativePoints: user.cumulativePoints || 0,
-            currentTier: user.currentTier || 'Standard'
+            currentTier: user.currentTier || 'STANDARD'
           };
         } catch (error) {
           console.error('Authorization error:', error);
-          throw error; // Changed from return null to throw error for better error handling
+          return null;
         }
       }
     })
@@ -61,21 +61,22 @@ export const authOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   callbacks: {
-    async signIn({ user, account }) {
-      if (user) {
-        return true;
-      }
-      return false;
+    async signIn({ user }) {
+      return !!user;
     },
-    async jwt({ token, user, account, profile, trigger }) {
-      if (trigger === "update" && token) {
-        // Fetch fresh user data when session is updated
-        const updatedUser = await User.findById(token.id).select('-password');
-        if (updatedUser) {
-          token.vivaBucks = updatedUser.vivaBucks;
-          token.rewardPoints = updatedUser.rewardPoints;
-          token.cumulativePoints = updatedUser.cumulativePoints;
-          token.currentTier = updatedUser.currentTier;
+    async jwt({ token, user, trigger }) {
+      if (trigger === "update" && token?.id) {
+        try {
+          await dbConnect();
+          const updatedUser = await User.findById(token.id).select('-password');
+          if (updatedUser) {
+            token.vivaBucks = updatedUser.vivaBucks || 0;
+            token.rewardPoints = updatedUser.rewardPoints || 0;
+            token.cumulativePoints = updatedUser.cumulativePoints || 0;
+            token.currentTier = updatedUser.currentTier || 'STANDARD';
+          }
+        } catch (error) {
+          console.error('Error updating token:', error);
         }
       }
       
@@ -92,13 +93,16 @@ export const authOptions = {
     },
     async session({ session, token }) {
       if (token) {
-        session.user.id = token.id;
-        session.user.role = token.role;
-        session.user.isVerified = token.isVerified;
-        session.user.vivaBucks = token.vivaBucks;
-        session.user.rewardPoints = token.rewardPoints;
-        session.user.cumulativePoints = token.cumulativePoints;
-        session.user.currentTier = token.currentTier;
+        session.user = {
+          ...session.user,
+          id: token.id,
+          role: token.role,
+          isVerified: token.isVerified,
+          vivaBucks: token.vivaBucks,
+          rewardPoints: token.rewardPoints,
+          cumulativePoints: token.cumulativePoints,
+          currentTier: token.currentTier
+        };
       }
       return session;
     }

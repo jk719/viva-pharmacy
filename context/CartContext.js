@@ -22,6 +22,8 @@ export function CartProvider({ children }) {
     const [deliveryOption, setDeliveryOption] = useState('pickup');
     const [selectedTime, setSelectedTime] = useState('');
     const [showTimeError, setShowTimeError] = useState(false);
+    const [subtotal, setSubtotal] = useState(0);
+    const [tax, setTax] = useState(0);
 
     // Load cart from localStorage on initial mount
     useEffect(() => {
@@ -38,38 +40,40 @@ export function CartProvider({ children }) {
         }
     }, []);
 
-    // Update total and save to localStorage when items change
+    // Calculate totals when items change
     useEffect(() => {
         if (!loading) {
-            const newTotal = items.reduce((sum, item) => 
+            const newSubtotal = items.reduce((sum, item) => 
                 sum + (item.price * item.quantity), 0
             );
+            const newTax = newSubtotal * 0.08; // 8% tax rate
+            const newTotal = newSubtotal + newTax;
+            
+            setSubtotal(newSubtotal);
+            setTax(newTax);
             setTotal(newTotal);
+            
             localStorage.setItem('cart', JSON.stringify(items));
         }
     }, [items, loading]);
 
     const getProductId = useCallback((product) => {
-        return product.id;
+        return product._id || product.id; // Support both MongoDB _id and legacy id
     }, []);
 
     const addToCart = useCallback((product) => {
-        if (!product || !product.id) {
+        if (!product || (!product._id && !product.id)) {
             console.error('Invalid product:', product);
             return;
         }
         
-        console.log('Adding product:', product);
         setItems(prevItems => {
             const productId = getProductId(product);
-            console.log('Product ID:', productId);
-            
             const existingItem = prevItems.find(item => 
                 getProductId(item) === productId
             );
             
             if (existingItem) {
-                console.log('Found existing item:', existingItem);
                 return prevItems.map(item =>
                     getProductId(item) === productId
                         ? { ...item, quantity: item.quantity + 1 }
@@ -77,8 +81,11 @@ export function CartProvider({ children }) {
                 );
             }
             
-            console.log('Adding new item to cart');
-            return [...prevItems, { ...product, quantity: 1 }];
+            return [...prevItems, { 
+                ...product, 
+                quantity: 1,
+                addedAt: new Date().toISOString() 
+            }];
         });
     }, [getProductId]);
 
@@ -89,13 +96,19 @@ export function CartProvider({ children }) {
     }, [getProductId]);
 
     const updateQuantity = useCallback((productId, quantity) => {
-        setItems(prevItems =>
-            prevItems.map(item =>
+        const newQuantity = Math.max(0, parseInt(quantity));
+        
+        setItems(prevItems => {
+            if (newQuantity === 0) {
+                return prevItems.filter(item => getProductId(item) !== productId);
+            }
+            
+            return prevItems.map(item =>
                 getProductId(item) === productId
-                    ? { ...item, quantity: Math.max(0, parseInt(quantity)) }
+                    ? { ...item, quantity: newQuantity }
                     : item
-            )
-        );
+            );
+        });
     }, [getProductId]);
 
     const decrement = useCallback((productId) => {
@@ -122,11 +135,19 @@ export function CartProvider({ children }) {
         localStorage.removeItem('cart');
         setItems([]);
         setTotal(0);
+        setSubtotal(0);
+        setTax(0);
     }, []);
+
+    const getCartSize = useCallback(() => {
+        return items.reduce((total, item) => total + item.quantity, 0);
+    }, [items]);
 
     const value = {
         items,
         total,
+        subtotal,
+        tax,
         loading,
         addToCart,
         removeFromCart,
@@ -138,7 +159,8 @@ export function CartProvider({ children }) {
         selectedTime,
         setSelectedTime,
         showTimeError,
-        setShowTimeError
+        setShowTimeError,
+        getCartSize
     };
 
     return (

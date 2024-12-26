@@ -52,17 +52,17 @@ export async function POST(request) {
     // Generate verification token
     const verificationToken = generateVerificationToken();
 
-    // Initialize rewards data
+    // Initialize rewards data with the updated config structure
     const rewardsData = {
-      vivaBucks: REWARDS_CONFIG.WELCOME_BONUS.VIVABUCKS,
-      rewardPoints: REWARDS_CONFIG.WELCOME_BONUS.VIVABUCKS,
-      cumulativePoints: REWARDS_CONFIG.WELCOME_BONUS.VIVABUCKS,
+      vivaBucks: REWARDS_CONFIG.WELCOME_BONUS.POINTS,  // Using POINTS instead of VIVABUCKS
+      rewardPoints: REWARDS_CONFIG.WELCOME_BONUS.POINTS,
+      cumulativePoints: REWARDS_CONFIG.WELCOME_BONUS.POINTS,
       currentTier: REWARDS_CONFIG.DEFAULT_TIER,
-      welcomeBonus: REWARDS_CONFIG.WELCOME_BONUS.AMOUNT,
+      welcomeBonus: REWARDS_CONFIG.BONUSES.FIRST_PURCHASE, // Using FIRST_PURCHASE bonus
       welcomeBonusRedeemed: false,
       rewardsHistory: [{
         type: 'welcome_bonus',
-        amount: REWARDS_CONFIG.WELCOME_BONUS.VIVABUCKS,
+        amount: REWARDS_CONFIG.WELCOME_BONUS.POINTS,
         description: 'Welcome Bonus Points',
         date: new Date()
       }]

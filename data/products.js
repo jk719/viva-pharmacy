@@ -110,10 +110,10 @@ const products = [
   },
   { 
     id: 13, 
-    name: 'Dr. Teal\\\'s Cooling Peppermint Pure Epsom Salt Foot Soak', 
+    name: 'Dr. Teal\'s Cooling Peppermint Pure Epsom Salt Foot Soak', 
     image: '/images/products/dr-teals-cooling-peppermint-pure-epsom-salt-foot-soak-32oz.png', 
     price: 6.99, 
-    description: 'Revitalize and soothe tired feet with Dr. Teal\\\'s Cooling Peppermint Pure Epsom Salt Foot Soak. This refreshing blend combines pure Epsom salt with peppermint essential oil for the ultimate foot care experience.', 
+    description: 'Revitalize and soothe tired feet with Dr. Teal\'s Cooling Peppermint Pure Epsom Salt Foot Soak. This refreshing blend combines pure Epsom salt with peppermint essential oil for the ultimate foot care experience.', 
     category: 'Foot Care', 
     isFeatured: true 
   },
@@ -559,4 +559,4 @@ const products = [
     isFeatured: true 
   },
 ];
-export default products;
+export { products };

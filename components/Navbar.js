@@ -6,12 +6,25 @@ import Link from "next/link";
 import ClientCartIcon from "./ClientCartIcon";
 import { AuthButtons } from "./auth";
 import VerificationAlert from "./VerificationAlert";
-import { useState } from "react";
-import products from "../data/products";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaSearch } from "react-icons/fa";
+import { products } from '@/data/products'; // Import the products directly
+
+// Debounce function
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
 
 export default function Navbar() {
   const [query, setQuery] = useState("");
@@ -20,24 +33,52 @@ export default function Navbar() {
   const router = useRouter();
   const { data: session } = useSession();
 
+  // Memoized search function
+  const searchProducts = useCallback(
+    debounce((searchQuery) => {
+      if (!searchQuery.trim()) {
+        setFilteredProducts([]);
+        return;
+      }
+
+      const searchTerms = searchQuery.toLowerCase().split(' ');
+      
+      const results = products.filter((product) => {
+        const productName = product.name.toLowerCase();
+        const productCategory = product.category.toLowerCase();
+        const productDescription = product.description.toLowerCase();
+
+        return searchTerms.every(term => 
+          productName.includes(term) || 
+          productCategory.includes(term) || 
+          productDescription.includes(term)
+        );
+      }).slice(0, 5); // Limit to 5 results for better performance
+
+      setFilteredProducts(results);
+    }, 300),
+    []
+  );
+
   const handleInputChange = (e) => {
     const input = e.target.value;
     setQuery(input);
-
-    if (input) {
-      const results = products.filter((product) =>
-        product.name.toLowerCase().includes(input.toLowerCase())
-      );
-      setFilteredProducts(results);
-    } else {
-      setFilteredProducts([]);
-    }
+    searchProducts(input);
   };
 
   const handleProductClick = (productId) => {
     router.push(`/products/${productId}`);
     setQuery("");
     setFilteredProducts([]);
+    setIsFocused(false);
+  };
+
+  // Handle keyboard navigation
+  const handleKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      setIsFocused(false);
+      setFilteredProducts([]);
+    }
   };
 
   return (
@@ -81,10 +122,12 @@ export default function Navbar() {
                 onChange={handleInputChange}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setTimeout(() => setIsFocused(false), 200)}
+                onKeyDown={handleKeyDown}
                 placeholder="Search products..."
                 className="w-full h-9 pl-10 pr-4 text-gray-900 placeholder-gray-500 
                   bg-white/90 backdrop-blur-sm rounded-xl border-2 border-white/50
                   focus:border-white focus:outline-none focus:ring-0 transition-all"
+                aria-label="Search products"
               />
               <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             </div>
@@ -110,10 +153,12 @@ export default function Navbar() {
                   onChange={handleInputChange}
                   onFocus={() => setIsFocused(true)}
                   onBlur={() => setTimeout(() => setIsFocused(false), 200)}
+                  onKeyDown={handleKeyDown}
                   placeholder="Search products..."
                   className="w-full h-12 pl-12 pr-4 text-gray-900 placeholder-gray-500 
                     bg-white/90 backdrop-blur-sm rounded-xl border-2 border-white/50
                     focus:border-white focus:outline-none focus:ring-0 transition-all"
+                  aria-label="Search products"
                 />
                 <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
               </div>
