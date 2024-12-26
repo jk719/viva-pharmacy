@@ -73,16 +73,49 @@ export async function POST(request) {
                 const productIds = cartItems.map(item => item.id);
                 const products = await Product.find({ _id: { $in: productIds } });
                 
+                // After fetching products
+                console.log('🖼️ Products from database:', products.map(p => ({
+                    name: p.name,
+                    image: p.image,
+                    _id: p._id.toString()
+                })));
+
                 const itemsWithImages = cartItems.map(item => {
                     const product = products.find(p => p._id.toString() === item.id.toString());
+                    let imageUrl = product?.image || null;
+                    
+                    console.log('🔍 Processing image for:', {
+                        productName: item.name,
+                        originalImage: imageUrl
+                    });
+                    
+                    // Handle different image URL formats
+                    if (imageUrl) {
+                        if (imageUrl.startsWith('http')) {
+                            console.log('✅ Already absolute URL:', imageUrl);
+                        } else if (imageUrl.startsWith('/')) {
+                            imageUrl = `${BASE_URL}${imageUrl}`;
+                            console.log('🔄 Converting to absolute URL:', imageUrl);
+                        } else {
+                            imageUrl = `${BASE_URL}/${imageUrl}`;
+                            console.log('➕ Adding base URL:', imageUrl);
+                        }
+                    }
+
                     return {
                         productId: item.id.toString(),
                         name: item.name,
                         quantity: item.qty,
                         price: parseFloat(item.price),
-                        image: product?.image || null // Image URL should already be complete from MongoDB
+                        image: imageUrl
                     };
                 });
+
+                // Log final items before email generation
+                console.log('📧 Final items for email:', itemsWithImages.map(item => ({
+                    name: item.name,
+                    finalImage: item.image
+                })));
 
                 // Base order data with enhanced items
                 const orderData = {
@@ -126,24 +159,50 @@ export async function POST(request) {
                     const pointsResult = await user.addPoints(pointsToAdd);
                     console.log('✨ Points updated:', pointsResult);
 
-                    // Before sending email
+                    // Calculate VivaBucks and rewards earned
+                    const vivaBucksEarned = pointsResult.vivaBucksAdded || 0;
+                    const rewardPointsEarned = pointsResult.pointsAdded || pointsToAdd;
+
                     console.log('📧 Preparing to send order confirmation email:', {
                         userEmail: user.email,
                         orderNumber: order._id,
-                        itemCount: itemsWithImages.length
+                        itemCount: itemsWithImages.length,
+                        vivaBucksEarned,
+                        rewardPointsEarned
                     });
+
+                    // Add this debug logging before email generation
+                    console.log('Debug: Original items with images:', itemsWithImages.map(item => ({
+                        name: item.name,
+                        originalImage: item.image
+                    })));
+
+                    const processedItems = itemsWithImages.map(item => ({
+                        ...item,
+                        image: item.image ? (item.image.startsWith('http') ? item.image : `${BASE_URL}${item.image}`) : null
+                    }));
+
+                    console.log('Debug: Processed items with images:', processedItems.map(item => ({
+                        name: item.name,
+                        processedImage: item.image
+                    })));
 
                     const emailHtml = generateOrderConfirmationEmail({
                         orderNumber: order._id,
                         customerName: user.name || user.email.split('@')[0],
-                        items: itemsWithImages,
+                        items: processedItems,  // Use the processed items
                         subtotal: orderData.total,
                         tax: orderData.total * 0.08875,
                         total: orderData.total,
                         shippingAddress: orderData.shippingAddress,
                         deliveryMethod: orderData.deliveryMethod,
-                        selectedTime: orderData.selectedTime
+                        selectedTime: orderData.selectedTime,
+                        vivaBucksEarned,
+                        rewardPointsEarned
                     });
+
+                    // Log the final HTML (first 500 chars)
+                    console.log('Debug: Email HTML preview:', emailHtml.substring(0, 500));
 
                     await sendOrderConfirmationEmail(
                         user.email,
