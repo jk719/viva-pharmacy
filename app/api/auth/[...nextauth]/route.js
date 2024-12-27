@@ -2,7 +2,6 @@ import NextAuth from 'next-auth';
 import CredentialsProvider from "next-auth/providers/credentials";
 import dbConnect from '@/lib/dbConnect';
 import User from '@/models/User';
-import { comparePasswords } from '@/lib/auth/password';
 
 export const authOptions = {
   providers: [
@@ -14,11 +13,14 @@ export const authOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
+          console.log('Missing credentials');
           throw new Error('Missing credentials');
         }
 
         try {
           await dbConnect();
+          console.log('Attempting to find user:', credentials.email);
+          
           const user = await User.findOne({ email: credentials.email.toLowerCase() });
           
           if (!user) {
@@ -26,7 +28,10 @@ export const authOptions = {
             return null;
           }
 
-          const isValid = await comparePasswords(credentials.password, user.password);
+          console.log('User found, comparing password...');
+          // Use the model's comparePassword method directly
+          const isValid = await user.comparePassword(credentials.password);
+          console.log('Password validation result:', isValid);
           
           if (!isValid) {
             console.log('Invalid password for user:', credentials.email);
@@ -35,14 +40,16 @@ export const authOptions = {
 
           if (!user.isVerified) {
             console.log('User not verified:', credentials.email);
-            return null;
+            throw new Error('Please verify your email before logging in');
           }
 
+          console.log('Authentication successful for:', credentials.email);
+          
           // Return user object with only necessary fields
           return {
             id: user._id.toString(),
             email: user.email,
-            role: user.role || 'user',
+            role: user.role || 'USER', // Match the case with your schema
             isVerified: user.isVerified,
             vivaBucks: user.vivaBucks || 0,
             rewardPoints: user.rewardPoints || 0,
@@ -51,7 +58,7 @@ export const authOptions = {
           };
         } catch (error) {
           console.error('Authorization error:', error);
-          return null;
+          throw error; // Throw the error instead of returning null
         }
       }
     })

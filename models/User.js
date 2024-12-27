@@ -122,12 +122,13 @@ const userSchema = new mongoose.Schema({
       message: props => `${props.value} is not a valid phone number!`
     }
   },
+  verificationToken: String,
+  verificationExpires: Date,
   isVerified: {
     type: Boolean,
     default: false
   },
-  emailVerificationToken: String,
-  verificationExpires: Date,
+  lastVerificationSent: Date,
   createdAt: {
     type: Date,
     default: Date.now
@@ -138,7 +139,6 @@ const userSchema = new mongoose.Schema({
   },
   resetPasswordToken: String,
   resetPasswordExpires: Date,
-  verificationToken: String,
   // Add addresses array
   addresses: [addressSchema],
   // Add reward history to user schema
@@ -220,16 +220,27 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
 };
 
 // Generate verification token
-userSchema.methods.generateVerificationToken = function() {
-  this.emailVerificationToken = crypto.randomBytes(32).toString('hex');
+userSchema.methods.generateVerificationToken = async function() {
+  console.log('Generating verification token for:', this.email);
+  
+  const token = crypto.randomBytes(32).toString('hex');
+  this.verificationToken = token;
   this.verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-  this.isVerified = false; // Ensure user is marked as unverified
-  return this.emailVerificationToken;
+  this.lastVerificationSent = new Date();
+  this.isVerified = false;
+  
+  console.log('Verification token generated:', {
+    email: this.email,
+    expires: this.verificationExpires,
+    tokenLength: token.length
+  });
+  
+  return token;
 };
 
 // Check if verification token is valid
 userSchema.methods.isVerificationTokenValid = function() {
-  return this.emailVerificationToken && 
+  return this.verificationToken && 
          this.verificationExpires && 
          this.verificationExpires > Date.now();
 };
@@ -242,14 +253,14 @@ userSchema.methods.markAsVerified = function() {
 
 // Clear verification tokens
 userSchema.methods.clearVerificationToken = function() {
-  this.emailVerificationToken = undefined;
+  this.verificationToken = undefined;
   this.verificationExpires = undefined;
 };
 
 // Static method to find user by verification token
 userSchema.statics.findByVerificationToken = function(token) {
   return this.findOne({
-    emailVerificationToken: token,
+    verificationToken: token,
     verificationExpires: { $gt: Date.now() }
   });
 };
@@ -258,7 +269,7 @@ userSchema.statics.findByVerificationToken = function(token) {
 userSchema.set('toJSON', {
   transform: function(doc, ret, opt) {
     delete ret.password;
-    delete ret.emailVerificationToken;
+    delete ret.verificationToken;
     delete ret.verificationExpires;
     return ret;
   }

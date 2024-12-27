@@ -14,29 +14,21 @@ export async function POST(request) {
   try {
     await dbConnect();
     const body = await request.json();
+    console.log('Registration request body:', body); // Debug log
+
     const { email, password, phoneNumber } = body;
 
     // Input validation
-    const validationErrors = {
-      email: !email || !email.includes('@') ? 'Valid email is required' : null,
-      password: validatePassword(password),
-      phoneNumber: !phoneNumber ? 'Phone number is required' : null
-    };
-
-    // Check for validation errors
-    const errors = Object.entries(validationErrors)
-      .filter(([key, value]) => value && key !== 'password')
-      .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
-
-    if (validationErrors.password && !validationErrors.password.isValid) {
-      errors.password = validationErrors.password.errors;
-    }
-
-    if (Object.keys(errors).length > 0) {
+    if (!email || !password || !phoneNumber) {
+      console.log('Missing required fields:', { email: !!email, password: !!password, phone: !!phoneNumber });
       return NextResponse.json({ 
         success: false, 
-        message: 'Validation failed',
-        errors 
+        message: 'All fields are required',
+        errors: {
+          email: !email ? 'Email is required' : null,
+          password: !password ? 'Password is required' : null,
+          phoneNumber: !phoneNumber ? 'Phone number is required' : null
+        }
       }, { status: 400 });
     }
 
@@ -52,19 +44,22 @@ export async function POST(request) {
     // Generate verification token
     const verificationToken = generateVerificationToken();
 
-    // Initialize rewards data with the updated config structure
+    // Initialize rewards data with the correct schema structure
     const rewardsData = {
-      vivaBucks: REWARDS_CONFIG.WELCOME_BONUS.POINTS,  // Using POINTS instead of VIVABUCKS
+      vivaBucks: REWARDS_CONFIG.WELCOME_BONUS.POINTS,
       rewardPoints: REWARDS_CONFIG.WELCOME_BONUS.POINTS,
       cumulativePoints: REWARDS_CONFIG.WELCOME_BONUS.POINTS,
-      currentTier: REWARDS_CONFIG.DEFAULT_TIER,
-      welcomeBonus: REWARDS_CONFIG.BONUSES.FIRST_PURCHASE, // Using FIRST_PURCHASE bonus
-      welcomeBonusRedeemed: false,
-      rewardsHistory: [{
-        type: 'welcome_bonus',
-        amount: REWARDS_CONFIG.WELCOME_BONUS.POINTS,
-        description: 'Welcome Bonus Points',
-        date: new Date()
+      currentTier: 'STANDARD', // Match the tier case in the schema
+      pointsMultiplier: 1.0,
+      nextRewardMilestone: 100,
+      rewardHistory: [{
+        type: 'POINTS_EARNED',
+        points: REWARDS_CONFIG.WELCOME_BONUS.POINTS,
+        adjustedPoints: REWARDS_CONFIG.WELCOME_BONUS.POINTS,
+        multiplier: 1.0,
+        tier: 'STANDARD',
+        source: 'welcome_bonus',
+        timestamp: new Date()
       }]
     };
 
@@ -74,8 +69,10 @@ export async function POST(request) {
       password,
       phoneNumber,
       verificationToken,
+      verificationExpires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
       isVerified: false,
-      role: 'user',
+      role: 'USER', // Matches the enum case
+      lastVerificationSent: new Date(),
       ...rewardsData,
       createdAt: new Date(),
       updatedAt: new Date()
@@ -86,10 +83,15 @@ export async function POST(request) {
 
     // Send verification email
     try {
-      await sendVerificationEmail(user.email, verificationToken);
-      console.log('Verification email sent successfully');
+      console.log('Attempting to send verification email to:', email);
+      await sendVerificationEmail(email, verificationToken);
+      console.log('Verification email sent successfully to:', email);
     } catch (emailError) {
-      console.error('Failed to send verification email:', emailError);
+      console.error('Email error details:', {
+        error: emailError.message,
+        stack: emailError.stack,
+        email: email
+      });
       return NextResponse.json({
         success: true,
         userId: user._id,
@@ -114,7 +116,11 @@ export async function POST(request) {
     }, { status: 201 });
 
   } catch (error) {
-    console.error('Registration error:', error);
+    console.error('Registration error details:', {
+      error: error.message,
+      stack: error.stack,
+      type: error.name
+    });
     return NextResponse.json({ 
       success: false, 
       message: AUTH_ERRORS.SERVER_ERROR,
