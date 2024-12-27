@@ -49,7 +49,21 @@ export async function POST(request) {
             });
 
             try {
-                // Retrieve the complete payment intent
+                await dbConnect();
+
+                // Check if order already exists for this payment intent
+                const existingOrder = await Order.findOne({ 
+                    paymentIntentId: paymentIntent.id 
+                });
+
+                if (existingOrder) {
+                    console.log('⚠️ Order already exists for payment intent:', paymentIntent.id);
+                    return NextResponse.json({ 
+                        received: true,
+                        message: 'Order already processed'
+                    });
+                }
+
                 const fullPaymentIntent = await stripe.paymentIntents.retrieve(paymentIntent.id);
                 
                 console.log('💳 Full Payment Intent:', {
@@ -63,8 +77,6 @@ export async function POST(request) {
                     console.log('⏭️ Skipping payment without cart items');
                     return NextResponse.json({ received: true });
                 }
-
-                await dbConnect();
 
                 // Parse cart items and add product images
                 const cartItems = JSON.parse(fullPaymentIntent.metadata.cartItemIds);
@@ -149,8 +161,14 @@ export async function POST(request) {
 
                 console.log('📝 Creating order with data:', JSON.stringify(orderData, null, 2));
                 
-                const order = await Order.create(orderData);
-                console.log('✅ Order created:', order._id);
+                // Create order with additional check
+                const order = await Order.create({
+                    ...orderData,
+                    createdAt: new Date(), // Ensure consistent timestamp
+                    paymentIntentId: fullPaymentIntent.id // Ensure this is always set
+                });
+
+                console.log('✅ New order created:', order._id);
 
                 // Handle points
                 const user = await User.findById(fullPaymentIntent.metadata.userId);
@@ -215,10 +233,20 @@ export async function POST(request) {
 
                 return NextResponse.json({ 
                     success: true,
-                    orderId: order._id
+                    orderId: order._id,
+                    isNew: true
                 });
 
             } catch (err) {
+                // Add more specific error handling
+                if (err.code === 11000) { // MongoDB duplicate key error
+                    console.log('⚠️ Duplicate order attempt caught');
+                    return NextResponse.json({ 
+                        received: true,
+                        message: 'Order already processed'
+                    });
+                }
+                
                 console.error('❌ Error processing payment:', err.message);
                 console.error('Stack:', err.stack);
                 return NextResponse.json({ error: err.message }, { status: 500 });

@@ -1,60 +1,173 @@
 import { NextResponse } from 'next/server';
-import mongoose from 'mongoose';
+import { getServerSession } from 'next-auth/next';
 import dbConnect from '@/lib/dbConnect';
 import Product from '@/models/Product';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { isValidObjectId } from 'mongoose';
 
-export async function GET(request, { params }) {
-  try {
-    await dbConnect();
-    const { id } = await Promise.resolve(params);
-
-    // Add validation for missing ID
-    if (!id) {
-      console.log('No product ID provided');
-      return NextResponse.json({ 
-        success: false, 
-        message: 'No product ID provided',
-        products: [] 
-      }, { status: 400 });
-    }
-
-    // Validate MongoDB ObjectId
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      console.log('Invalid product ID format:', id);
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Invalid product ID format',
-        products: [] 
-      }, { status: 400 });
-    }
-
-    const product = await Product.findById(id);
+export async function GET(request, context) {
+    const { id } = await Promise.resolve(context.params);
+    console.log('GET request for product:', id);
     
-    console.log('Product fetch result:', {
-      id,
-      found: !!product,
-      productId: product?._id
-    });
+    try {
+        await dbConnect();
+        
+        if (!id) {
+            console.error('No product ID provided');
+            return NextResponse.json(
+                { success: false, message: 'Product ID is required' },
+                { status: 400 }
+            );
+        }
 
-    if (!product) {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Product not found',
-        products: [] 
-      }, { status: 404 });
+        // Validate MongoDB ObjectId
+        if (!isValidObjectId(id)) {
+            console.error('Invalid product ID format');
+            return NextResponse.json(
+                { success: false, message: 'Invalid product ID format' },
+                { status: 400 }
+            );
+        }
+
+        const product = await Product.findById(id);
+        console.log('Product lookup result:', {
+            id,
+            found: !!product,
+            name: product?.name
+        });
+        
+        if (!product) {
+            return NextResponse.json(
+                { success: false, message: 'Product not found' },
+                { status: 404 }
+            );
+        }
+
+        return NextResponse.json({ 
+            success: true, 
+            product,
+            message: 'Product fetched successfully'
+        });
+    } catch (error) {
+        console.error('Error fetching product:', {
+            id,
+            error: error.message,
+            stack: error.stack
+        });
+        return NextResponse.json(
+            { 
+                success: false, 
+                message: 'Failed to fetch product',
+                error: error.message 
+            }, 
+            { status: 500 }
+        );
     }
+}
 
-    return NextResponse.json({
-      success: true,
-      products: [product]
-    });
+export async function PUT(request, context) {
+    const { id } = await Promise.resolve(context.params);
+    console.log('PUT request for product:', id);
+    
+    try {
+        const session = await getServerSession(authOptions);
+        console.log('Session user role:', session?.user?.role);
+        
+        if (!session?.user?.role || !['ADMIN', 'MANAGER'].includes(session.user.role)) {
+            return NextResponse.json(
+                { success: false, message: 'Unauthorized' },
+                { status: 403 }
+            );
+        }
 
-  } catch (error) {
-    console.error('Product fetch error:', error);
-    return NextResponse.json({ 
-      success: false, 
-      message: error.message || 'Failed to fetch product',
-      products: [] 
-    }, { status: 500 });
-  }
+        if (!id) {
+            return NextResponse.json(
+                { success: false, message: 'Product ID is required' },
+                { status: 400 }
+            );
+        }
+
+        await dbConnect();
+        const data = await request.json();
+        console.log('Updating product:', { id, updates: data });
+
+        const product = await Product.findByIdAndUpdate(
+            id,
+            { $set: data },
+            { new: true, runValidators: true }
+        );
+
+        if (!product) {
+            return NextResponse.json(
+                { success: false, message: 'Product not found' },
+                { status: 404 }
+            );
+        }
+
+        return NextResponse.json({
+            success: true,
+            message: 'Product updated successfully',
+            product
+        });
+    } catch (error) {
+        console.error('Error updating product:', error);
+        return NextResponse.json(
+            { 
+                success: false, 
+                message: 'Failed to update product',
+                error: error.message 
+            }, 
+            { status: 500 }
+        );
+    }
+}
+
+export async function DELETE(request, context) {
+    const { id } = await Promise.resolve(context.params);
+    console.log('DELETE request for product:', id);
+    
+    try {
+        const session = await getServerSession(authOptions);
+        console.log('Session user role:', session?.user?.role);
+        
+        if (!session?.user?.role || !['ADMIN', 'MANAGER'].includes(session.user.role)) {
+            return NextResponse.json(
+                { success: false, message: 'Unauthorized' },
+                { status: 403 }
+            );
+        }
+
+        if (!id) {
+            return NextResponse.json(
+                { success: false, message: 'Product ID is required' },
+                { status: 400 }
+            );
+        }
+
+        await dbConnect();
+        const product = await Product.findByIdAndDelete(id);
+        
+        if (!product) {
+            return NextResponse.json(
+                { success: false, message: 'Product not found' },
+                { status: 404 }
+            );
+        }
+
+        return NextResponse.json({
+            success: true,
+            message: 'Product deleted successfully',
+            productId: id
+        });
+    } catch (error) {
+        console.error('Error deleting product:', error);
+        return NextResponse.json(
+            { 
+                success: false, 
+                message: 'Failed to delete product',
+                error: error.message 
+            }, 
+            { status: 500 }
+        );
+    }
 } 

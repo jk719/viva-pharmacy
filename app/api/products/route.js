@@ -25,7 +25,7 @@ export async function GET(request) {
     
     // Build query
     if (category) query.category = category;
-    if (featured) query.isFeatured = featured === 'true';
+    if (featured === 'true') query.isFeatured = true;
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
@@ -97,19 +97,18 @@ export async function POST(request) {
   try {
     const session = await getServerSession(authOptions);
     
-    // Check if user is authenticated and is admin
-    if (!session || session.user.role !== 'admin') {
+    if (!session?.user?.role || !['ADMIN', 'MANAGER'].includes(session.user.role)) {
       return NextResponse.json({ 
         success: false, 
         message: 'Unauthorized' 
-      }, { status: 401 });
+      }, { status: 403 });
     }
 
     await dbConnect();
     const body = await request.json();
     
     // Validate required fields
-    const { name, price, description, category, imageUrl } = body;
+    const { name, price, description, category, image, isFeatured = false } = body;
     if (!name || !price || !description || !category) {
       return NextResponse.json({ 
         success: false, 
@@ -117,17 +116,24 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    // Create new product
+    // Create new product with isFeatured field
     const product = new Product({
       name,
-      price,
+      price: parseFloat(price),
       description,
       category,
-      imageUrl,
+      image: image || "https://via.placeholder.com/400x400?text=No+Image",
+      isFeatured,
       createdBy: session.user.id
     });
 
     await product.save();
+
+    console.log('Created product:', {
+      id: product._id,
+      name: product.name,
+      isFeatured: product.isFeatured
+    });
 
     return NextResponse.json({
       success: true,
@@ -148,11 +154,11 @@ export async function PUT(request) {
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session || session.user.role !== 'admin') {
+    if (!session?.user?.role || !['ADMIN', 'MANAGER'].includes(session.user.role)) {
       return NextResponse.json({ 
         success: false, 
         message: 'Unauthorized' 
-      }, { status: 401 });
+      }, { status: 403 });
     }
 
     await dbConnect();
@@ -199,11 +205,11 @@ export async function DELETE(request) {
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session || session.user.role !== 'admin') {
+    if (!session?.user?.role || !['ADMIN', 'MANAGER'].includes(session.user.role)) {
       return NextResponse.json({ 
         success: false, 
         message: 'Unauthorized' 
-      }, { status: 401 });
+      }, { status: 403 });
     }
 
     await dbConnect();

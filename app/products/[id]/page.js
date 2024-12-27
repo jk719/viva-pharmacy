@@ -1,62 +1,63 @@
 // src/app/products/[id]/page.js
 
 import ClientProductView from './ClientProductView';
-import { fetchProduct, fetchProducts } from '@/lib/api';
 import { notFound } from 'next/navigation';
 
-// Cache the product fetching
 async function getProduct(id) {
   try {
-    const data = await fetchProduct(id);
+    // Use absolute URL with protocol and host
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+    // Ensure proper URL construction
+    const url = new URL(`/api/products/${id}`, baseUrl).toString();
     
-    // Add detailed logging
-    console.log('Fetching product:', {
-      requestedId: id,
-      success: data.success,
-      productsCount: data.products?.length || 0
+    console.log('Fetching product from:', url);
+
+    const response = await fetch(url, {
+      cache: 'no-store',
+      headers: {
+        'Accept': 'application/json'
+      }
     });
 
-    if (!data.success || !data.products) {
-      console.log('API request failed or no products returned');
-      return null;
-    }
-
-    // Ensure string comparison for IDs
-    const product = data.products.find(p => p._id.toString() === id.toString());
-    
-    if (!product) {
-      console.log('Product lookup failed:', {
-        requestedId: id,
-        availableIds: data.products.map(p => p._id.toString())
+    if (!response.ok) {
+      console.error('Product fetch failed:', {
+        status: response.status,
+        statusText: response.statusText
       });
       return null;
     }
 
-    console.log('Product found:', {
-      id: product._id,
-      name: product.name
+    const data = await response.json();
+    
+    console.log('Product fetch response:', {
+      id,
+      success: data.success,
+      hasProduct: !!data.product
     });
 
-    return product;
+    return data.success ? data.product : null;
   } catch (error) {
-    console.error('Error fetching product:', error);
+    console.error('Error fetching product:', {
+      error: error.message,
+      id: id,
+      baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
+    });
     return null;
   }
 }
 
 export default async function ProductPage({ params }) {
+  // Await params resolution
   const { id } = await Promise.resolve(params);
   
   if (!id) {
-    console.log('No ID in params');
+    console.error('No product ID provided');
     notFound();
   }
 
-  console.log('Processing product page for ID:', id);
   const product = await getProduct(id);
   
   if (!product) {
-    console.log('No product found for ID:', id);
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="bg-white p-6 md:p-8 rounded-xl shadow-lg text-center max-w-md mx-auto">
@@ -86,8 +87,8 @@ export default async function ProductPage({ params }) {
   );
 }
 
-// Update metadata generation
 export async function generateMetadata({ params }) {
+  // Await params resolution
   const { id } = await Promise.resolve(params);
   
   if (!id) {
@@ -120,40 +121,9 @@ export async function generateMetadata({ params }) {
           alt: product.name,
         },
       ],
-      type: 'website',
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: product.name,
-      description: product.description,
-      images: [product.image],
     },
   };
 }
 
-// Update static params generation
-export async function generateStaticParams() {
-  try {
-    const data = await fetchProducts();
-    console.log('Generating static params:', {
-      success: data.success,
-      productsCount: data.products?.length || 0
-    });
-
-    if (!data.success || !data.products) {
-      console.error('Failed to fetch products for static generation');
-      return [];
-    }
-    
-    return data.products.map((product) => ({
-      id: product._id.toString()
-    }));
-  } catch (error) {
-    console.error('Error generating static params:', error);
-    return [];
-  }
-}
-
-// Configuration
+// Force dynamic rendering for product pages
 export const dynamic = 'force-dynamic';
-export const revalidate = 3600; // Revalidate every hour

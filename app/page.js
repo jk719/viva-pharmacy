@@ -3,89 +3,106 @@
 
 import { useState, useEffect } from 'react';
 import FeaturedProducts from '../components/products/FeaturedProducts';
-import ProductFilter from '@/components/products/ProductFilter';
 import Link from 'next/link';
 import { useCategory } from '@/context/CategoryContext';
-import { products } from '@/data/products';
+import { motion } from 'framer-motion';
+import { IoArrowForward } from 'react-icons/io5';
+import { fetchProducts } from '@/lib/api';
 
 export default function Home() {
   const { selectedCategory, setSelectedCategory } = useCategory();
   const [categories, setCategories] = useState(["All"]);
-  const [minPrice, setMinPrice] = useState('');
-  const [maxPrice, setMaxPrice] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Load categories from products data directly
   useEffect(() => {
-    const uniqueCategories = ["All", ...new Set(
-      products.map(product => product.category)
-    )].sort();
-    setCategories(uniqueCategories);
+    const loadCategories = async () => {
+      try {
+        const data = await fetchProducts();
+        if (data.success) {
+          const uniqueCategories = ["All", ...new Set(
+            data.products.map(product => product.category)
+          )].sort();
+          setCategories(uniqueCategories);
+        }
+      } catch (error) {
+        console.error('Error loading categories:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadCategories();
   }, []);
-
-  const handlePriceChange = (type, value) => {
-    // Validate price input
-    const numValue = parseFloat(value);
-    if (value && (isNaN(numValue) || numValue < 0)) {
-      return;
-    }
-
-    if (type === 'min') {
-      setMinPrice(value);
-    } else {
-      setMaxPrice(value);
-    }
-  };
-
-  const handleCategoryChange = (e) => {
-    setSelectedCategory(e.target.value);
-  };
-
-  // Prepare query parameters for the View All Products link
-  const getQueryParams = () => {
-    const params = {};
-    
-    if (selectedCategory !== 'All') {
-      params.category = selectedCategory;
-    }
-    
-    if (minPrice) {
-      params.minPrice = minPrice;
-    }
-    
-    if (maxPrice) {
-      params.maxPrice = maxPrice;
-    }
-
-    return params;
-  };
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="bg-white border-b shadow-sm">
-        <ProductFilter 
-          categories={categories}
-          selectedCategory={selectedCategory}
-          minPrice={minPrice}
-          maxPrice={maxPrice}
-          onPriceChange={handlePriceChange}
-          onChange={handleCategoryChange}
-        />
+      {/* Enhanced Filter Section */}
+      <motion.div 
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="sticky top-0 z-10 bg-white border-b shadow-sm"
+      >
+        <div className="w-full max-w-7xl mx-auto">
+          <div className="relative px-4 py-3">
+            <div 
+              className="flex items-center space-x-3 overflow-x-auto 
+                       scrollbar-thin scrollbar-thumb-gray-300 
+                       scrollbar-track-transparent pb-2"
+              style={{
+                msOverflowStyle: 'none',
+                scrollbarWidth: 'none',
+                WebkitOverflowScrolling: 'touch'
+              }}
+            >
+              {categories.map((category) => (
+                <motion.button
+                  key={category}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setSelectedCategory(category)}
+                  className={`
+                    whitespace-nowrap px-4 py-1.5 rounded-full
+                    text-sm font-medium transition-all duration-200
+                    ${selectedCategory === category 
+                      ? 'bg-primary text-white shadow-md hover:shadow-lg' 
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }
+                    focus:outline-none focus:ring-2 focus:ring-primary/20
+                  `}
+                  aria-pressed={selectedCategory === category}
+                >
+                  {category}
+                </motion.button>
+              ))}
+            </div>
+            
+            {/* Fade edges for better scroll indication */}
+            <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white to-transparent pointer-events-none" />
+            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent pointer-events-none" />
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Products Section */}
+      <div className="container mx-auto px-4">
+        <FeaturedProducts />
       </div>
 
-      <FeaturedProducts />
-
-      <section className="my-8 text-center">
+      {/* View All Products CTA */}
+      <motion.section 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="text-center py-8"
+      >
         <Link 
-          href={{
-            pathname: '/products',
-            query: getQueryParams(),
-          }}
-          className="inline-block mt-4 px-6 py-2 bg-primary-color text-white rounded-lg 
-                   hover:bg-blue-700 transition-colors duration-300"
+          href="/products"
+          className="inline-flex items-center gap-2 px-6 py-2.5 
+                   bg-primary text-white rounded-full
+                   hover:bg-primary/90 transition-all duration-300"
         >
-          View All Products
+          <span>View All Products</span>
+          <IoArrowForward />
         </Link>
-      </section>
+      </motion.section>
     </div>
   );
 }
