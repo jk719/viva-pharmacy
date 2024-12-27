@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
 import Image from 'next/image';
 import { fetchProducts } from '@/lib/api';
@@ -12,6 +12,7 @@ export default function OrderHistory({ userId }) {
   const [error, setError] = useState(null);
   const [productsMap, setProductsMap] = useState({});
   const [imageErrors, setImageErrors] = useState({});
+  const [dataLoaded, setDataLoaded] = useState(false);
 
   // Add this debug function
   const debugProductImage = (product, item) => {
@@ -47,92 +48,117 @@ export default function OrderHistory({ userId }) {
     return matchingKey ? cloudinaryUrls[matchingKey] : null;
   };
 
-  // Update findProductImage function
+  // Updated findProductImage function
   const findProductImage = (productId, productName) => {
-    console.log('Looking for image:', { productId, productName });
+    console.log('Finding image for:', { productId, productName });
     
-    // Try to find direct match in Cloudinary URLs first
-    const directMatch = findMatchingCloudinaryUrl(productName);
-    if (directMatch) {
-      console.log('Found direct Cloudinary match:', directMatch);
-      return directMatch;
+    // 1. First try to get the product from our map
+    const product = productsMap[productId];
+    if (product?.image) {
+      console.log('Found product image from map:', product.image);
+      return product.image;
     }
     
-    // Try to find by product ID
-    const productById = productsMap[productId];
-    if (productById) {
-      console.log('Found product by ID:', productById);
-      const cloudinaryMatch = findMatchingCloudinaryUrl(productById.name);
-      if (cloudinaryMatch) {
-        console.log('Found Cloudinary match for product:', cloudinaryMatch);
-        return cloudinaryMatch;
+    // 2. If no direct product image, try cloudinary mapping
+    if (productName) {
+      // Remove file extension and normalize
+      const normalizedName = normalizeProductName(productName);
+      
+      // Look through cloudinary URLs
+      const matchingUrl = Object.entries(cloudinaryUrls).find(([key, _]) => {
+        const normalizedKey = normalizeProductName(key.replace('.png', ''));
+        return normalizedKey.includes(normalizedName) || 
+               normalizedName.includes(normalizedKey);
+      });
+
+      if (matchingUrl) {
+        console.log('Found Cloudinary match:', matchingUrl[1]);
+        return matchingUrl[1];
       }
     }
     
-    // Try to find by product name
-    const productByName = Object.values(productsMap).find(p => 
+    // 3. If still no image, try to find a fallback from products
+    const fallbackProduct = Object.values(productsMap).find(p => 
       normalizeProductName(p.name) === normalizeProductName(productName)
     );
-    
-    if (productByName) {
-      console.log('Found product by name:', productByName);
-      const cloudinaryMatch = findMatchingCloudinaryUrl(productByName.name);
-      if (cloudinaryMatch) {
-        console.log('Found Cloudinary match for name:', cloudinaryMatch);
-        return cloudinaryMatch;
-      }
+
+    if (fallbackProduct?.image) {
+      console.log('Found fallback image:', fallbackProduct.image);
+      return fallbackProduct.image;
     }
-    
+
     console.log('No image found for:', { productId, productName });
     return null;
   };
 
   useEffect(() => {
+    let mounted = true;
+
     const loadData = async () => {
-      if (!userId) return;
+      if (!userId || dataLoaded) return;
 
       try {
+        console.log('Loading data for userId:', userId);
+        
         // Fetch products first
         const productsData = await fetchProducts();
-        console.log('All products:', productsData.products);
-        
+        if (!mounted) return;
+
         if (productsData.success) {
           const productMapping = {};
           productsData.products.forEach(product => {
-            productMapping[product._id] = product;
+            if (product._id && product.image) {
+              productMapping[product._id] = product;
+            }
           });
-          console.log('Product mapping created:', productMapping);
           setProductsMap(productMapping);
         }
 
         // Fetch orders
         const response = await fetch(`/api/orders/${userId}`);
         const data = await response.json();
-        console.log('Raw orders data:', data);
+        
+        if (!mounted) return;
         
         if (!response.ok) throw new Error(data.error || `HTTP error! status: ${response.status}`);
         if (!Array.isArray(data)) throw new Error('Invalid data format received from server');
 
+        // Process orders with better logging
         const ordersWithImages = data.map(order => ({
           ...order,
-          items: order.items.map(item => ({
-            ...item,
-            image: findProductImage(item.productId, item.name)
-          }))
+          items: order.items.map(item => {
+            const imageUrl = findProductImage(item.productId, item.name);
+            return {
+              ...item,
+              image: imageUrl
+            };
+          })
         }));
 
-        console.log('Final processed orders:', ordersWithImages);
         setOrders(ordersWithImages);
+        setDataLoaded(true);
       } catch (error) {
-        console.error('Error in OrderHistory:', error);
-        setError(error.message);
-        toast.error('Failed to load order history');
+        if (mounted) {
+          console.error('Error in OrderHistory:', error);
+          setError(error.message);
+          toast.error('Failed to load order history');
+        }
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
     loadData();
+
+    return () => {
+      mounted = false;
+    };
+  }, [userId, dataLoaded]);
+
+  useEffect(() => {
+    setDataLoaded(false);
   }, [userId]);
 
   if (loading) {
@@ -193,21 +219,24 @@ export default function OrderHistory({ userId }) {
             {order.items.map((item, index) => (
               <div key={item._id || index} className="p-4 flex gap-4">
                 <div className="relative h-16 w-16 flex-shrink-0 bg-gray-50 rounded-md">
-                  {item.image && !imageErrors[item._id] ? (
+                  {item.image ? (
                     <Image
                       src={item.image}
                       alt={item.name}
                       fill
-                      className="object-contain rounded-md"
-                      sizes="64px"
-                      onError={() => {
-                        console.error('Image failed to load:', item.image);
+                      className="object-contain rounded-md p-1"
+                      sizes="(max-width: 64px) 100vw, 64px"
+                      onError={(e) => {
+                        console.error('Image failed to load:', {
+                          src: item.image,
+                          name: item.name,
+                          error: e
+                        });
                         setImageErrors(prev => ({
                           ...prev,
                           [item._id]: true
                         }));
                       }}
-                      unoptimized
                     />
                   ) : (
                     <div className="h-full w-full flex items-center justify-center">

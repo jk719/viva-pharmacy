@@ -152,22 +152,23 @@ export default function FeaturedProducts() {
     const loadProducts = async () => {
       try {
         const params = {};
+        
+        // Only filter by featured if a specific category is selected
         if (selectedCategory !== 'All') {
+          params.featured = true;
           params.category = selectedCategory;
-          params.featured = 'true';
         }
+
+        console.log('Fetching products with params:', params); // Debug log
 
         const data = await fetchProducts(params);
         if (data.success) {
-          // Sort products by category count when "All" is selected
           if (selectedCategory === 'All') {
             const categoryCount = {};
-            // Count items in each category
             data.products.forEach(product => {
               categoryCount[product.category] = (categoryCount[product.category] || 0) + 1;
             });
             
-            // Sort products based on their category count
             const sortedProducts = data.products.sort((a, b) => {
               return categoryCount[b.category] - categoryCount[a.category];
             });

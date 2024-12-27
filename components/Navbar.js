@@ -105,6 +105,14 @@ export default function Navbar() {
               </Link>
               
               <div className="flex items-center gap-3">
+                {session?.user?.role && ['ADMIN', 'MANAGER'].includes(session.user.role) && (
+                  <Link 
+                    href="/admin"
+                    className="text-white hover:text-white/80 transition-colors duration-300"
+                  >
+                    Admin
+                  </Link>
+                )}
                 <AuthButtons className="flex items-center text-sm" />
                 <Link 
                   href="/cart"
@@ -165,6 +173,14 @@ export default function Navbar() {
             </div>
 
             <div className="flex items-center space-x-6">
+              {session?.user?.role && ['ADMIN', 'MANAGER'].includes(session.user.role) && (
+                <Link 
+                  href="/admin"
+                  className="text-white hover:text-white/80 transition-colors duration-300 font-medium"
+                >
+                  Admin Dashboard
+                </Link>
+              )}
               <Link 
                 href="/cart" 
                 className="text-white hover:text-white/80 transition-colors duration-300"

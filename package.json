@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "deploy": "npm run build && mv .next/standalone docs && git add . && git commit -m 'Deploy to GitHub Pages' && git push origin main"
+    "deploy": "npm run build && mv .next/standalone docs && git add . && git commit -m 'Deploy to GitHub Pages' && git push origin main",
+    "cleanup-orders": "node -r dotenv/config scripts/cleanupDuplicateOrders.js"
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^6.6.0",

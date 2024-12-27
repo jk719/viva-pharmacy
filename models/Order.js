@@ -79,7 +79,9 @@ const OrderSchema = new mongoose.Schema({
     },
     paymentIntentId: {
         type: String,
-        required: true
+        required: true,
+        unique: true,
+        index: true
     }
 }, {
     timestamps: true,
@@ -94,6 +96,7 @@ const OrderSchema = new mongoose.Schema({
 });
 
 OrderSchema.index({ createdAt: -1 });
+OrderSchema.index({ userId: 1, createdAt: -1 });
 
 OrderSchema.methods.getStatusColor = function() {
     const statusColors = {
@@ -117,6 +120,27 @@ OrderSchema.virtual('formattedDate').get(function() {
     return new Date(this.createdAt).toLocaleDateString();
 });
 
+OrderSchema.virtual('summary').get(function() {
+    return {
+        id: this._id,
+        total: this.total,
+        status: this.status,
+        date: this.formattedDate,
+        itemCount: this.items.length
+    };
+});
+
+OrderSchema.methods.canBeModified = function() {
+    const nonModifiableStatuses = ['Delivered', 'Completed'];
+    return !nonModifiableStatuses.includes(this.status);
+};
+
 const Order = mongoose.models.Order || mongoose.model('Order', OrderSchema);
+
+if (process.env.NODE_ENV === 'production') {
+    Order.createIndexes().catch(err => 
+        console.error('Error creating Order indexes:', err)
+    );
+}
 
 export default Order; 
