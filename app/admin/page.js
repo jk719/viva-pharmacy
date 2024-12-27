@@ -1,211 +1,103 @@
 "use client";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import ProductManagement from '@/components/admin/ProductManagement';
+import { motion } from "framer-motion";
+import { FiPackage, FiUsers, FiShoppingCart, FiSettings } from "react-icons/fi";
+import { useState } from "react";
 
-import { useState, useEffect, Suspense } from 'react';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+export default function AdminDashboard() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState('products');
 
-function AdminContent() {
-    const { data: session, status } = useSession();
-    const router = useRouter();
-    const [product, setProduct] = useState({
-        name: "",
-        description: "",
-        price: "",
-        category: "",
-        image: "/images/products/",
-        isFeatured: false
-    });
-
-    // Check authentication and admin status
-    useEffect(() => {
-        if (status === 'loading') return;
-        if (!session || session.user.role !== 'admin') {
-            router.push('/');
-        }
-    }, [session, status, router]);
-
-    const handleInputChange = (e) => {
-        const { name, value, type, checked } = e.target;
-        setProduct((prevProduct) => ({
-            ...prevProduct,
-            [name]: type === 'checkbox' ? checked : value,
-        }));
-    };
-
-    const handleFormSubmit = async (e) => {
-        e.preventDefault();
-        
-        try {
-            const response = await fetch('/api/admin/products', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    ...product,
-                    price: parseFloat(product.price)
-                }),
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to add product');
-            }
-
-            alert('Product added successfully!');
-            // Reset form
-            setProduct({
-                name: "",
-                description: "",
-                price: "",
-                category: "",
-                image: "/images/products/",
-                isFeatured: false
-            });
-        } catch (error) {
-            console.error('Error adding product:', error);
-            alert('Failed to add product');
-        }
-    };
-
-    // Show loading state
-    if (status === 'loading') {
-        return <div className="container mx-auto p-6">Loading...</div>;
-    }
-
-    // Show access denied message instead of redirecting
-    if (!session || session.user.role !== 'admin') {
-        return <div className="container mx-auto p-6">Access Denied</div>;
-    }
-
-    const categories = [
-        'Pain Relief',
-        'Cold & Flu Relief',
-        'Allergy Relief',
-        'Digestive Relief',
-        'First Aid',
-        'Vitamins',
-        'Feminine Care',
-        'Nasal Care',
-        'Sleep Aid',
-        'Joint Health Supplements',
-        'Omega-3 Supplements',
-        'Probiotics',
-        'Cough & Throat Relief',
-        'Sinus & Cold Relief',
-        'Motion Sickness Relief',
-        'OTC Medications'
-    ];
-
+  if (status === "loading") {
     return (
-        <div className="container mx-auto p-6 bg-white min-h-screen">
-            <h1 className="text-2xl font-bold mb-6">Admin Dashboard - Add Product</h1>
-            <form onSubmit={handleFormSubmit} className="bg-white p-6 rounded shadow-md">
-                {/* Product Name */}
-                <div className="mb-4">
-                    <label className="block text-gray-700">Product Name</label>
-                    <input
-                        type="text"
-                        name="name"
-                        value={product.name}
-                        onChange={handleInputChange}
-                        className="w-full p-2 border border-gray-300 rounded"
-                        required
-                    />
-                </div>
-
-                {/* Description */}
-                <div className="mb-4">
-                    <label className="block text-gray-700">Description</label>
-                    <textarea
-                        name="description"
-                        value={product.description}
-                        onChange={handleInputChange}
-                        className="w-full p-2 border border-gray-300 rounded"
-                        required
-                        rows={4}
-                    />
-                </div>
-
-                {/* Price */}
-                <div className="mb-4">
-                    <label className="block text-gray-700">Price ($)</label>
-                    <input
-                        type="number"
-                        name="price"
-                        value={product.price}
-                        onChange={handleInputChange}
-                        className="w-full p-2 border border-gray-300 rounded"
-                        required
-                        min="0.01"
-                        step="0.01"
-                    />
-                </div>
-
-                {/* Category */}
-                <div className="mb-4">
-                    <label className="block text-gray-700">Category</label>
-                    <select
-                        name="category"
-                        value={product.category}
-                        onChange={handleInputChange}
-                        className="w-full p-2 border border-gray-300 rounded"
-                        required
-                    >
-                        <option value="">Select a category</option>
-                        {categories.map((category) => (
-                            <option key={category} value={category}>
-                                {category}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-
-                {/* Image Path */}
-                <div className="mb-4">
-                    <label className="block text-gray-700">Image Path</label>
-                    <input
-                        type="text"
-                        name="image"
-                        value={product.image}
-                        onChange={handleInputChange}
-                        className="w-full p-2 border border-gray-300 rounded"
-                        required
-                        placeholder="/images/products/product-name.png"
-                    />
-                </div>
-
-                {/* Featured Product */}
-                <div className="mb-4">
-                    <label className="flex items-center">
-                        <input
-                            type="checkbox"
-                            name="isFeatured"
-                            checked={product.isFeatured}
-                            onChange={handleInputChange}
-                            className="mr-2"
-                        />
-                        <span className="text-gray-700">Featured Product</span>
-                    </label>
-                </div>
-
-                <button type="submit" className="bg-blue-600 text-white py-2 px-4 rounded mt-4 hover:bg-blue-700">
-                    Add Product
-                </button>
-            </form>
+      <div className="flex justify-center items-center min-h-screen bg-gray-50">
+        <div className="space-y-4 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
+          <p className="text-gray-600">Loading dashboard...</p>
         </div>
+      </div>
     );
-}
+  }
 
-export default function AdminPage() {
-    return (
-        <Suspense 
-            fallback={
-                <div className="min-h-screen flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-gray-900"></div>
-                </div>
-            }
+  if (!session?.user?.role || !["ADMIN", "MANAGER"].includes(session.user.role)) {
+    router.push("/");
+    return null;
+  }
+
+  const menuItems = [
+    { id: 'products', icon: FiPackage, label: 'Products' },
+    { id: 'orders', icon: FiShoppingCart, label: 'Orders' },
+    { id: 'users', icon: FiUsers, label: 'Users' },
+    { id: 'settings', icon: FiSettings, label: 'Settings' },
+  ];
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Top Bar */}
+      <motion.div 
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="bg-white shadow-sm border-b sticky top-0 z-10"
+      >
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-bold text-gray-800">Admin Dashboard</h1>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-gray-600">
+                Welcome, {session.user.name}
+              </span>
+              <img 
+                src={session.user.image || '/default-avatar.png'} 
+                alt="Profile" 
+                className="w-8 h-8 rounded-full border-2 border-primary"
+              />
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Navigation Tabs */}
+      <div className="container mx-auto px-4 py-6">
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex overflow-x-auto gap-2 md:gap-4 pb-2 mb-6 
+                     scrollbar-thin scrollbar-thumb-gray-300"
         >
-            <AdminContent />
-        </Suspense>
-    );
+          {menuItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`
+                flex items-center gap-2 px-4 py-2 rounded-lg
+                whitespace-nowrap transition-all duration-200
+                ${activeTab === item.id 
+                  ? 'bg-primary text-white shadow-md' 
+                  : 'bg-white text-gray-600 hover:bg-gray-50'}
+              `}
+            >
+              <item.icon className="text-lg" />
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </motion.div>
+
+        {/* Content Area */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="bg-white rounded-xl shadow-sm p-6"
+        >
+          {activeTab === 'products' && <ProductManagement />}
+          {activeTab === 'orders' && <div>Orders Management (Coming Soon)</div>}
+          {activeTab === 'users' && <div>User Management (Coming Soon)</div>}
+          {activeTab === 'settings' && <div>Settings (Coming Soon)</div>}
+        </motion.div>
+      </div>
+    </div>
+  );
 }
