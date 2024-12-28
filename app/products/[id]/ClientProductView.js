@@ -116,7 +116,7 @@ export default function ClientProductView({ product }) {
               className="relative w-full h-full flex items-center justify-center"
             >
               <Image
-                src={product.image}
+                src={`/images/products/${product.image.split('/').pop()}`}
                 alt={product.name}
                 width={300}
                 height={300}

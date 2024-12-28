@@ -5,15 +5,18 @@ const nextConfig = {
   images: {
     domains: [
       'localhost',
-      process.env.VERCEL_URL || 'viva-pharmacy.vercel.app'
-    ],
+      'viva-pharmacy.vercel.app',
+      process.env.VERCEL_URL,
+    ].filter(Boolean),
     remotePatterns: [
       {
         protocol: 'https',
         hostname: '**',
       },
     ],
-    unoptimized: true,
+    unoptimized: false,
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
   env: {
     NEXTAUTH_URL: process.env.VERCEL_URL

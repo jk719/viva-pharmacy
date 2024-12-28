@@ -147,7 +147,7 @@ export default function ProductsPage() {
                 <Link href={`/products/${product._id}`}>
                   <div className="relative h-48 mb-4 rounded-lg overflow-hidden">
                     <Image
-                      src={product.image}
+                      src={`/images/products/${product.image.split('/').pop()}`}
                       alt={product.name}
                       fill
                       className="object-contain"
