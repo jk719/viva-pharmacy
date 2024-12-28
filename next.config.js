@@ -3,6 +3,16 @@ const nextConfig = {
   reactStrictMode: false,
   trailingSlash: false,
   images: {
+    domains: [
+      'localhost',
+      process.env.VERCEL_URL || 'viva-pharmacy.vercel.app'
+    ],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
+    ],
     unoptimized: true,
   },
   env: {
