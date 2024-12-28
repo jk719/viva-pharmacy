@@ -20,6 +20,7 @@ export default function ClientProductView({ product }) {
   const { addToCart, decrement, items = [] } = useCart();
   const router = useRouter();
   const [expandedSection, setExpandedSection] = useState('Details');
+  const [imgError, setImgError] = useState(false);
   
   const handleBack = () => {
     router.back();
@@ -115,15 +116,26 @@ export default function ClientProductView({ product }) {
               transition={{ delay: 0.2 }}
               className="relative w-full h-full flex items-center justify-center"
             >
-              <Image
-                src={product.image}
-                alt={product.name}
-                width={300}
-                height={300}
-                priority
-                className="object-contain w-auto h-auto max-h-[150px] md:max-h-[300px] 
-                         transform group-hover:scale-105 transition-transform duration-500"
-              />
+              {!imgError ? (
+                <Image
+                  src={product.image}
+                  alt={product.name}
+                  width={300}
+                  height={300}
+                  priority
+                  onError={() => {
+                    console.error('Image failed to load:', product.image);
+                    setImgError(true);
+                  }}
+                  className="object-contain w-auto h-auto max-h-[150px] md:max-h-[300px] 
+                           transform group-hover:scale-105 transition-transform duration-500"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full">
+                  <p className="text-gray-500">Image not available</p>
+                  <p className="text-xs text-gray-400 mt-2">{product.image}</p>
+                </div>
+              )}
             </motion.div>
           </div>
 

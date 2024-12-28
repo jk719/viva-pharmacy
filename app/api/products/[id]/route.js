@@ -30,10 +30,13 @@ export async function GET(request, context) {
         }
 
         const product = await Product.findById(id);
+        
+        // Add image URL logging
         console.log('Product lookup result:', {
             id,
             found: !!product,
-            name: product?.name
+            name: product?.name,
+            imageUrl: product?.image
         });
         
         if (!product) {
@@ -41,6 +44,11 @@ export async function GET(request, context) {
                 { success: false, message: 'Product not found' },
                 { status: 404 }
             );
+        }
+
+        // Validate image URL
+        if (!product.image?.startsWith('https://res.cloudinary.com/')) {
+            console.warn('Invalid image URL format:', product.image);
         }
 
         return NextResponse.json({ 

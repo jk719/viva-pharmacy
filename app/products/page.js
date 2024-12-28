@@ -21,6 +21,7 @@ export default function ProductsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
+  const [imgErrors, setImgErrors] = useState({});
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -146,13 +147,24 @@ export default function ProductsPage() {
               >
                 <Link href={`/products/${product._id}`}>
                   <div className="relative h-48 mb-4 rounded-lg overflow-hidden">
-                    <Image
-                      src={product.image}
-                      alt={product.name}
-                      fill
-                      className="object-contain"
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                    />
+                    {!imgErrors[product._id] ? (
+                      <Image
+                        src={product.image}
+                        alt={product.name}
+                        fill
+                        onError={() => {
+                          console.error('Image failed to load:', product.image);
+                          setImgErrors(prev => ({...prev, [product._id]: true}));
+                        }}
+                        className="object-contain"
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full bg-gray-50">
+                        <p className="text-gray-500">Image not available</p>
+                        <p className="text-xs text-gray-400 mt-2">{product.image}</p>
+                      </div>
+                    )}
                   </div>
                 </Link>
 
