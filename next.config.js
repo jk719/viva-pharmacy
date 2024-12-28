@@ -14,12 +14,10 @@ const nextConfig = {
     unoptimized: true,
   },
   env: {
-    NEXTAUTH_URL: process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : 'http://localhost:3000',
-    NEXT_PUBLIC_BASE_URL: process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : 'http://localhost:3000',
+    NEXTAUTH_URL: process.env.NEXT_PUBLIC_SITE_URL || 
+                  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'),
+    NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_SITE_URL || 
+                         (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'),
   },
   webpack: (config) => {
     config.cache = false;
@@ -31,11 +29,12 @@ const nextConfig = {
       enabled: true,
       allowedOrigins: [
         'localhost:3000',
+        'viva-pharmacy.vercel.app',
         process.env.VERCEL_URL || '',
       ].filter(Boolean)
     }
   },
-  headers: async () => {
+  async headers() {
     return [
       {
         source: '/api/:path*',
