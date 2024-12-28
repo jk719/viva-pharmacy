@@ -9,13 +9,52 @@ import { useSession } from "next-auth/react";
 import confetti from 'canvas-confetti';
 
 function SuccessContent() {
-  const { clearCart, items = [] } = useCart();
+  const { clearCart } = useCart();
   const router = useRouter();
   const { data: session } = useSession();
   const [countdown, setCountdown] = useState(5);
-  const [pointsUpdated, setPointsUpdated] = useState(false);
 
-  // Confetti effect
+  // Add check for processed payment
+  useEffect(() => {
+    const hasProcessedPayment = sessionStorage.getItem('paymentProcessed');
+    
+    if (!hasProcessedPayment) {
+      // First time loading
+      sessionStorage.setItem('paymentProcessed', 'true');
+      clearCart();
+    } else {
+      // Already processed - redirect immediately
+      router.push('/');
+    }
+
+    return () => {
+      if (countdown === 0) {
+        sessionStorage.removeItem('paymentProcessed');
+      }
+    };
+  }, [clearCart, router, countdown]);
+
+  // Modified countdown effect
+  useEffect(() => {
+    let timeoutId;
+    
+    if (countdown > 0) {
+      timeoutId = setTimeout(() => {
+        setCountdown(prev => prev - 1);
+      }, 1000);
+    } else {
+      timeoutId = setTimeout(() => {
+        sessionStorage.removeItem('paymentProcessed');
+        router.push('/');
+      }, 0);
+    }
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [countdown, router]);
+
+  // Keep confetti effect
   useEffect(() => {
     const duration = 3 * 1000;
     const end = Date.now() + duration;
@@ -44,69 +83,6 @@ function SuccessContent() {
     
     frame();
   }, []);
-
-  // Points update effect
-  useEffect(() => {
-    let isMounted = true;
-
-    const updatePoints = async () => {
-      if (session?.user?.id && items.length > 0 && !pointsUpdated) {
-        try {
-          const amount = items.reduce((sum, item) => {
-            const itemPrice = parseFloat(item.price) || 0;
-            const itemQuantity = parseInt(item.quantity) || 0;
-            return sum + (itemPrice * itemQuantity);
-          }, 0);
-          
-          const points = Math.floor(amount);
-
-          if (points > 0) {
-            const response = await fetch(`/api/user/vivabucks/${session.user.id}`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ points, source: 'purchase' })
-            });
-
-            if (!response.ok) {
-              throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            if (isMounted) {
-              setPointsUpdated(true);
-              clearCart();
-            }
-          }
-        } catch (error) {
-          console.error('Error updating points:', error);
-        }
-      }
-    };
-
-    updatePoints();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [session, items, pointsUpdated, clearCart]);
-
-  // Separate countdown effect
-  useEffect(() => {
-    let timeoutId;
-    
-    if (countdown > 0) {
-      timeoutId = setTimeout(() => {
-        setCountdown(prev => prev - 1);
-      }, 1000);
-    } else {
-      timeoutId = setTimeout(() => {
-        router.push('/');
-      }, 0);
-    }
-
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-  }, [countdown, router]);
 
   return (
     <motion.div 
