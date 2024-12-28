@@ -5,50 +5,65 @@ import { notFound } from 'next/navigation';
 
 async function getProduct(id) {
   try {
-    // Use absolute URL with protocol and host
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-    // Ensure proper URL construction
-    const url = new URL(`/api/products/${id}`, baseUrl).toString();
+    // Use existing environment variables
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL;
     
-    console.log('Fetching product from:', url);
+    if (!baseUrl) {
+      console.error('Base URL not configured in environment variables');
+      throw new Error('API configuration error');
+    }
+    
+    // Use URL constructor for proper URL formation
+    const url = new URL(`/api/products/${id}`, baseUrl);
+    
+    console.log('Fetching product:', {
+      id,
+      url: url.toString(),
+      env: process.env.NODE_ENV,
+      baseUrl
+    });
 
     const response = await fetch(url, {
       cache: 'no-store',
       headers: {
         'Accept': 'application/json'
+      },
+      next: {
+        revalidate: 0 // Disable cache
       }
     });
 
     if (!response.ok) {
       console.error('Product fetch failed:', {
         status: response.status,
-        statusText: response.statusText
+        statusText: response.statusText,
+        url: url.toString()
       });
-      return null;
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const data = await response.json();
     
-    console.log('Product fetch response:', {
-      id,
-      success: data.success,
-      hasProduct: !!data.product
-    });
-
-    // Add image URL logging in development
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Product image URL:', {
-        id,
-        imageUrl: data.product?.image
+    if (!data.success) {
+      console.error('Product fetch returned error:', {
+        message: data.message,
+        id
       });
+      throw new Error(data.message || 'Failed to fetch product');
     }
-    
-    return data.success ? data.product : null;
+
+    // Validate product data
+    if (!data.product) {
+      throw new Error('Product data is missing');
+    }
+
+    return data.product;
   } catch (error) {
     console.error('Error fetching product:', {
       error: error.message,
-      id: id,
-      baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
+      id,
+      stack: error.stack,
+      baseUrl: process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL
     });
     return null;
   }
