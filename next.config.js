@@ -6,12 +6,14 @@ const nextConfig = {
     domains: [
       'localhost',
       'viva-pharmacy.vercel.app',
+      'res.cloudinary.com',
       process.env.VERCEL_URL,
     ].filter(Boolean),
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '**',
+        hostname: 'res.cloudinary.com',
+        pathname: '/dv3cd1aoy/image/upload/**',
       },
     ],
     unoptimized: false,

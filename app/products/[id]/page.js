@@ -35,6 +35,14 @@ async function getProduct(id) {
       hasProduct: !!data.product
     });
 
+    // Add image URL logging in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Product image URL:', {
+        id,
+        imageUrl: data.product?.image
+      });
+    }
+    
     return data.success ? data.product : null;
   } catch (error) {
     console.error('Error fetching product:', {
