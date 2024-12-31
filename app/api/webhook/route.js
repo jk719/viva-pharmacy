@@ -11,10 +11,11 @@ import { sendOrderConfirmationEmail } from '@/lib/email/sendEmail';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const WEBHOOK_SECRET = process.env.STRIPE_SIGNING_SECRET;
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 export async function POST(request) {
     try {
-        console.log('\n🔄 Webhook request received');
+        console.log('\n🔄 Webhook request received in:', IS_PRODUCTION ? 'production' : 'development');
         
         const rawBody = await request.text();
         const headersList = await headers();
@@ -51,16 +52,54 @@ export async function POST(request) {
             try {
                 await dbConnect();
 
-                // Check if order already exists for this payment intent
+                // Check if order exists
                 const existingOrder = await Order.findOne({ 
                     paymentIntentId: paymentIntent.id 
                 });
 
                 if (existingOrder) {
-                    console.log('⚠️ Order already exists for payment intent:', paymentIntent.id);
+                    // Even if order exists, try to send email if it hasn't been sent
+                    const user = await User.findById(existingOrder.userId);
+                    if (user && !existingOrder.emailSent) {
+                        console.log('📧 Attempting to send email for existing order:', existingOrder._id);
+                        
+                        try {
+                            const emailHtml = generateOrderConfirmationEmail({
+                                orderNumber: existingOrder._id,
+                                customerName: user.name || user.email.split('@')[0],
+                                items: existingOrder.items,
+                                subtotal: existingOrder.total,
+                                tax: existingOrder.total * 0.08875,
+                                total: existingOrder.total,
+                                shippingAddress: existingOrder.shippingAddress,
+                                deliveryMethod: existingOrder.deliveryMethod,
+                                selectedTime: existingOrder.selectedTime,
+                                vivaBucksEarned: 0, // Already handled in first attempt
+                                rewardPointsEarned: 0,
+                                baseUrl: IS_PRODUCTION ? 
+                                    'https://your-production-url.vercel.app' : 
+                                    'http://localhost:3000'
+                            });
+
+                            await sendOrderConfirmationEmail(
+                                user.email,
+                                'Your Viva Pharmacy Order Confirmation',
+                                emailHtml
+                            );
+
+                            // Mark email as sent
+                            existingOrder.emailSent = true;
+                            await existingOrder.save();
+
+                            console.log('✅ Email sent for existing order:', existingOrder._id);
+                        } catch (emailError) {
+                            console.error('❌ Failed to send email for existing order:', emailError);
+                        }
+                    }
+
                     return NextResponse.json({ 
                         received: true,
-                        message: 'Order already processed'
+                        message: 'Order processed and email attempted'
                     });
                 }
 
@@ -205,50 +244,109 @@ export async function POST(request) {
                         processedImage: item.image
                     })));
 
-                    const emailHtml = generateOrderConfirmationEmail({
-                        orderNumber: order._id,
-                        customerName: user.name || user.email.split('@')[0],
-                        items: processedItems,  // Use the processed items
-                        subtotal: orderData.total,
-                        tax: orderData.total * 0.08875,
-                        total: orderData.total,
-                        shippingAddress: orderData.shippingAddress,
-                        deliveryMethod: orderData.deliveryMethod,
-                        selectedTime: orderData.selectedTime,
-                        vivaBucksEarned,
-                        rewardPointsEarned
-                    });
+                    // Enhanced email sending with retry logic
+                    const sendEmailWithRetry = async (retries = 3) => {
+                        for (let i = 0; i < retries; i++) {
+                            try {
+                                // Log full email configuration (except password)
+                                console.log('📧 Email Configuration:', {
+                                    environment: process.env.NODE_ENV,
+                                    user: process.env.GMAIL_USER,
+                                    host: process.env.EMAIL_SERVER_HOST,
+                                    port: process.env.EMAIL_SERVER_PORT,
+                                    isProduction: IS_PRODUCTION
+                                });
 
-                    // Log the final HTML (first 500 chars)
-                    console.log('Debug: Email HTML preview:', emailHtml.substring(0, 500));
+                                if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+                                    throw new Error('Missing email configuration');
+                                }
 
-                    await sendOrderConfirmationEmail(
-                        user.email,
-                        'Your Viva Pharmacy Order Confirmation',
-                        emailHtml
-                    );
-                    
-                    console.log('✅ Order confirmation email sent successfully to:', user.email);
+                                console.log(`📧 Attempt ${i + 1} to send email to:`, user.email);
+
+                                const emailHtml = generateOrderConfirmationEmail({
+                                    orderNumber: order._id,
+                                    customerName: user.name || user.email.split('@')[0],
+                                    items: processedItems,
+                                    subtotal: orderData.total,
+                                    tax: orderData.total * 0.08875,
+                                    total: orderData.total,
+                                    shippingAddress: orderData.shippingAddress,
+                                    deliveryMethod: orderData.deliveryMethod,
+                                    selectedTime: orderData.selectedTime,
+                                    vivaBucksEarned,
+                                    rewardPointsEarned,
+                                    baseUrl: IS_PRODUCTION ? 
+                                        'https://your-production-url.vercel.app' : 
+                                        'http://localhost:3000'
+                                });
+
+                                // Log email content for debugging
+                                console.log('📧 Email Content:', {
+                                    to: user.email,
+                                    subject: 'Your Viva Pharmacy Order Confirmation',
+                                    htmlLength: emailHtml.length,
+                                    configuration: {
+                                        host: process.env.EMAIL_SERVER_HOST,
+                                        port: process.env.EMAIL_SERVER_PORT,
+                                        secure: false,
+                                        auth: {
+                                            user: process.env.GMAIL_USER,
+                                            hasPassword: !!process.env.GMAIL_APP_PASSWORD
+                                        }
+                                    }
+                                });
+
+                                const emailResult = await sendOrderConfirmationEmail(
+                                    user.email,
+                                    'Your Viva Pharmacy Order Confirmation',
+                                    emailHtml
+                                );
+
+                                console.log('✅ Email sent successfully:', {
+                                    to: user.email,
+                                    messageId: emailResult.messageId,
+                                    attempt: i + 1
+                                });
+                                
+                                return true;
+                            } catch (error) {
+                                console.error(`❌ Email attempt ${i + 1} failed:`, {
+                                    error: error.message,
+                                    stack: error.stack,
+                                    config: {
+                                        host: process.env.EMAIL_SERVER_HOST,
+                                        port: process.env.EMAIL_SERVER_PORT,
+                                        user: process.env.GMAIL_USER?.substring(0, 3) + '...'
+                                    }
+                                });
+                                
+                                if (i === retries - 1) throw error;
+                                await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+                            }
+                        }
+                    };
+
+                    try {
+                        await sendEmailWithRetry();
+                    } catch (emailError) {
+                        console.error('❌ All email attempts failed:', emailError);
+                        // Continue processing even if email fails
+                    }
                 }
 
                 return NextResponse.json({ 
                     success: true,
                     orderId: order._id,
-                    isNew: true
+                    isNew: true,
+                    emailSent: true
                 });
 
             } catch (err) {
-                // Add more specific error handling
-                if (err.code === 11000) { // MongoDB duplicate key error
-                    console.log('⚠️ Duplicate order attempt caught');
-                    return NextResponse.json({ 
-                        received: true,
-                        message: 'Order already processed'
-                    });
-                }
-                
-                console.error('❌ Error processing payment:', err.message);
-                console.error('Stack:', err.stack);
+                console.error('❌ Error processing order:', {
+                    error: err.message,
+                    stack: err.stack,
+                    environment: process.env.NODE_ENV
+                });
                 return NextResponse.json({ error: err.message }, { status: 500 });
             }
         }
@@ -257,8 +355,11 @@ export async function POST(request) {
         return NextResponse.json({ received: true });
 
     } catch (err) {
-        console.error('❌ General webhook error:', err.message);
-        console.error('Stack:', err.stack);
+        console.error('❌ General webhook error:', {
+            error: err.message,
+            stack: err.stack,
+            environment: process.env.NODE_ENV
+        });
         return NextResponse.json({ error: err.message }, { status: 500 });
     }
 }

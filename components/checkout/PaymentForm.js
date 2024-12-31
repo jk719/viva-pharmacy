@@ -96,16 +96,43 @@ const PaymentForm = ({ amount, items, shippingAddress, deliveryMethod, selectedT
   const [clientSecret, setClientSecret] = useState('');
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+  const { data: session } = useSession();
 
   useEffect(() => {
     const initializePayment = async () => {
       try {
+        // Prepare cart items with essential data
+        const cartItems = items.map(item => ({
+          id: item.id || item._id,
+          name: item.name,
+          quantity: item.quantity,
+          price: Number(item.price).toFixed(2)
+        }));
+
+        // Create metadata object
+        const metadata = {
+          dm: deliveryMethod,
+          time: selectedTime,
+          items: `${items.length} items`,
+          total: Number(amount).toFixed(2),
+          userId: session?.user?.id
+        };
+
+        // Add shipping address if delivery method is 'delivery'
+        if (deliveryMethod === 'delivery' && shippingAddress) {
+          metadata.street = shippingAddress.street;
+          metadata.city = shippingAddress.city;
+          metadata.state = shippingAddress.state;
+          metadata.zipCode = shippingAddress.zipCode;
+        }
+
         const response = await fetch('/api/payments', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
-            cartItems: items,
-            shippingAddress,
+            cartItems,
+            metadata,
+            amount: Number(amount),
             deliveryMethod,
             selectedTime
           })
@@ -114,13 +141,13 @@ const PaymentForm = ({ amount, items, shippingAddress, deliveryMethod, selectedT
         const data = await response.json();
 
         if (data.error) {
+          console.error('Payment initialization error:', data.error);
           setError(data.error);
-        } else if (!data.clientSecret) {
-          setError('Failed to initialize payment');
         } else {
           setClientSecret(data.clientSecret);
         }
       } catch (err) {
+        console.error('Payment initialization error:', err);
         setError('Failed to initialize payment');
       } finally {
         setLoading(false);
@@ -128,7 +155,7 @@ const PaymentForm = ({ amount, items, shippingAddress, deliveryMethod, selectedT
     };
 
     initializePayment();
-  }, [items, shippingAddress, deliveryMethod, selectedTime]);
+  }, [items, shippingAddress, deliveryMethod, selectedTime, amount, session]);
 
   if (loading) {
     return <div className="text-center py-4">Initializing payment...</div>;

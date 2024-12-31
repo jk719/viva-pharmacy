@@ -82,6 +82,19 @@ const OrderSchema = new mongoose.Schema({
         required: true,
         unique: true,
         index: true
+    },
+    emailSent: {
+        type: Boolean,
+        default: false,
+        index: true
+    },
+    emailAttempts: {
+        type: Number,
+        default: 0
+    },
+    lastEmailAttempt: {
+        type: Date,
+        default: null
     }
 }, {
     timestamps: true,
