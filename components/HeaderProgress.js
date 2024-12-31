@@ -1,7 +1,7 @@
 'use client';
 
 import { useSession } from "next-auth/react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import eventEmitter, { Events } from '@/lib/eventEmitter';
 import { FaStar, FaGift, FaCoins } from 'react-icons/fa';
@@ -30,7 +30,7 @@ export default function HeaderProgress() {
   const { setActiveReward } = useRewardsStore();
   const ITEMS_PER_PAGE = 5;
 
-  const fetchRewardsData = async () => {
+  const fetchRewardsData = useCallback(async () => {
     if (!session?.user?.id) return;
     try {
       const response = await fetch(`/api/user/vivabucks/${session.user.id}`);
@@ -48,7 +48,11 @@ export default function HeaderProgress() {
     } catch (error) {
       console.error('Error fetching rewards data:', error);
     }
-  };
+  }, [session?.user?.id]);
+
+  useEffect(() => {
+    fetchRewardsData();
+  }, [fetchRewardsData]);
 
   useEffect(() => {
     if (session?.user?.id) {
@@ -87,7 +91,7 @@ export default function HeaderProgress() {
       eventEmitter.off(Events.POINTS_RESET, handleVivaBucksReset);
       eventEmitter.off(Events.REWARD_RESTORED, handleVivaBucksUpdate);
     };
-  }, [session]);
+  }, [session, fetchRewardsData]);
 
   useEffect(() => {
     if (rewardsData?.availableVivaBucks) {
@@ -105,7 +109,7 @@ export default function HeaderProgress() {
     return () => {
       eventEmitter.off(Events.REWARD_RESTORED, handleRewardRestored);
     };
-  }, []);
+  }, [fetchRewardsData]);
 
   const currentVivaBucks = Math.floor(rewardsData?.rewardPoints || 0);
   const vivaBucksToNextReward = REWARDS_CONFIG.getPointsToNextReward(currentVivaBucks);

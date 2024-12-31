@@ -10,6 +10,12 @@ import { useSession } from 'next-auth/react';
 import { FaClock, FaTruck, FaStore, FaMapMarkerAlt, FaRegClock, FaBox } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 
+// Define INCREMENT_SIZE as a regular constant outside of any components
+const INCREMENT_SIZE = {
+  desktop: 100,
+  mobile: 50
+};
+
 function CheckoutContent() {
   const { 
     items = [], 
@@ -25,10 +31,6 @@ function CheckoutContent() {
   const [shippingAddress, setShippingAddress] = useState(null);
   const [deliveryMethod, setDeliveryMethod] = useState('delivery');
   const { data: session } = useSession();
-  const INCREMENT_SIZE = {
-    desktop: 9,
-    mobile: 6
-  };
 
   const [displayCount, setDisplayCount] = useState(
     typeof window !== 'undefined' && window.innerWidth < 768 

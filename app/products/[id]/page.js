@@ -2,6 +2,7 @@
 
 import ClientProductView from './ClientProductView';
 import { notFound } from 'next/navigation';
+import Link from 'next/link'
 
 async function getProduct(id) {
   try {
@@ -90,14 +91,14 @@ export default async function ProductPage({ params }) {
           <p className="text-gray-600 mb-6">
             The product you're looking for doesn't exist or has been removed.
           </p>
-          <a 
+          <Link 
             href="/products" 
             className="inline-block bg-primary text-white px-6 py-2.5 rounded-full 
                      hover:bg-primary/90 transition-colors duration-200
                      shadow-md hover:shadow-lg"
           >
             Back to Products
-          </a>
+          </Link>
         </div>
       </div>
     );

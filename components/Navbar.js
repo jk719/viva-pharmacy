@@ -34,31 +34,28 @@ export default function Navbar() {
   const { data: session } = useSession();
 
   // Memoized search function
-  const searchProducts = useCallback(
-    debounce((searchQuery) => {
-      if (!searchQuery.trim()) {
-        setFilteredProducts([]);
-        return;
-      }
+  const searchProducts = useCallback((searchQuery) => {
+    if (!searchQuery.trim()) {
+      setFilteredProducts([]);
+      return;
+    }
 
-      const searchTerms = searchQuery.toLowerCase().split(' ');
-      
-      const results = products.filter((product) => {
-        const productName = product.name.toLowerCase();
-        const productCategory = product.category.toLowerCase();
-        const productDescription = product.description.toLowerCase();
+    const searchTerms = searchQuery.toLowerCase().split(' ');
+    
+    const results = products.filter((product) => {
+      const productName = product.name.toLowerCase();
+      const productCategory = product.category.toLowerCase();
+      const productDescription = product.description.toLowerCase();
 
-        return searchTerms.every(term => 
-          productName.includes(term) || 
-          productCategory.includes(term) || 
-          productDescription.includes(term)
-        );
-      }).slice(0, 5); // Limit to 5 results for better performance
+      return searchTerms.every(term => 
+        productName.includes(term) || 
+        productCategory.includes(term) || 
+        productDescription.includes(term)
+      );
+    }).slice(0, 5);
 
-      setFilteredProducts(results);
-    }, 300),
-    []
-  );
+    setFilteredProducts(results);
+  }, [setFilteredProducts]);
 
   const handleInputChange = (e) => {
     const input = e.target.value;

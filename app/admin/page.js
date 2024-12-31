@@ -5,6 +5,7 @@ import ProductManagement from '@/components/admin/ProductManagement';
 import { motion } from "framer-motion";
 import { FiPackage, FiUsers, FiShoppingCart, FiSettings } from "react-icons/fi";
 import { useState } from "react";
+import Image from 'next/image'
 
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
@@ -49,10 +50,12 @@ export default function AdminDashboard() {
               <span className="text-sm text-gray-600">
                 Welcome, {session.user.name}
               </span>
-              <img 
+              <Image 
                 src={session.user.image || '/default-avatar.png'} 
                 alt="Profile" 
                 className="w-8 h-8 rounded-full border-2 border-primary"
+                width={32}
+                height={32}
               />
             </div>
           </div>

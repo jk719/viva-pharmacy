@@ -48,23 +48,19 @@ export default function OrderHistory({ userId }) {
     return matchingKey ? cloudinaryUrls[matchingKey] : null;
   };
 
-  // Updated findProductImage function
-  const findProductImage = (productId, productName) => {
-    console.log('Finding image for:', { productId, productName });
+  // Wrap findProductImage in useCallback with proper dependencies
+  const findProductImage = useCallback((product) => {
+    if (!product) return null;
     
     // 1. First try to get the product from our map
-    const product = productsMap[productId];
-    if (product?.image) {
-      console.log('Found product image from map:', product.image);
-      return product.image;
+    const productFromMap = productsMap[product._id];
+    if (productFromMap?.image) {
+      return productFromMap.image;
     }
     
     // 2. If no direct product image, try cloudinary mapping
-    if (productName) {
-      // Remove file extension and normalize
-      const normalizedName = normalizeProductName(productName);
-      
-      // Look through cloudinary URLs
+    if (product.name) {
+      const normalizedName = normalizeProductName(product.name);
       const matchingUrl = Object.entries(cloudinaryUrls).find(([key, _]) => {
         const normalizedKey = normalizeProductName(key.replace('.png', ''));
         return normalizedKey.includes(normalizedName) || 
@@ -72,24 +68,17 @@ export default function OrderHistory({ userId }) {
       });
 
       if (matchingUrl) {
-        console.log('Found Cloudinary match:', matchingUrl[1]);
         return matchingUrl[1];
       }
     }
     
     // 3. If still no image, try to find a fallback from products
     const fallbackProduct = Object.values(productsMap).find(p => 
-      normalizeProductName(p.name) === normalizeProductName(productName)
+      normalizeProductName(p.name) === normalizeProductName(product.name)
     );
 
-    if (fallbackProduct?.image) {
-      console.log('Found fallback image:', fallbackProduct.image);
-      return fallbackProduct.image;
-    }
-
-    console.log('No image found for:', { productId, productName });
-    return null;
-  };
+    return fallbackProduct?.image || null;
+  }, [productsMap]); // Add productsMap as dependency
 
   useEffect(() => {
     let mounted = true;
@@ -155,11 +144,21 @@ export default function OrderHistory({ userId }) {
     return () => {
       mounted = false;
     };
-  }, [userId, dataLoaded]);
+  }, [userId, dataLoaded, findProductImage]);
 
   useEffect(() => {
     setDataLoaded(false);
   }, [userId]);
+
+  useEffect(() => {
+    if (orders.length > 0) {
+      orders.forEach(order => {
+        order.items.forEach(item => {
+          findProductImage(item);
+        });
+      });
+    }
+  }, [orders, findProductImage]);
 
   if (loading) {
     return (

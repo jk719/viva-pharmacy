@@ -15,20 +15,6 @@ const nextConfig = {
     ],
     unoptimized: true,
   },
-  webpack: (config, { dev, isServer }) => {
-    // Unique cache configuration for different compilers
-    config.cache = {
-      type: 'filesystem',
-      version: `${isServer ? 'server' : 'client'}-${dev ? 'development' : 'production'}`,
-      cacheDirectory: path.join(__dirname, '.next/cache/webpack'),
-      store: 'pack',
-      buildDependencies: {
-        config: [__filename],
-      },
-    };
-
-    return config;
-  },
   env: {
     NEXTAUTH_URL: process.env.NEXT_PUBLIC_SITE_URL || 
                   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'),

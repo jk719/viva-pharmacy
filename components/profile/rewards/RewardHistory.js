@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { FaGift } from 'react-icons/fa';
 import { REWARDS_CONFIG } from '@/lib/rewards/config';
@@ -13,7 +13,7 @@ export default function RewardHistory() {
   const [error, setError] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const fetchRewardHistory = async () => {
+  const fetchRewardHistory = useCallback(async () => {
     console.log('🔄 Fetching reward history...');
     if (!session?.user?.id) {
       setLoading(false);
@@ -51,7 +51,7 @@ export default function RewardHistory() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [session?.user?.id]);
 
   useEffect(() => {
     const handleRewardRedeemed = () => {
@@ -70,7 +70,7 @@ export default function RewardHistory() {
 
   useEffect(() => {
     fetchRewardHistory();
-  }, [session?.user?.id, refreshKey]);
+  }, [fetchRewardHistory]);
 
   if (loading) {
     return (

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -37,9 +37,11 @@ export default function EditProductForm({ productId }) {
             return;
         }
         fetchProduct();
-    }, [productId]);
+    }, [productId, fetchProduct]);
 
-    const fetchProduct = async () => {
+    const fetchProduct = useCallback(async () => {
+        if (!productId) return;
+        
         try {
             setError("");
             const response = await fetch(`/api/products/${productId}`);
@@ -67,7 +69,11 @@ export default function EditProductForm({ productId }) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [productId]);
+
+    useEffect(() => {
+        fetchProduct();
+    }, [fetchProduct]);
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
