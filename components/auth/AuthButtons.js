@@ -3,15 +3,24 @@ import { useState, useRef, useEffect } from 'react';
 import { useSession, signOut, signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import toast from 'react-hot-toast';
 
 export function AuthButtons() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [showLogin, setShowLogin] = useState(false);
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const dropdownRef = useRef(null);
+
+  // Reset error when form is opened/closed
+  useEffect(() => {
+    if (!showLogin) {
+      setError('');
+      setFormData({ email: '', password: '' });
+    }
+  }, [showLogin]);
 
   // Handle click outside
   useEffect(() => {
@@ -45,19 +54,22 @@ export function AuthButtons() {
     try {
       const result = await signIn('credentials', {
         redirect: false,
-        email: formData.email,
+        email: formData.email.toLowerCase().trim(),
         password: formData.password
       });
 
-      if (result.error) {
+      if (result?.error) {
         setError(result.error);
+        toast.error(result.error);
       } else {
         setShowLogin(false);
-        router.push('/');
+        toast.success('Successfully signed in!');
         router.refresh();
       }
     } catch (err) {
-      setError('An error occurred during sign in');
+      console.error('Sign in error:', err);
+      setError('An unexpected error occurred');
+      toast.error('An unexpected error occurred');
     } finally {
       setLoading(false);
     }
@@ -65,21 +77,17 @@ export function AuthButtons() {
 
   const handleSignOut = async () => {
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin;
-      
-      await signOut({
-        callbackUrl: `${baseUrl}/`,
-        redirect: false
+      setShowLogin(false);
+      await signOut({ 
+        redirect: false 
       });
       
-      // Clear any local state/storage if needed
-      // Force navigation and refresh
-      router.push('/');
+      toast.success('Successfully signed out');
       router.refresh();
-      
     } catch (error) {
       console.error('Sign out error:', error);
-      // Ultimate fallback
+      toast.error('Error signing out');
+      // Fallback
       window.location.href = '/';
     }
   };
@@ -88,6 +96,14 @@ export function AuthButtons() {
   const handleNavigation = () => {
     setShowLogin(false);
   };
+
+  if (status === 'loading') {
+    return (
+      <div className="animate-pulse">
+        <div className="h-10 w-24 bg-white/10 rounded-full"></div>
+      </div>
+    );
+  }
 
   if (session) {
     return (

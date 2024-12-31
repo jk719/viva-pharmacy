@@ -7,7 +7,20 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 export async function GET(request) {
   try {
     await dbConnect();
-    const { searchParams } = new URL(request.url);
+    
+    // Ensure proper URL parsing
+    let searchParams;
+    try {
+      const url = new URL(request.url);
+      searchParams = url.searchParams;
+    } catch (error) {
+      console.error('URL parsing error:', error);
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Invalid request URL',
+        products: [] 
+      }, { status: 400 });
+    }
     
     // Log incoming request
     console.log('API Request:', {
@@ -15,7 +28,7 @@ export async function GET(request) {
       params: Object.fromEntries(searchParams.entries())
     });
     
-    // Filter parameters
+    // Build query with type checking
     const query = {};
     const category = searchParams.get('category');
     const search = searchParams.get('search');
@@ -23,10 +36,9 @@ export async function GET(request) {
     const minPrice = searchParams.get('minPrice');
     const maxPrice = searchParams.get('maxPrice');
     
-    // Build query
-    if (category) query.category = category;
+    if (category && typeof category === 'string') query.category = category;
     if (featured === 'true') query.isFeatured = true;
-    if (search) {
+    if (search && typeof search === 'string') {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } }
@@ -38,48 +50,18 @@ export async function GET(request) {
       if (maxPrice) query.price.$lte = parseFloat(maxPrice);
     }
 
-    // Log the MongoDB query
-    console.log('MongoDB Query:', {
-      query,
-      hasFilters: Object.keys(query).length > 0
-    });
-
-    // Execute query without pagination
-    const products = await Product.find(query)
-      .sort({ createdAt: -1 });
+    // Execute query
+    const products = await Product.find(query).sort({ createdAt: -1 });
     
-    // Get total count and detailed stats
-    const total = products.length;
-    const categoryStats = {};
-    products.forEach(product => {
-      if (!categoryStats[product.category]) {
-        categoryStats[product.category] = {
-          count: 0,
-          minPrice: Infinity,
-          maxPrice: -Infinity
-        };
-      }
-      categoryStats[product.category].count++;
-      categoryStats[product.category].minPrice = Math.min(categoryStats[product.category].minPrice, product.price);
-      categoryStats[product.category].maxPrice = Math.max(categoryStats[product.category].maxPrice, product.price);
-    });
-    
-    console.log('Found products:', {
-      total,
-      categories: Object.keys(categoryStats),
-      categoryStats,
-      firstProduct: products[0]?.name,
-      lastProduct: products[products.length - 1]?.name
-    });
-
+    // Return consistent response structure
     return NextResponse.json({
       success: true,
       products,
       pagination: {
-        total,
+        total: products.length,
         pages: 1,
         currentPage: 1,
-        perPage: total,
+        perPage: products.length,
         hasMore: false
       }
     });
@@ -88,7 +70,8 @@ export async function GET(request) {
     console.error('Products fetch error:', error);
     return NextResponse.json({ 
       success: false, 
-      message: 'Failed to fetch products' 
+      message: error.message || 'Failed to fetch products',
+      products: [] 
     }, { status: 500 });
   }
 }

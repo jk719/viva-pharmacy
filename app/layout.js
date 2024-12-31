@@ -1,6 +1,6 @@
 // src/app/layout.js
-"use client";
 
+import { EventEmitter } from 'events';
 import { Suspense } from "react";
 import Navbar from "../components/Navbar";
 import Image from "next/image";
@@ -10,6 +10,12 @@ import { Toaster } from 'react-hot-toast';
 import "./globals.css";
 import HeaderProgress from '@/components/HeaderProgress';
 import RewardAlert from '@/components/RewardAlert';
+import { headers } from 'next/headers';
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "./api/auth/[...nextauth]/route";
+
+// Add this line before the siteConfig
+EventEmitter.defaultMaxListeners = 15;
 
 // Metadata can be exported as a constant
 const siteConfig = {
@@ -22,7 +28,9 @@ const siteConfig = {
   }
 };
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  const session = await getServerSession(authOptions);
+
   return (
     <html lang="en" className="scroll-smooth">
       <head>
@@ -37,7 +45,7 @@ export default function RootLayout({ children }) {
         )}
       </head>
       <body className="bg-white text-primary-color">
-        <Providers>
+        <Providers session={session}>
           <header className="fixed top-0 left-0 right-0 w-full bg-white z-50">
             <div className="bg-primary-color">
               <Navbar />

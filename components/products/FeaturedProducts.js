@@ -151,19 +151,19 @@ export default function FeaturedProducts() {
   useEffect(() => {
     const loadProducts = async () => {
       try {
+        setLoading(true);
         const params = {};
         
-        // Only filter by featured if a specific category is selected
-        if (selectedCategory !== 'All') {
-          params.featured = true;
+        if (selectedCategory && selectedCategory !== 'All') {
           params.category = selectedCategory;
         }
 
-        console.log('Fetching products with params:', params); // Debug log
+        console.log('Fetching products with params:', params);
 
         const data = await fetchProducts(params);
         if (data.success) {
           if (selectedCategory === 'All') {
+            // Group and sort products by category
             const categoryCount = {};
             data.products.forEach(product => {
               categoryCount[product.category] = (categoryCount[product.category] || 0) + 1;
@@ -177,9 +177,13 @@ export default function FeaturedProducts() {
           } else {
             setProducts(data.products);
           }
+        } else {
+          console.error('Failed to fetch products:', data.message);
+          setProducts([]);
         }
       } catch (error) {
         console.error('Error fetching products:', error);
+        setProducts([]);
       } finally {
         setLoading(false);
       }

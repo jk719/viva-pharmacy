@@ -7,7 +7,6 @@ import Link from 'next/link';
 import { useCategory } from '@/context/CategoryContext';
 import { motion } from 'framer-motion';
 import { IoArrowForward } from 'react-icons/io5';
-import { fetchProducts } from '@/lib/api';
 
 export default function Home() {
   const { selectedCategory, setSelectedCategory } = useCategory();
@@ -15,23 +14,16 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const loadCategories = async () => {
-      try {
-        const data = await fetchProducts();
-        if (data.success) {
-          const uniqueCategories = ["All", ...new Set(
-            data.products.map(product => product.category)
-          )].sort();
-          setCategories(uniqueCategories);
-        }
-      } catch (error) {
-        console.error('Error loading categories:', error);
-      } finally {
+    fetch('/api/categories')
+      .then(res => res.json())
+      .then(data => {
+        setCategories(data);
         setIsLoading(false);
-      }
-    };
-
-    loadCategories();
+      })
+      .catch(error => {
+        console.error('Error loading categories:', error);
+        setIsLoading(false);
+      });
   }, []);
 
   return (
@@ -54,7 +46,7 @@ export default function Home() {
                 WebkitOverflowScrolling: 'touch'
               }}
             >
-              {categories.map((category) => (
+              {!isLoading && categories.map((category) => (
                 <motion.button
                   key={category}
                   whileTap={{ scale: 0.95 }}
@@ -73,6 +65,17 @@ export default function Home() {
                   {category}
                 </motion.button>
               ))}
+              
+              {isLoading && (
+                <div className="flex space-x-3">
+                  {[1, 2, 3].map((n) => (
+                    <div 
+                      key={n}
+                      className="h-8 w-24 bg-gray-200 rounded-full animate-pulse"
+                    />
+                  ))}
+                </div>
+              )}
             </div>
             
             {/* Fade edges for better scroll indication */}

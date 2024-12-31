@@ -124,48 +124,46 @@ export async function POST(request) {
                 const productIds = cartItems.map(item => item.id);
                 const products = await Product.find({ _id: { $in: productIds } });
                 
-                // After fetching products
-                console.log('🖼️ Products from database:', products.map(p => ({
+                // Debug log the products found
+                console.log('🔍 Products found:', products.map(p => ({
+                    id: p._id.toString(),
                     name: p.name,
-                    image: p.image,
-                    _id: p._id.toString()
+                    image: p.image
                 })));
 
                 const itemsWithImages = cartItems.map(item => {
                     const product = products.find(p => p._id.toString() === item.id.toString());
-                    let imageUrl = product?.image || null;
                     
-                    console.log('🔍 Processing image for:', {
-                        productName: item.name,
-                        originalImage: imageUrl
+                    // Enhanced debug logging
+                    console.log('🛍️ Processing item:', {
+                        cartItemId: item.id,
+                        foundProduct: product ? {
+                            name: product.name,
+                            image: product.image
+                        } : 'Product not found'
                     });
-                    
-                    // Handle different image URL formats
-                    if (imageUrl) {
-                        if (imageUrl.startsWith('http')) {
-                            console.log('✅ Already absolute URL:', imageUrl);
-                        } else if (imageUrl.startsWith('/')) {
-                            imageUrl = `${BASE_URL}${imageUrl}`;
-                            console.log('🔄 Converting to absolute URL:', imageUrl);
-                        } else {
-                            imageUrl = `${BASE_URL}/${imageUrl}`;
-                            console.log('➕ Adding base URL:', imageUrl);
-                        }
+
+                    // Ensure image URL is absolute
+                    let imageUrl = product?.image || null;
+                    if (imageUrl && !imageUrl.startsWith('http')) {
+                        imageUrl = `${BASE_URL}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
                     }
 
                     return {
-                        productId: item.id.toString(),
-                        name: item.name,
-                        quantity: item.qty,
+                        productId: item.id,
+                        name: product?.name || 'Unknown Product',
+                        quantity: parseInt(item.qty),
                         price: parseFloat(item.price),
-                        image: imageUrl
+                        image: imageUrl,
+                        subtotal: parseFloat(item.price) * parseInt(item.qty)
                     };
                 });
 
-                // Log final items before email generation
-                console.log('📧 Final items for email:', itemsWithImages.map(item => ({
+                // Verify the processed items
+                console.log('📦 Processed items for email:', itemsWithImages.map(item => ({
                     name: item.name,
-                    finalImage: item.image
+                    hasImage: !!item.image,
+                    imageUrl: item.image
                 })));
 
                 // Base order data with enhanced items

@@ -6,6 +6,7 @@ import { PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import stripePromise from '@/lib/stripe/client';
 import eventEmitter, { Events } from '@/lib/eventEmitter';
 import { useSession } from "next-auth/react";
+import { useCart } from '@/context/CartContext';
 
 const CheckoutForm = ({ amount }) => {
   const stripe = useStripe();
@@ -92,7 +93,8 @@ const CheckoutForm = ({ amount }) => {
   );
 };
 
-const PaymentForm = ({ amount, items, shippingAddress, deliveryMethod, selectedTime }) => {
+export default function PaymentForm({ amount, shippingAddress, deliveryMethod, selectedTime }) {
+  const { getFormattedItems } = useCart();
   const [clientSecret, setClientSecret] = useState('');
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -101,42 +103,31 @@ const PaymentForm = ({ amount, items, shippingAddress, deliveryMethod, selectedT
   useEffect(() => {
     const initializePayment = async () => {
       try {
-        // Prepare cart items with essential data
-        const cartItems = items.map(item => ({
-          id: item.id || item._id,
-          name: item.name,
-          quantity: item.quantity,
-          price: Number(item.price).toFixed(2)
-        }));
-
-        // Create metadata object
-        const metadata = {
-          dm: deliveryMethod,
-          time: selectedTime,
-          items: `${items.length} items`,
-          total: Number(amount).toFixed(2),
-          userId: session?.user?.id
-        };
-
-        // Add shipping address if delivery method is 'delivery'
-        if (deliveryMethod === 'delivery' && shippingAddress) {
-          metadata.street = shippingAddress.street;
-          metadata.city = shippingAddress.city;
-          metadata.state = shippingAddress.state;
-          metadata.zipCode = shippingAddress.zipCode;
-        }
+        // Get formatted cart items
+        const cartItems = getFormattedItems();
+        console.log('Submitting payment with formatted items:', cartItems);
 
         const response = await fetch('/api/payments', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
             cartItems,
-            metadata,
-            amount: Number(amount),
+            amount,
             deliveryMethod,
-            selectedTime
-          })
+            selectedTime,
+            shippingAddress,
+            metadata: {
+              deliveryMethod,
+              selectedTime
+            }
+          }),
         });
+
+        if (!response.ok) {
+          throw new Error('Payment failed');
+        }
 
         const data = await response.json();
 
@@ -155,7 +146,7 @@ const PaymentForm = ({ amount, items, shippingAddress, deliveryMethod, selectedT
     };
 
     initializePayment();
-  }, [items, shippingAddress, deliveryMethod, selectedTime, amount, session]);
+  }, [amount, shippingAddress, deliveryMethod, selectedTime, session, getFormattedItems]);
 
   if (loading) {
     return <div className="text-center py-4">Initializing payment...</div>;
@@ -186,6 +177,4 @@ const PaymentForm = ({ amount, items, shippingAddress, deliveryMethod, selectedT
       )}
     </div>
   );
-};
-
-export default PaymentForm;
+}

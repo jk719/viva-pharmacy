@@ -14,6 +14,18 @@ export function useCart() {
     return context;
 }
 
+// Add these helper functions at the top
+const normalizeProduct = (product) => {
+  if (!product) return null;
+  return {
+    id: product._id || product.id,
+    name: product.name,
+    price: parseFloat(product.price),
+    image: product.image,
+    quantity: product.quantity || 1
+  };
+};
+
 // CartProvider component to wrap around parts of the app that need access to the cart context
 export function CartProvider({ children }) {
     const [items, setItems] = useState([]);
@@ -81,9 +93,12 @@ export function CartProvider({ children }) {
                 );
             }
             
+            // Normalize product data when adding to cart
+            const normalizedProduct = normalizeProduct(product);
+            console.log('Adding normalized product to cart:', normalizedProduct);
+            
             return [...prevItems, { 
-                ...product, 
-                quantity: 1,
+                ...normalizedProduct,
                 addedAt: new Date().toISOString() 
             }];
         });
@@ -143,6 +158,18 @@ export function CartProvider({ children }) {
         return items.reduce((total, item) => total + item.quantity, 0);
     }, [items]);
 
+    // Add a method to get formatted cart items
+    const getFormattedItems = useCallback(() => {
+        return items.map(item => ({
+            id: getProductId(item),
+            name: item.name,
+            price: parseFloat(item.price),
+            quantity: parseInt(item.quantity),
+            image: item.image,
+            subtotal: parseFloat(item.price) * parseInt(item.quantity)
+        }));
+    }, [items, getProductId]);
+
     const value = {
         items,
         total,
@@ -160,7 +187,8 @@ export function CartProvider({ children }) {
         setSelectedTime,
         showTimeError,
         setShowTimeError,
-        getCartSize
+        getCartSize,
+        getFormattedItems
     };
 
     return (
