@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useCategory } from '@/context/CategoryContext';
 import { motion } from 'framer-motion';
 import { IoArrowForward } from 'react-icons/io5';
+import { fetchProducts } from '@/lib/api';
 
 export default function Home() {
   const { selectedCategory, setSelectedCategory } = useCategory();
@@ -14,16 +15,25 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/categories')
-      .then(res => res.json())
-      .then(data => {
-        setCategories(data);
+    const loadCategories = async () => {
+      try {
+        setIsLoading(true);
+        const { success, products } = await fetchProducts();
+        
+        if (success && products.length > 0) {
+          // Extract unique categories from products and sort them
+          const uniqueCategories = ["All", ...new Set(products.map(p => p.category))].sort();
+          setCategories(uniqueCategories);
+        }
+      } catch (error) {
+        console.error('Error loading products:', error);
+        setCategories(["All"]); // Fallback to just "All" if there's an error
+      } finally {
         setIsLoading(false);
-      })
-      .catch(error => {
-        console.error('Error loading categories:', error);
-        setIsLoading(false);
-      });
+      }
+    };
+
+    loadCategories();
   }, []);
 
   return (

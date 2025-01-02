@@ -144,7 +144,7 @@ const ProductInfo = ({ product }) => (
 
 export default function FeaturedProducts() {
   const { addToCart, decrement, items = [] } = useCart();
-  const { selectedCategory } = useCategory();
+  const { selectedCategory, setSelectedCategory } = useCategory();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -158,25 +158,18 @@ export default function FeaturedProducts() {
           params.category = selectedCategory;
         }
 
-        console.log('Fetching products with params:', params);
-
         const data = await fetchProducts(params);
         if (data.success) {
-          if (selectedCategory === 'All') {
-            // Group and sort products by category
-            const categoryCount = {};
-            data.products.forEach(product => {
-              categoryCount[product.category] = (categoryCount[product.category] || 0) + 1;
-            });
-            
-            const sortedProducts = data.products.sort((a, b) => {
-              return categoryCount[b.category] - categoryCount[a.category];
-            });
-            
-            setProducts(sortedProducts);
-          } else {
-            setProducts(data.products);
+          setProducts(data.products);
+          
+          // Get available categories from products
+          const availableCategories = ["All", ...new Set(data.products.map(p => p.category))];
+          
+          // If selected category isn't available, reset to "All"
+          if (!availableCategories.includes(selectedCategory)) {
+            setSelectedCategory("All");
           }
+          
         } else {
           console.error('Failed to fetch products:', data.message);
           setProducts([]);
@@ -190,7 +183,7 @@ export default function FeaturedProducts() {
     };
 
     loadProducts();
-  }, [selectedCategory]);
+  }, [selectedCategory, setSelectedCategory]);
 
   const categoriesWithCounts = [...new Set(products.map((product) => product.category))]
     .map((category) => ({
