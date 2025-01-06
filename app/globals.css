@@ -6,7 +6,7 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
-  --primary-color: #003366;
+  --primary-color: #002B49;
   --accent-color: #ff4a4a;
   --secondary-color: #f1f5f9;
   --text-color: #003366;
@@ -284,3 +284,16 @@ body {
 }
 
 /* Keep your existing navbar and other styles */
+
+/* Add these navbar-specific styles */
+.viva-navbar {
+  background-color: var(--primary-color);
+  position: relative;
+  z-index: 50;
+}
+
+.viva-navbar-logo {
+  height: auto;
+  width: auto;
+  max-height: 60px;
+}

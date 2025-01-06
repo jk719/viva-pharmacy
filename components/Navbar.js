@@ -27,6 +27,8 @@ function debounce(func, wait) {
 }
 
 export default function Navbar() {
+  console.log('Navbar: Component rendering');
+
   const [query, setQuery] = useState("");
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [isFocused, setIsFocused] = useState(false);
@@ -35,6 +37,7 @@ export default function Navbar() {
 
   // Memoized search function
   const searchProducts = useCallback((searchQuery) => {
+    console.log('Navbar: Searching products with query:', searchQuery);
     if (!searchQuery.trim()) {
       setFilteredProducts([]);
       return;
@@ -54,6 +57,7 @@ export default function Navbar() {
       );
     }).slice(0, 5);
 
+    console.log('Navbar: Found matching products:', results.length);
     setFilteredProducts(results);
   }, [setFilteredProducts]);
 
@@ -64,6 +68,7 @@ export default function Navbar() {
   };
 
   const handleProductClick = (productId) => {
+    console.log('Navbar: Product clicked:', productId);
     router.push(`/products/${productId}`);
     setQuery("");
     setFilteredProducts([]);
@@ -78,42 +83,47 @@ export default function Navbar() {
     }
   };
 
+  useEffect(() => {
+    console.log('Navbar: Session updated:', session?.user);
+  }, [session]);
+
   return (
     <>
       <motion.nav 
-        className="bg-primary text-white py-3 w-full shadow-sm"
+        className="viva-navbar py-2 md:py-3 w-full shadow-sm"
         initial={{ y: -100 }}
         animate={{ y: 0 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
       >
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-3 md:px-4">
           {/* Mobile Layout */}
-          <div className="flex flex-col md:hidden space-y-3">
-            <div className="flex items-center justify-between px-1">
+          <div className="flex flex-col md:hidden space-y-2">
+            <div className="flex items-center justify-between">
               <Link href="/" className="flex items-center">
                 <Image
                   src="/images/viva-online-logo.png"
                   alt="VIVA Logo"
-                  width={140}
-                  height={42}
-                  className="h-7 w-auto -ml-1"
+                  width={120}
+                  height={36}
+                  className="h-8 w-auto"
+                  style={{ height: '32px' }}
                   priority
                 />
               </Link>
               
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 {session?.user?.role && ['ADMIN', 'MANAGER'].includes(session.user.role) && (
                   <Link 
                     href="/admin"
-                    className="text-white hover:text-white/80 transition-colors duration-300"
+                    className="text-white hover:text-white/80 transition-colors duration-300 text-sm"
                   >
                     Admin
                   </Link>
                 )}
-                <AuthButtons className="flex items-center text-sm" />
+                <AuthButtons className="flex items-center text-sm scale-90" />
                 <Link 
                   href="/cart"
-                  className="flex items-center justify-center w-8 h-8"
+                  className="flex items-center justify-center scale-90"
                 >
                   <ClientCartIcon />
                 </Link>
@@ -129,12 +139,13 @@ export default function Navbar() {
                 onBlur={() => setTimeout(() => setIsFocused(false), 200)}
                 onKeyDown={handleKeyDown}
                 placeholder="Search products..."
-                className="w-full h-9 pl-10 pr-4 text-gray-900 placeholder-gray-500 
-                  bg-white/90 backdrop-blur-sm rounded-xl border-2 border-white/50
-                  focus:border-white focus:outline-none focus:ring-0 transition-all"
+                className="w-full h-9 pl-9 pr-3 text-gray-900 placeholder-gray-500 
+                  bg-white rounded-lg border border-gray-200
+                  focus:border-[#FF9F43] focus:outline-none focus:ring-1 focus:ring-[#FF9F43]/50
+                  text-sm transition-all"
                 aria-label="Search products"
               />
-              <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
             </div>
           </div>
 
@@ -144,9 +155,11 @@ export default function Navbar() {
               <Image
                 src="/images/viva-online-logo.png"
                 alt="VIVA Pharmacy & Wellness Logo"
-                width={180}
-                height={60}
-                className="h-12 w-auto"
+                width={300}
+                height={100}
+                className="viva-navbar-logo"
+                style={{ height: 'auto' }}
+                priority
               />
             </Link>
 
@@ -161,8 +174,9 @@ export default function Navbar() {
                   onKeyDown={handleKeyDown}
                   placeholder="Search products..."
                   className="w-full h-12 pl-12 pr-4 text-gray-900 placeholder-gray-500 
-                    bg-white/90 backdrop-blur-sm rounded-xl border-2 border-white/50
-                    focus:border-white focus:outline-none focus:ring-0 transition-all"
+                    bg-white rounded-xl border-2 border-gray-200
+                    focus:border-[#FF9F43] focus:outline-none focus:ring-1 focus:ring-[#FF9F43]
+                    transition-all"
                   aria-label="Search products"
                 />
                 <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -192,14 +206,14 @@ export default function Navbar() {
           <AnimatePresence>
             {filteredProducts.length > 0 && isFocused && (
               <motion.div 
-                className="absolute left-4 right-4 mt-2 z-50"
+                className="absolute left-3 right-3 md:left-4 md:right-4 mt-1 z-50"
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2 }}
               >
-                <div className="bg-white rounded-2xl shadow-lg overflow-hidden 
-                  border-2 border-gray-100 max-h-[300px] overflow-y-auto">
+                <div className="bg-white rounded-xl shadow-lg overflow-hidden 
+                  border border-gray-100 max-h-[60vh] overflow-y-auto">
                   {filteredProducts.map((product) => (
                     <motion.button
                       key={product.id}

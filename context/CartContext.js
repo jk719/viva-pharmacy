@@ -28,6 +28,7 @@ const normalizeProduct = (product) => {
 
 // CartProvider component to wrap around parts of the app that need access to the cart context
 export function CartProvider({ children }) {
+    console.log('CartContext: Initializing provider');
     const [items, setItems] = useState([]);
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);

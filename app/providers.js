@@ -6,6 +6,7 @@ import { CategoryProvider } from "../context/CategoryContext";
 import { Toaster } from 'react-hot-toast';
 
 export function Providers({ children, session }) {
+  console.log('Providers: Initializing');
   return (
     <SessionProvider session={session} refetchInterval={5 * 60}>
       <CartProvider>

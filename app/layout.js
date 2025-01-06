@@ -29,6 +29,7 @@ const siteConfig = {
 };
 
 export default async function RootLayout({ children }) {
+  console.log('RootLayout: Rendering');
   const session = await getServerSession(authOptions);
 
   return (
@@ -47,9 +48,7 @@ export default async function RootLayout({ children }) {
       <body className="bg-white text-primary-color">
         <Providers session={session}>
           <header className="fixed top-0 left-0 right-0 w-full bg-white z-50">
-            <div className="bg-primary-color">
-              <Navbar />
-            </div>
+            <Navbar />
             
             <div className="bg-white border-b">
               <HeaderProgress />

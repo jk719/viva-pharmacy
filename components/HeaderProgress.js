@@ -13,6 +13,7 @@ import { createPortal } from 'react-dom';
 import Link from 'next/link';
 
 export default function HeaderProgress() {
+  console.log('HeaderProgress: Component rendering');
   const { data: session } = useSession();
   const [rewardsData, setRewardsData] = useState({
     vivaBucks: 0,
