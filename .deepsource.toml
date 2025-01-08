@@ -7,6 +7,8 @@ enabled = true
 [analyzers.meta]
 eslint_enabled = true
 prettier_enabled = true
+environment = ["nodejs"]
+skip_rules = ["JS-0128", "JS-0455"]
 
 [[analyzers]]
 name = "secrets"
