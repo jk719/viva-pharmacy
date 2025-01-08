@@ -1,52 +1,39 @@
 // src/products/page.js
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useCart } from '../../context/CartContext';
 import { useSearchParams, useRouter } from 'next/navigation';
 import ProductFilter from '@/components/products/ProductFilter';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { fetchProducts } from '@/lib/api';
+import { useProducts } from '@/lib/api';
 
 export default function ProductsPage() {
   const { addToCart, items } = useCart();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [categories, setCategories] = useState([]);
-  const [error, setError] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [minPrice, setMinPrice] = useState('');
-  const [maxPrice, setMaxPrice] = useState('');
   const [imgErrors, setImgErrors] = useState({});
 
-  useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        setLoading(true);
-        const params = new URLSearchParams(searchParams);
-        const data = await fetchProducts(Object.fromEntries(params));
+  // Get search parameters
+  const category = searchParams.get('category') || 'All';
+  const search = searchParams.get('search') || '';
+  const minPrice = searchParams.get('minPrice') || '';
+  const maxPrice = searchParams.get('maxPrice') || '';
 
-        if (data.success) {
-          setProducts(data.products);
-          const uniqueCategories = ['All', ...new Set(data.products.map(p => p.category))];
-          setCategories(uniqueCategories);
-        } else {
-          setError(data.message || 'Failed to fetch products');
-        }
-      } catch (error) {
-        console.error('Error fetching products:', error);
-        setError('An error occurred while fetching products');
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Use SWR hook for products
+  const { products, isLoading, isError } = useProducts({
+    category: category !== 'All' ? category : undefined,
+    search,
+    minPrice,
+    maxPrice
+  });
 
-    loadProducts();
-  }, [searchParams]);
+  // Extract unique categories from products
+  const categories = products 
+    ? ['All', ...new Set(products.map(p => p.category))]
+    : ['All'];
 
   const updateSearchParams = (updates) => {
     const params = new URLSearchParams(searchParams);
@@ -61,33 +48,22 @@ export default function ProductsPage() {
   };
 
   const handleSearchChange = (value) => {
-    setSearchQuery(value);
     updateSearchParams({ search: value });
   };
 
   const handlePriceChange = (type, value) => {
-    if (type === 'min') {
-      setMinPrice(value);
-      updateSearchParams({ minPrice: value });
-    } else {
-      setMaxPrice(value);
-      updateSearchParams({ maxPrice: value });
-    }
-  };
-
-  const handleCategoryChange = (e) => {
-    const category = e.target.value;
     updateSearchParams({ 
-      category: category === 'All' ? '' : category 
+      [type === 'min' ? 'minPrice' : 'maxPrice']: value 
     });
   };
 
-  const getItemQuantity = (productId) => {
-    const item = items?.find(item => item?._id === productId);
-    return item ? item.quantity : 0;
+  const handleCategoryChange = (e) => {
+    updateSearchParams({ 
+      category: e.target.value === 'All' ? '' : e.target.value 
+    });
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
         <div className="container mx-auto">
@@ -106,12 +82,12 @@ export default function ProductsPage() {
     );
   }
 
-  if (error) {
+  if (isError) {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
         <div className="container mx-auto">
           <div className="bg-red-50 text-red-500 p-4 rounded-lg">
-            {error}
+            Error loading products. Please try again later.
           </div>
         </div>
       </div>
@@ -122,8 +98,8 @@ export default function ProductsPage() {
     <div className="min-h-screen bg-gray-50">
       <ProductFilter 
         categories={categories}
-        selectedCategory={searchParams.get('category') || 'All'}
-        searchQuery={searchQuery}
+        selectedCategory={category}
+        searchQuery={search}
         minPrice={minPrice}
         maxPrice={maxPrice}
         onSearchChange={handleSearchChange}
@@ -132,63 +108,22 @@ export default function ProductsPage() {
       />
 
       <div className="container mx-auto px-6 py-8">
-        {products.length === 0 ? (
+        {!products || products.length === 0 ? (
           <div className="text-center text-gray-500">
             No products found.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {products.map((product) => (
-              <motion.div
+              <ProductCard 
                 key={product._id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-white p-6 shadow-lg rounded-lg hover:shadow-xl transition-all duration-300"
-              >
-                <Link href={`/products/${product._id}`}>
-                  <div className="relative h-48 mb-4 rounded-lg overflow-hidden">
-                    {!imgErrors[product._id] ? (
-                      <Image
-                        src={product.image}
-                        alt={product.name}
-                        fill
-                        onError={() => {
-                          console.error('Image failed to load:', product.image);
-                          setImgErrors(prev => ({...prev, [product._id]: true}));
-                        }}
-                        className="object-contain"
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                      />
-                    ) : (
-                      <div className="flex flex-col items-center justify-center h-full bg-gray-50">
-                        <p className="text-gray-500">Image not available</p>
-                        <p className="text-xs text-gray-400 mt-2">{product.image}</p>
-                      </div>
-                    )}
-                  </div>
-                </Link>
-
-                <h3 className="text-xl font-bold mb-2 text-primary">{product.name}</h3>
-                <p className="text-gray-700 mb-4 line-clamp-2">{product.description}</p>
-                <div className="flex items-center justify-between">
-                  <p className="text-lg font-semibold">${product.price.toFixed(2)}</p>
-                  <button
-                    className="bg-primary text-white py-2 px-4 rounded-full hover:bg-primary/90 
-                             transition-colors duration-200 flex items-center gap-2"
-                    onClick={() => {
-                      addToCart({
-                        _id: product._id,
-                        name: product.name,
-                        price: product.price,
-                        image: product.image,
-                        quantity: 1
-                      });
-                    }}
-                  >
-                    Add to Cart
-                  </button>
-                </div>
-              </motion.div>
+                product={product}
+                onAddToCart={addToCart}
+                imgError={imgErrors[product._id]}
+                onImageError={() => {
+                  setImgErrors(prev => ({...prev, [product._id]: true}));
+                }}
+              />
             ))}
           </div>
         )}
@@ -196,3 +131,56 @@ export default function ProductsPage() {
     </div>
   );
 }
+
+// Extracted ProductCard component for better organization
+const ProductCard = ({ product, onAddToCart, imgError, onImageError }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="bg-white p-6 shadow-lg rounded-lg hover:shadow-xl transition-all duration-300"
+  >
+    <Link href={`/products/${product._id}`}>
+      <div className="relative h-48 mb-4 rounded-lg overflow-hidden">
+        {!imgError ? (
+          <Image
+            src={product.image}
+            alt={product.name}
+            fill
+            onError={() => {
+              console.error('Image failed to load:', product.image);
+              onImageError();
+            }}
+            className="object-contain"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          />
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full bg-gray-50">
+            <p className="text-gray-500">Image not available</p>
+            <p className="text-xs text-gray-400 mt-2">{product.image}</p>
+          </div>
+        )}
+      </div>
+    </Link>
+
+    <h3 className="text-xl font-bold mb-2 text-primary">{product.name}</h3>
+    <p className="text-gray-700 mb-4 line-clamp-2">{product.description}</p>
+    <div className="flex items-center justify-between">
+      <p className="text-lg font-semibold">${product.price.toFixed(2)}</p>
+      <button
+        className="bg-primary text-white py-2 px-4 rounded-full hover:bg-primary/90 
+                   transition-colors duration-200 flex items-center gap-2"
+        onClick={() => {
+          onAddToCart({
+            _id: product._id,
+            name: product.name,
+            price: product.price,
+            image: product.image,
+            quantity: 1
+          });
+        }}
+      >
+        Add to Cart
+      </button>
+    </div>
+  </motion.div>
+);

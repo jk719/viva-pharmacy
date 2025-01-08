@@ -1,22 +1,40 @@
 "use client";
-import { useState, useEffect, useCallback } from 'react';
+
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useProduct } from '@/lib/api';
+import { mutate } from 'swr';
 
 export default function EditProductForm({ productId }) {
     const router = useRouter();
-    const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
-    const [formData, setFormData] = useState({
-        name: "",
-        description: "",
-        price: "",
-        category: "",
-        image: "",
-        isFeatured: false
-    });
     const [error, setError] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
+
+    const { product, isLoading, isError } = useProduct(productId);
+
+    const [formData, setFormData] = useState({
+        name: product?.name || "",
+        description: product?.description || "",
+        price: product?.price?.toString() || "",
+        category: product?.category || "",
+        image: product?.image || "",
+        isFeatured: product?.isFeatured || false
+    });
+
+    useEffect(() => {
+        if (product) {
+            setFormData({
+                name: product.name || "",
+                description: product.description || "",
+                price: product.price?.toString() || "",
+                category: product.category || "",
+                image: product.image || "",
+                isFeatured: product.isFeatured || false
+            });
+        }
+    }, [product]);
 
     const categories = [
         "Pain Relief",
@@ -30,58 +48,12 @@ export default function EditProductForm({ productId }) {
         "Foot Care"
     ].sort();
 
-    useEffect(() => {
-        if (!productId) {
-            setError("Product ID is required");
-            setLoading(false);
-            return;
-        }
-        fetchProduct();
-    }, [productId, fetchProduct]);
-
-    const fetchProduct = useCallback(async () => {
-        if (!productId) return;
-        
-        try {
-            setError("");
-            const response = await fetch(`/api/products/${productId}`);
-            const data = await response.json();
-            
-            if (!response.ok) {
-                throw new Error(data.message || "Failed to load product");
-            }
-            
-            if (data.success && data.product) {
-                setFormData({
-                    name: data.product.name || "",
-                    description: data.product.description || "",
-                    price: data.product.price?.toString() || "",
-                    category: data.product.category || "",
-                    image: data.product.image || "",
-                    isFeatured: data.product.isFeatured || false
-                });
-            } else {
-                throw new Error("Product data is invalid");
-            }
-        } catch (error) {
-            console.error("Error fetching product:", error);
-            setError(error.message || "Failed to load product");
-        } finally {
-            setLoading(false);
-        }
-    }, [productId]);
-
-    useEffect(() => {
-        fetchProduct();
-    }, [fetchProduct]);
-
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
         setFormData(prev => ({
             ...prev,
             [name]: type === 'checkbox' ? checked : value
         }));
-        // Clear error when user starts typing
         setError("");
     };
 
@@ -123,6 +95,9 @@ export default function EditProductForm({ productId }) {
             const data = await response.json();
 
             if (response.ok && data.success) {
+                await mutate('/api/products');
+                await mutate(`/api/products/${productId}`);
+                
                 setSuccessMessage("Product updated successfully");
                 setTimeout(() => router.push('/admin'), 1500);
             } else {
@@ -136,10 +111,18 @@ export default function EditProductForm({ productId }) {
         }
     };
 
-    if (loading) {
+    if (isLoading) {
         return (
             <div className="flex justify-center items-center min-h-[400px]">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
+        );
+    }
+
+    if (isError) {
+        return (
+            <div className="p-6 bg-red-50 text-red-500 rounded-lg">
+                Error loading product. Please try again later.
             </div>
         );
     }

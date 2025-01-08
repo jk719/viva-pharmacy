@@ -13,6 +13,7 @@ import RewardAlert from '@/components/RewardAlert';
 import { headers } from 'next/headers';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "./api/auth/[...nextauth]/route";
+import { SWRConfig } from 'swr';
 
 // Add this line before the siteConfig
 EventEmitter.defaultMaxListeners = 15;

@@ -2,11 +2,12 @@
 'use client';
 
 import PropTypes from 'prop-types';
+import { memo } from 'react';
 
-export default function ProductFilter({ 
+const ProductFilter = memo(function ProductFilter({ 
   categories = [], 
   selectedCategory = 'All', 
-  onChange = () => {}         // Default empty function
+  onChange = () => {} 
 }) {
   // Sort categories alphabetically, but keep "All" at the front if it exists
   const sortedCategories = categories.sort((a, b) => {
@@ -15,7 +16,7 @@ export default function ProductFilter({
     return a.localeCompare(b);
   });
 
-  // Safe category handler
+  // Safe category handler with memoized callback
   const handleCategoryChange = (category) => {
     onChange({ target: { value: category } });
   };
@@ -23,7 +24,6 @@ export default function ProductFilter({
   return (
     <div className="w-full bg-white border-b">
       <div className="w-full max-w-7xl mx-auto px-3 md:px-4 py-3">
-        {/* Categories */}
         <div 
           className="flex items-center -mx-3 px-3 overflow-x-auto scrollbar-hide" 
           style={{ 
@@ -55,11 +55,12 @@ export default function ProductFilter({
       </div>
     </div>
   );
-}
+});
 
-// PropTypes for type checking
 ProductFilter.propTypes = {
   categories: PropTypes.arrayOf(PropTypes.string),
   selectedCategory: PropTypes.string,
   onChange: PropTypes.func
 };
+
+export default ProductFilter;

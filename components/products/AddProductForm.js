@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { mutate } from 'swr';
 
 export default function AddProductForm() {
     const router = useRouter();
@@ -60,6 +61,7 @@ export default function AddProductForm() {
             const data = await response.json();
 
             if (response.ok) {
+                await mutate('/api/products');
                 router.push('/admin');
             } else {
                 setError(data.message || "Failed to add product");

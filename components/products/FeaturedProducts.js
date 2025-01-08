@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCart } from '../../context/CartContext';
@@ -8,7 +8,7 @@ import { useCategory } from '../../context/CategoryContext';
 import { motion } from 'framer-motion';
 import { IoMdAdd } from 'react-icons/io';
 import { HiMinusSm, HiPlusSm } from 'react-icons/hi';
-import { fetchProducts } from '@/lib/api';
+import { useProducts } from '@/lib/api';
 
 // Extracted components for better organization
 const ProductCard = ({ product, quantity, onAdd, onDecrement }) => {
@@ -145,52 +145,22 @@ const ProductInfo = ({ product }) => (
 export default function FeaturedProducts() {
   const { addToCart, decrement, items = [] } = useCart();
   const { selectedCategory, setSelectedCategory } = useCategory();
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  
+  // Replace useState and useEffect with SWR hook
+  const { products, isLoading, isError } = useProducts(
+    selectedCategory && selectedCategory !== 'All' 
+      ? { category: selectedCategory }
+      : {}
+  );
 
-  useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        setLoading(true);
-        const params = {};
-        
-        if (selectedCategory && selectedCategory !== 'All') {
-          params.category = selectedCategory;
-        }
-
-        const data = await fetchProducts(params);
-        if (data.success) {
-          setProducts(data.products);
-          
-          // Get available categories from products
-          const availableCategories = ["All", ...new Set(data.products.map(p => p.category))];
-          
-          // If selected category isn't available, reset to "All"
-          if (!availableCategories.includes(selectedCategory)) {
-            setSelectedCategory("All");
-          }
-          
-        } else {
-          console.error('Failed to fetch products:', data.message);
-          setProducts([]);
-        }
-      } catch (error) {
-        console.error('Error fetching products:', error);
-        setProducts([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadProducts();
-  }, [selectedCategory, setSelectedCategory]);
-
-  const categoriesWithCounts = [...new Set(products.map((product) => product.category))]
-    .map((category) => ({
-      name: category,
-      count: products.filter((product) => product.category === category).length,
-    }))
-    .sort((a, b) => b.count - a.count);
+  const categoriesWithCounts = products 
+    ? [...new Set(products.map((product) => product.category))]
+      .map((category) => ({
+        name: category,
+        count: products.filter((product) => product.category === category).length,
+      }))
+      .sort((a, b) => b.count - a.count)
+    : [];
 
   const filteredCategories = selectedCategory === 'All' 
     ? categoriesWithCounts 
@@ -204,7 +174,7 @@ export default function FeaturedProducts() {
   const handleAddToCart = (product) => {
     console.log('Adding to cart:', product);
     addToCart({
-      id: product._id, // Note: Changed from id to _id to match MongoDB
+      id: product._id,
       name: product.name,
       price: product.price,
       image: product.image,
@@ -216,35 +186,30 @@ export default function FeaturedProducts() {
     decrement(productId);
   };
 
-  if (loading) {
+  // Update available categories when products change
+  useEffect(() => {
+    if (products) {
+      const availableCategories = ["All", ...new Set(products.map(p => p.category))];
+      if (!availableCategories.includes(selectedCategory)) {
+        setSelectedCategory("All");
+      }
+    }
+  }, [products, selectedCategory, setSelectedCategory]);
+
+  if (isLoading) {
+    return <LoadingState />;
+  }
+
+  if (isError) {
     return (
-      <div className="py-6">
-        <div className="animate-pulse space-y-4">
-          {[1, 2].map((i) => (
-            <div key={i} className="space-y-3">
-              <div className="h-6 bg-gray-200 rounded w-1/4"></div>
-              <div className="flex gap-6 overflow-x-auto">
-                {[1, 2, 3].map((j) => (
-                  <div key={j} className="min-w-[280px] space-y-3">
-                    <div className="h-48 bg-gray-200 rounded-xl"></div>
-                    <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
+      <div className="py-6 text-center text-red-500">
+        Error loading products. Please try again later.
       </div>
     );
   }
 
-  if (products.length === 0) {
-    return (
-      <div className="py-6 text-center text-gray-500">
-        No products found in this category.
-      </div>
-    );
+  if (!products || products.length === 0) {
+    return <EmptyState />;
   }
 
   return (
