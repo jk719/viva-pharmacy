@@ -112,14 +112,18 @@ export function AuthButtons() {
           onClick={() => setShowLogin(!showLogin)}
           aria-expanded={showLogin}
           aria-haspopup="true"
-          className="group inline-flex items-center gap-2 px-5 py-2.5 rounded-full
-                   bg-white/10 hover:bg-white/20 active:bg-white/15
-                   transition-all duration-200 ease-out transform hover:scale-105
-                   focus:outline-none focus:ring-2 focus:ring-white/50
-                   shadow-lg shadow-primary/10 hover:shadow-xl
-                   backdrop-blur-sm"
+          className="group inline-flex items-center gap-2 px-4 py-2 rounded-full
+                   bg-gradient-to-r from-[#FF9F43] to-[#FFB976]
+                   hover:from-[#ff9429] hover:to-[#ffa851]
+                   text-white font-medium
+                   transition-all duration-200 ease-out 
+                   transform hover:scale-105
+                   focus:outline-none focus:ring-2 focus:ring-[#FF9F43]/50
+                   shadow-lg shadow-orange-200/50"
         >
-          <span className="max-w-[150px] truncate text-sm font-medium">{session.user.email}</span>
+          <span className="max-w-[150px] truncate text-sm">
+            {session.user.email}
+          </span>
           <svg 
             className={`w-4 h-4 transition-transform duration-200 ${showLogin ? 'rotate-180' : ''}`} 
             fill="none" 
