@@ -14,34 +14,7 @@ const CheckoutForm = ({ amount }) => {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const { data: session } = useSession();
-
-  const updatePoints = async () => {
-    if (!session?.user?.id) return;
-    
-    try {
-      // Use the exact amount passed from checkout
-      const points = Math.floor(amount);
-      
-      const response = await fetch(`/api/user/vivabucks/${session.user.id}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          points,
-          source: 'purchase'
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update points');
-      }
-
-      eventEmitter.emit(Events.POINTS_UPDATED);
-    } catch (error) {
-      console.error('Error updating points:', error);
-    }
-  };
+  const { clearCart } = useCart();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -65,11 +38,13 @@ const CheckoutForm = ({ amount }) => {
       if (submitError) {
         setError(submitError.message);
       } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-        await updatePoints();
+        // Clear the cart after successful payment
+        clearCart();
         window.location.href = `${window.location.origin}/checkout/success`;
       }
     } catch (err) {
-      setError('An unexpected error occurred.');
+      console.error('❌ Payment confirmation error:', err);
+      setError('An unexpected error occurred during payment.');
     } finally {
       setLoading(false);
     }
@@ -93,7 +68,7 @@ const CheckoutForm = ({ amount }) => {
   );
 };
 
-export default function PaymentForm({ amount, shippingAddress, deliveryMethod, selectedTime }) {
+export default function PaymentForm({ amount, items, shippingAddress, deliveryMethod, selectedTime }) {
   const { getFormattedItems } = useCart();
   const [clientSecret, setClientSecret] = useState('');
   const [error, setError] = useState(null);
@@ -105,47 +80,66 @@ export default function PaymentForm({ amount, shippingAddress, deliveryMethod, s
       try {
         // Get formatted cart items
         const cartItems = getFormattedItems();
-        console.log('Submitting payment with formatted items:', cartItems);
+        
+        // Prepare shipping address for API
+        const formattedAddress = shippingAddress ? {
+          street: shippingAddress.street,
+          city: shippingAddress.city,
+          state: shippingAddress.state,
+          zipCode: shippingAddress.zipCode,
+          country: shippingAddress.country || 'US'
+        } : null;
+
+        // Prepare request payload
+        const payload = {
+          amount: Math.round(amount * 100), // Convert to cents
+          cartItems: cartItems.map(item => ({
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            image: item.image
+          })),
+          deliveryMethod,
+          selectedTime,
+          shippingAddress: formattedAddress,
+          userId: session?.user?.id || 'guest',
+          userEmail: session?.user?.email
+        };
+
+        console.log('📦 Initializing payment with:', {
+          amount: payload.amount,
+          items: payload.cartItems.length,
+          delivery: payload.deliveryMethod
+        });
 
         const response = await fetch('/api/payments', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            cartItems,
-            amount,
-            deliveryMethod,
-            selectedTime,
-            shippingAddress,
-            metadata: {
-              deliveryMethod,
-              selectedTime
-            }
-          }),
+          body: JSON.stringify(payload),
         });
 
         if (!response.ok) {
-          throw new Error('Payment failed');
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Payment initialization failed');
         }
 
         const data = await response.json();
+        setClientSecret(data.clientSecret);
 
-        if (data.error) {
-          console.error('Payment initialization error:', data.error);
-          setError(data.error);
-        } else {
-          setClientSecret(data.clientSecret);
-        }
       } catch (err) {
-        console.error('Payment initialization error:', err);
-        setError('Failed to initialize payment');
+        console.error('❌ Payment initialization error:', err);
+        setError(err.message || 'Failed to initialize payment');
       } finally {
         setLoading(false);
       }
     };
 
-    initializePayment();
+    if (amount > 0) {
+      initializePayment();
+    }
   }, [amount, shippingAddress, deliveryMethod, selectedTime, session, getFormattedItems]);
 
   if (loading) {

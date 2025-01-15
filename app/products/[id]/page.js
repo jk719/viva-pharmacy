@@ -42,15 +42,15 @@ async function getProduct(id) {
 }
 
 export default async function ProductPage({ params }) {
-  const { id } = params;
+  const productId = params.id;
   
-  if (!id) {
+  if (!productId) {
     console.error('No product ID provided');
     notFound();
   }
 
   // Get initial data
-  const product = await getProduct(id);
+  const product = await getProduct(productId);
   
   if (!product) {
     return <ProductNotFound />;
@@ -62,7 +62,7 @@ export default async function ProductPage({ params }) {
       <SWRConfig
         value={{
           fallback: {
-            [`/api/products/${id}`]: { success: true, product }
+            [`/api/products/${productId}`]: { success: true, product }
           }
         }}
       >
@@ -108,13 +108,13 @@ const ProductSkeleton = () => (
 );
 
 export async function generateMetadata({ params }) {
-  const { id } = params;
+  const productId = params.id;
   
-  if (!id) {
+  if (!productId) {
     return defaultMetadata;
   }
 
-  const product = await getProduct(id);
+  const product = await getProduct(productId);
 
   if (!product) {
     return defaultMetadata;

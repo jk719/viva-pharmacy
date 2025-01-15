@@ -103,15 +103,15 @@ export default function ProfilePage() {
 
         {/* Content Section */}
         <div className="bg-white rounded-xl shadow-lg p-4 md:p-6 border border-[#e6eef5]">
-          <div className={`transition-opacity duration-200 ${activeTab === 'info' ? 'opacity-100' : 'opacity-0 hidden'}`}>
+          {activeTab === 'info' && (
             <ProfileInfo user={userData || session.user} />
-          </div>
-          <div className={`transition-opacity duration-200 ${activeTab === 'rewards' ? 'opacity-100' : 'opacity-0 hidden'}`}>
+          )}
+          {activeTab === 'rewards' && (
             <VivaBucksDashboard />
-          </div>
-          <div className={`transition-opacity duration-200 ${activeTab === 'orders' ? 'opacity-100' : 'opacity-0 hidden'}`}>
+          )}
+          {activeTab === 'orders' && (
             <OrderHistory userId={session.user.id} />
-          </div>
+          )}
         </div>
       </div>
     </div>

@@ -56,7 +56,7 @@ export default async function RootLayout({ children }) {
             </div>
           </header>
 
-          <div className="h-[250px] sm:h-[250px]" aria-hidden="true" />
+          <div className="h-[200px] sm:h-[200px]" aria-hidden="true" />
 
           <main className="min-h-screen w-full">
             <div className="container mx-auto px-4">
@@ -116,31 +116,45 @@ export default async function RootLayout({ children }) {
           </footer>
 
           <div id="modal-root" className="relative z-50" />
-          <Toaster 
+          {/* <Toaster 
             position="top-right"
             containerStyle={{
               top: '400px',
             }}
             toastOptions={{
-              duration: 3000,
+              duration: 4000,
               style: {
                 background: '#363636',
                 color: '#fff',
+                fontSize: '16px',
+                padding: '16px',
+                borderRadius: '10px',
+                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
               },
               success: {
-                duration: 3000,
-                theme: {
-                  primary: '#4CAF50',
+                duration: 5000,
+                icon: '✅',
+                style: {
+                  background: '#10B981',
+                },
+                iconTheme: {
+                  primary: '#FFFFFF',
+                  secondary: '#10B981',
                 }
               },
               error: {
-                duration: 4000,
-                theme: {
-                  primary: '#E57373',
+                duration: 6000,
+                icon: '❌',
+                style: {
+                  background: '#EF4444',
+                },
+                iconTheme: {
+                  primary: '#FFFFFF',
+                  secondary: '#EF4444',
                 }
               }
             }}
-          />
+          /> */}
         </Providers>
       </body>
     </html>

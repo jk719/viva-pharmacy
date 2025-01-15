@@ -1,6 +1,12 @@
 import mongoose from 'mongoose';
 
 const OrderSchema = new mongoose.Schema({
+    orderNumber: {
+        type: String,
+        required: true,
+        unique: true,
+        index: true
+    },
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
@@ -110,6 +116,7 @@ const OrderSchema = new mongoose.Schema({
 
 OrderSchema.index({ createdAt: -1 });
 OrderSchema.index({ userId: 1, createdAt: -1 });
+OrderSchema.index({ orderNumber: 1 }, { unique: true });
 
 OrderSchema.methods.getStatusColor = function() {
     const statusColors = {
@@ -122,10 +129,26 @@ OrderSchema.methods.getStatusColor = function() {
     return statusColors[this.status] || 'gray';
 };
 
-OrderSchema.pre('save', function(next) {
+OrderSchema.pre('save', async function(next) {
     if (this.status) {
         this.status = this.status.charAt(0).toUpperCase() + this.status.slice(1).toLowerCase();
     }
+    
+    if (!this.orderNumber) {
+        const timestamp = Date.now();
+        const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+        this.orderNumber = `ORD-${timestamp}-${random}`;
+        
+        try {
+            const existingOrder = await mongoose.models.Order.findOne({ orderNumber: this.orderNumber });
+            if (existingOrder) {
+                return next(new Error('Order number already exists. Please try again.'));
+            }
+        } catch (err) {
+            return next(err);
+        }
+    }
+    
     next();
 });
 

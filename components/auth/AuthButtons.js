@@ -52,10 +52,14 @@ export function AuthButtons() {
     setError('');
 
     try {
+      // Check if this is a verification auto-login
+      const isVerificationLogin = formData.verificationLogin === 'true';
+      
       const result = await signIn('credentials', {
         redirect: false,
         email: formData.email.toLowerCase().trim(),
-        password: formData.password
+        password: formData.password,
+        verificationLogin: isVerificationLogin ? 'true' : undefined
       });
 
       if (result?.error) {
@@ -63,7 +67,7 @@ export function AuthButtons() {
         toast.error(result.error);
       } else {
         setShowLogin(false);
-        toast.success('Successfully signed in!');
+        toast.success(isVerificationLogin ? 'Email verified and signed in!' : 'Successfully signed in!');
         router.refresh();
       }
     } catch (err) {
@@ -73,6 +77,12 @@ export function AuthButtons() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Add a method to handle verification auto-login
+  const handleVerificationLogin = async (email) => {
+    setFormData({ email, password: '', verificationLogin: 'true' });
+    return handleSubmit(new Event('submit'));
   };
 
   const handleSignOut = async () => {
@@ -370,3 +380,12 @@ export function AuthButtons() {
     </div>
   );
 }
+
+// Export the component and the verification login handler
+export const verificationLogin = async (email) => {
+  const authButtons = document.querySelector('[data-auth-buttons]');
+  if (authButtons) {
+    return authButtons.__verificationLogin(email);
+  }
+  return false;
+};

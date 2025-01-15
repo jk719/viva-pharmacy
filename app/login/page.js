@@ -1,31 +1,109 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
 import Link from 'next/link';
 
 function MessageDisplay() {
   const searchParams = useSearchParams();
-  const message = searchParams.get('message');
+  const [displayMessage, setDisplayMessage] = useState(null);
+  const [displayError, setDisplayError] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    setIsLoading(true);
+    const message = searchParams.get('message');
+    const error = searchParams.get('error');
+    
+    if (message) setDisplayMessage(message);
+    if (error) setDisplayError(error === 'CredentialsSignin' ? 'Invalid email or password' : error);
+    
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchParams]);
   
-  if (!message) return null;
+  if (isLoading) {
+    return (
+      <div className="animate-pulse">
+        <div className="h-12 bg-gray-200 rounded"></div>
+      </div>
+    );
+  }
   
-  return (
-    <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
-      {message}
-    </div>
-  );
+  if (!displayMessage && !displayError) return null;
+  
+  if (displayError && displayError !== 'undefined') {
+    return (
+      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded 
+                    animate-fadeIn transition-all duration-300">
+        {displayError}
+      </div>
+    );
+  }
+  
+  if (displayMessage) {
+    return (
+      <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded
+                    animate-fadeIn transition-all duration-300">
+        {displayMessage}
+      </div>
+    );
+  }
+
+  return null;
 }
 
-function LoginContent() {
+export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [formData, setFormData] = useState({
-    email: '',
+    email: searchParams.get('email') || '',
     password: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const autoLogin = async () => {
+      const verificationSuccess = searchParams.get('verification') === 'success';
+      const email = searchParams.get('email');
+      
+      if (verificationSuccess && email) {
+        console.log('Attempting auto-login after verification for:', email);
+        setLoading(true);
+        
+        try {
+          const result = await signIn('credentials', {
+            redirect: false,
+            email: email.toLowerCase().trim(),
+            verificationLogin: 'true'
+          });
+
+          console.log('Auto-login result:', result);
+
+          if (result?.ok) {
+            console.log('Auto-login successful, redirecting...');
+            router.push('/?message=Welcome! Your email has been verified.');
+            router.refresh();
+          } else {
+            console.error('Auto-login failed:', result?.error);
+            setError('Auto-login failed. Please sign in manually.');
+            setFormData(prev => ({ ...prev, email }));
+          }
+        } catch (err) {
+          console.error('Auto-login error:', err);
+          setError('Auto-login failed. Please sign in manually.');
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    autoLogin();
+  }, [searchParams, router]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -35,18 +113,32 @@ function LoginContent() {
     try {
       const result = await signIn('credentials', {
         redirect: false,
-        email: formData.email,
+        email: formData.email.toLowerCase().trim(),
         password: formData.password
       });
 
+      if (!result) {
+        throw new Error('No response from authentication server');
+      }
+
       if (result.error) {
-        setError(result.error);
-      } else {
+        switch (result.error) {
+          case 'Please verify your email before logging in':
+            setError('Please check your email for verification link');
+            break;
+          case 'CredentialsSignin':
+            setError('Invalid email or password');
+            break;
+          default:
+            setError(result.error);
+        }
+      } else if (result.ok) {
         router.push('/');
         router.refresh();
       }
     } catch (err) {
-      setError('An error occurred during sign in');
+      console.error('Login error:', err);
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -60,15 +152,16 @@ function LoginContent() {
             Sign in to your account
           </h2>
         </div>
-        <Suspense fallback={<div>Loading...</div>}>
-          <MessageDisplay />
-        </Suspense>
+        
+        <MessageDisplay />
+        
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-              {error}
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+              <span className="block sm:inline">{error}</span>
             </div>
           )}
+          
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
               <input
@@ -104,9 +197,13 @@ function LoginContent() {
             <button
               type="submit"
               disabled={loading}
-              className={`group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${
-                loading ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
+              className={`
+                group relative w-full flex justify-center py-2 px-4 
+                border border-transparent text-sm font-medium rounded-md 
+                text-white bg-indigo-600 hover:bg-indigo-700 
+                focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500
+                ${loading ? 'opacity-50 cursor-not-allowed' : ''}
+              `}
             >
               {loading ? 'Signing in...' : 'Sign in'}
             </button>
@@ -121,8 +218,4 @@ function LoginContent() {
       </div>
     </div>
   );
-}
-
-export default function LoginPage() {
-  return <LoginContent />;
 }

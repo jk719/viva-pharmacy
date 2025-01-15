@@ -9,12 +9,46 @@ export const authOptions = {
       name: 'Credentials',
       credentials: {
         email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        password: { label: "Password", type: "password" },
+        verificationLogin: { label: "Verification Login", type: "boolean" }
       },
       async authorize(credentials, req) {
         try {
           await dbConnect();
           
+          console.log('Auth attempt:', {
+            email: credentials.email,
+            isVerificationLogin: credentials.verificationLogin === 'true'
+          });
+          
+          if (credentials.verificationLogin === 'true') {
+            console.log('Attempting verification auto-login');
+            const user = await User.findOne({ 
+              email: credentials.email.toLowerCase(),
+              isVerified: true 
+            });
+            
+            console.log('Verification login user found:', !!user);
+            
+            if (user) {
+              console.log('Auto-login successful for:', user.email);
+              return {
+                id: user._id.toString(),
+                email: user.email,
+                role: user.role || 'USER',
+                isVerified: true,
+                vivaBucks: user.vivaBucks || 0,
+                rewardPoints: user.rewardPoints || 0,
+                cumulativePoints: user.cumulativePoints || 0,
+                currentTier: user.currentTier || 'STANDARD'
+              };
+            }
+            console.log('Verification auto-login failed: User not found or not verified');
+            throw new Error('Verification auto-login failed');
+          }
+
+          // Normal login flow
+          console.log('Normal login attempt');
           if (!credentials?.email || !credentials?.password) {
             throw new Error('Please enter both email and password');
           }
@@ -35,6 +69,7 @@ export const authOptions = {
             throw new Error('Please verify your email before logging in');
           }
 
+          console.log('Normal login successful for:', user.email);
           return {
             id: user._id.toString(),
             email: user.email,
@@ -59,12 +94,12 @@ export const authOptions = {
   callbacks: {
     async jwt({ token, user, trigger, session }) {
       if (trigger === "update" && session) {
-        // Update token with session data
+        console.log('Updating JWT with session data');
         return { ...token, ...session.user };
       }
 
       if (user) {
-        // Initial sign in
+        console.log('Creating new JWT for user:', user.email);
         token.id = user.id;
         token.role = user.role;
         token.isVerified = user.isVerified;
@@ -77,6 +112,7 @@ export const authOptions = {
     },
     async session({ session, token }) {
       if (token) {
+        console.log('Creating session for user:', token.email);
         session.user = {
           ...session.user,
           id: token.id,

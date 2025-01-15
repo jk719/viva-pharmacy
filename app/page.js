@@ -2,17 +2,82 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import FeaturedProducts from '../components/products/FeaturedProducts';
 import Link from 'next/link';
 import { useCategory } from '@/context/CategoryContext';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { IoArrowForward } from 'react-icons/io5';
 import { fetchProducts } from '@/lib/api';
+import toast from 'react-hot-toast';
 
 export default function Home() {
   const { selectedCategory, setSelectedCategory } = useCategory();
   const [categories, setCategories] = useState(["All"]);
   const [isLoading, setIsLoading] = useState(true);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  
+  useEffect(() => {
+    const verified = searchParams.get('verified');
+    const email = searchParams.get('email');
+    const error = searchParams.get('error');
+    
+    if (verified === 'true' && email) {
+      // Show verification success and login prompt
+      toast.success('Email verified successfully!', {
+        duration: 3000,
+        style: {
+          background: '#10B981',
+          color: '#FFFFFF',
+          padding: '16px',
+          borderRadius: '10px',
+        },
+      });
+
+      // Show login prompt after success message
+      setTimeout(() => {
+        toast((t) => (
+          <div className="flex flex-col gap-3">
+            <p className="font-medium">Please log in to continue</p>
+            <button
+              onClick={() => {
+                toast.dismiss(t.id);
+                router.push('/login');
+              }}
+              className="bg-white text-primary px-4 py-2 rounded-md 
+                         hover:bg-primary/10 transition-colors duration-200
+                         font-medium text-sm"
+            >
+              Log in now
+            </button>
+          </div>
+        ), {
+          duration: 5000,
+          position: 'top-center',
+          style: {
+            background: '#10B981',
+            color: '#FFFFFF',
+            padding: '16px',
+            borderRadius: '10px',
+            maxWidth: '320px',
+          },
+        });
+      }, 3500);
+    }
+    
+    if (error) {
+      toast.error(error, {
+        duration: 6000,
+        style: {
+          background: '#EF4444',
+          color: '#FFFFFF',
+          padding: '16px',
+          borderRadius: '10px',
+        },
+      });
+    }
+  }, [searchParams, router]);
 
   useEffect(() => {
     const loadCategories = async () => {

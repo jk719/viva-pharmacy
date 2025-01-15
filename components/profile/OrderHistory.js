@@ -12,7 +12,17 @@ export default function OrderHistory({ userId }) {
   const [error, setError] = useState(null);
   const [productsMap, setProductsMap] = useState({});
   const [imageErrors, setImageErrors] = useState({});
-  const [dataLoaded, setDataLoaded] = useState(false);
+
+  // Memoize the product mapping function
+  const createProductsMap = useCallback((products) => {
+    const mapping = {};
+    products.forEach(product => {
+      if (product._id && product.image) {
+        mapping[product._id] = product;
+      }
+    });
+    return mapping;
+  }, []);
 
   // Add this debug function
   const debugProductImage = (product, item) => {
@@ -48,7 +58,7 @@ export default function OrderHistory({ userId }) {
     return matchingKey ? cloudinaryUrls[matchingKey] : null;
   };
 
-  // Wrap findProductImage in useCallback with proper dependencies
+  // Memoize findProductImage
   const findProductImage = useCallback((product) => {
     if (!product) return null;
     
@@ -78,62 +88,60 @@ export default function OrderHistory({ userId }) {
     );
 
     return fallbackProduct?.image || null;
-  }, [productsMap]); // Add productsMap as dependency
+  }, []); // Remove productsMap dependency
 
   useEffect(() => {
-    let mounted = true;
+    if (!userId) return;
+
+    const controller = new AbortController();
+    let isMounted = true;
 
     const loadData = async () => {
-      if (!userId || dataLoaded) return;
-
       try {
-        console.log('Loading data for userId:', userId);
+        setLoading(true);
         
-        // Fetch products first
-        const productsData = await fetchProducts();
-        if (!mounted) return;
+        // Fetch both orders and products in parallel
+        const [productsData, ordersResponse] = await Promise.all([
+          fetchProducts({ signal: controller.signal }),
+          fetch(`/api/orders/${userId}`, { signal: controller.signal })
+        ]);
+
+        if (!isMounted) return;
+
+        const ordersData = await ordersResponse.json();
+
+        if (!ordersResponse.ok) {
+          throw new Error(ordersData.error || `HTTP error! status: ${ordersResponse.status}`);
+        }
 
         if (productsData.success) {
-          const productMapping = {};
-          productsData.products.forEach(product => {
-            if (product._id && product.image) {
-              productMapping[product._id] = product;
-            }
-          });
+          const productMapping = createProductsMap(productsData.products);
           setProductsMap(productMapping);
         }
 
-        // Fetch orders
-        const response = await fetch(`/api/orders/${userId}`);
-        const data = await response.json();
-        
-        if (!mounted) return;
-        
-        if (!response.ok) throw new Error(data.error || `HTTP error! status: ${response.status}`);
-        if (!Array.isArray(data)) throw new Error('Invalid data format received from server');
-
-        // Process orders with better logging
-        const ordersWithImages = data.map(order => ({
+        const processedOrders = ordersData.map(order => ({
           ...order,
-          items: order.items.map(item => {
-            const imageUrl = findProductImage(item.productId, item.name);
-            return {
-              ...item,
-              image: imageUrl
-            };
-          })
+          items: order.items.map(item => ({
+            ...item,
+            image: findProductImage({ 
+              _id: item.productId, 
+              name: item.name,
+              image: item.image 
+            })
+          }))
         }));
 
-        setOrders(ordersWithImages);
-        setDataLoaded(true);
+        setOrders(processedOrders);
       } catch (error) {
-        if (mounted) {
+        if (error.name === 'AbortError') return;
+        
+        if (isMounted) {
           console.error('Error in OrderHistory:', error);
           setError(error.message);
           toast.error('Failed to load order history');
         }
       } finally {
-        if (mounted) {
+        if (isMounted) {
           setLoading(false);
         }
       }
@@ -142,27 +150,14 @@ export default function OrderHistory({ userId }) {
     loadData();
 
     return () => {
-      mounted = false;
+      isMounted = false;
+      controller.abort();
     };
-  }, [userId, dataLoaded, findProductImage]);
-
-  useEffect(() => {
-    setDataLoaded(false);
-  }, [userId]);
-
-  useEffect(() => {
-    if (orders.length > 0) {
-      orders.forEach(order => {
-        order.items.forEach(item => {
-          findProductImage(item);
-        });
-      });
-    }
-  }, [orders, findProductImage]);
+  }, [userId, createProductsMap, findProductImage]);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-8">
+      <div className="">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
       </div>
     );
