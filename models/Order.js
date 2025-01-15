@@ -114,9 +114,15 @@ const OrderSchema = new mongoose.Schema({
     }
 });
 
-OrderSchema.index({ createdAt: -1 });
-OrderSchema.index({ userId: 1, createdAt: -1 });
-OrderSchema.index({ orderNumber: 1 }, { unique: true });
+OrderSchema.index({ 
+    orderNumber: 1,
+    createdAt: -1,
+    userId: 1,
+    emailSent: 1
+}, { 
+    unique: true, 
+    partialFilterExpression: { orderNumber: { $type: "string" } } 
+});
 
 OrderSchema.methods.getStatusColor = function() {
     const statusColors = {
@@ -135,17 +141,33 @@ OrderSchema.pre('save', async function(next) {
     }
     
     if (!this.orderNumber) {
-        const timestamp = Date.now();
-        const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-        this.orderNumber = `ORD-${timestamp}-${random}`;
+        let attempts = 0;
+        const maxAttempts = 5;
         
-        try {
-            const existingOrder = await mongoose.models.Order.findOne({ orderNumber: this.orderNumber });
-            if (existingOrder) {
-                return next(new Error('Order number already exists. Please try again.'));
+        while (attempts < maxAttempts) {
+            const timestamp = Date.now();
+            const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+            const candidateOrderNumber = `ORD-${timestamp}-${random}`;
+            
+            try {
+                const existingOrder = await mongoose.models.Order.findOne({ 
+                    orderNumber: candidateOrderNumber 
+                });
+                
+                if (!existingOrder) {
+                    this.orderNumber = candidateOrderNumber;
+                    break;
+                }
+            } catch (err) {
+                console.error('Error checking order number:', err);
             }
-        } catch (err) {
-            return next(err);
+            
+            attempts++;
+            await new Promise(resolve => setTimeout(resolve, 100)); // Small delay between attempts
+        }
+        
+        if (!this.orderNumber) {
+            return next(new Error('Failed to generate unique order number after multiple attempts'));
         }
     }
     
@@ -171,12 +193,26 @@ OrderSchema.methods.canBeModified = function() {
     return !nonModifiableStatuses.includes(this.status);
 };
 
-const Order = mongoose.models.Order || mongoose.model('Order', OrderSchema);
+let Order;
+try {
+    Order = mongoose.models.Order || mongoose.model('Order', OrderSchema);
+} catch (error) {
+    console.error('Error initializing Order model:', error);
+    throw error;
+}
 
 if (process.env.NODE_ENV === 'production') {
-    Order.createIndexes().catch(err => 
-        console.error('Error creating Order indexes:', err)
-    );
+    const createIndexes = async () => {
+        try {
+            await Order.syncIndexes();
+            console.log('Order indexes synchronized successfully');
+        } catch (err) {
+            console.error('Error synchronizing Order indexes:', err);
+            // Don't throw the error - log it and continue
+        }
+    };
+    
+    createIndexes();
 }
 
 export default Order; 

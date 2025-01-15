@@ -17,22 +17,18 @@ function SuccessContent() {
   // Add check for processed payment
   useEffect(() => {
     const hasProcessedPayment = sessionStorage.getItem('paymentProcessed');
+    const paymentIntentId = sessionStorage.getItem('paymentIntentId');
     
-    if (!hasProcessedPayment) {
-      // First time loading
-      sessionStorage.setItem('paymentProcessed', 'true');
-      clearCart();
-    } else {
-      // Already processed - redirect immediately
-      router.push('/');
+    if (!hasProcessedPayment || !paymentIntentId) {
+        router.push('/');
+        return;
     }
 
-    return () => {
-      if (countdown === 0) {
-        sessionStorage.removeItem('paymentProcessed');
-      }
-    };
-  }, [clearCart, router, countdown]);
+    // First time loading
+    clearCart();
+    sessionStorage.removeItem('paymentProcessed');
+    sessionStorage.removeItem('paymentIntentId');
+  }, [clearCart, router]);
 
   // Modified countdown effect
   useEffect(() => {

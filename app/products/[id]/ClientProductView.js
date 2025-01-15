@@ -6,11 +6,11 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { IoArrowBack, IoAdd } from 'react-icons/io5';
 import { HiMinusSm, HiPlusSm } from 'react-icons/hi';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 
-// Dynamic content based on product category
+// Moved outside component to prevent recreation on each render
 const getCategoryContent = (category) => ({
-  Details: product => product.description,
+  Details: product => product.description || "No description available.",
   Ingredients: product => product.ingredients || "Ingredients information not available.",
   Directions: product => product.directions || "Take as directed by your healthcare provider. Read all product information before use.",
   "Storage & Warnings": product => `Store at room temperature. Keep out of reach of children. ${product.warnings || ''}`
@@ -22,21 +22,51 @@ export default function ClientProductView({ product }) {
   const [expandedSection, setExpandedSection] = useState('Details');
   const [imgError, setImgError] = useState(false);
   
+  // Memoize the quantity calculation
+  const getItemQuantity = useCallback((productId) => {
+    if (!items?.length) return 0;
+    const item = items.find(item => item?.id === productId || item?._id === productId);
+    return item?.quantity || 0;
+  }, [items]);
+
+  const quantity = product ? getItemQuantity(product._id) : 0;
+
   const handleBack = () => {
     router.back();
   };
 
-  const getItemQuantity = (productId) => {
-    if (!items) return 0;
-    const item = items.find((item) => item?.id === productId); // Changed back to id for cart consistency
-    return item ? item.quantity : 0;
+  const handleAddToCart = () => {
+    if (!product) return;
+    
+    // Normalize product data for cart
+    const cartItem = {
+      id: product._id,
+      name: product.name,
+      price: parseFloat(product.price),
+      image: product.image,
+      quantity: 1
+    };
+
+    addToCart(cartItem);
   };
 
-  const quantity = product ? getItemQuantity(product._id) : 0;
+  const handleDecrement = () => {
+    if (!product?._id) return;
+    decrement(product._id);
+  };
+
+  const toggleSection = (section) => {
+    setExpandedSection(prev => prev === section ? null : section);
+  };
 
   if (!product) {
     return (
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+      >
         <div className="bg-white p-6 rounded-lg shadow-xl">
           <p className="text-gray-600">Product details are not available.</p>
           <button
@@ -46,29 +76,9 @@ export default function ClientProductView({ product }) {
             Go Back
           </button>
         </div>
-      </div>
+      </motion.div>
     );
   }
-
-  const handleAddToCart = () => {
-    if (!product) return;
-    addToCart({
-      id: product._id, // Changed to match cart context expectations
-      name: product.name,
-      price: product.price,
-      image: product.image,
-      quantity: 1
-    });
-  };
-
-  const handleDecrement = () => {
-    if (!product) return;
-    decrement(product._id);
-  };
-
-  const toggleSection = (section) => {
-    setExpandedSection(expandedSection === section ? null : section);
-  };
 
   const sectionContent = getCategoryContent(product.category);
 

@@ -1,47 +1,45 @@
 require('dotenv').config({ path: '.env.local' });
 const { sendOrderConfirmationEmail } = require('./lib/email/sendEmail');
+const { generateOrderConfirmationEmail } = require('./lib/email-templates/order-confirmation');
 
-// Get command line arguments
-const args = process.argv.slice(2);
-const toEmail = args[0] || 'jamilkabir.dev@gmail.com';
-const subject = args[1] || `Test Email from Viva Pharmacy ${new Date().toISOString()}`;
-const customHtml = args[2] || `
-    <h1>This is a test email</h1>
-    <p>If you receive this, the email configuration is working.</p>
-    <p>Sent at: ${new Date().toLocaleString()}</p>
-`;
-
-console.log('📧 Test Email Configuration:', {
-    to: toEmail,
-    subject: subject,
-    bodyPreview: customHtml.substring(0, 100) + '...',
-    environment: process.env.NODE_ENV || 'development'
-});
+const testOrder = {
+    orderNumber: 'TEST-123',
+    customerName: 'Test User',
+    items: [{
+        name: 'Test Product',
+        price: 19.99,
+        quantity: 1,
+        image: 'https://res.cloudinary.com/your-cloud-name/image/upload/test-image.jpg'
+    }],
+    subtotal: 19.99,
+    tax: 1.99,
+    total: 21.98,
+    deliveryMethod: 'pickup',
+    selectedTime: '2:00 PM',
+    shippingAddress: {
+        street: '123 Test St',
+        city: 'Test City',
+        state: 'TS',
+        zipCode: '12345'
+    }
+};
 
 async function testEmail() {
     try {
-        console.log('🚀 Attempting to send test email...');
+        console.log('🚀 Generating test email content...');
+        const emailContent = generateOrderConfirmationEmail(testOrder);
         
+        console.log('📧 Sending test email...');
         const result = await sendOrderConfirmationEmail(
-            toEmail,
-            subject,
-            customHtml
+            'your-test-email@example.com',
+            emailContent
         );
 
-        console.log('✅ Test email sent successfully:', {
-            to: toEmail,
-            messageId: result.messageId,
-            success: result.success
-        });
+        console.log('✅ Test email sent successfully:', result);
     } catch (error) {
-        console.error('❌ Error sending test email:', {
-            message: error.message,
-            code: error.code,
-            command: error.command
-        });
+        console.error('❌ Error:', error);
         process.exit(1);
     }
 }
 
-// Start the test
 testEmail(); 
