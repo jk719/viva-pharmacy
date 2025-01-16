@@ -1,10 +1,12 @@
 'use client';
 
 import { REWARDS_CONFIG } from '@/lib/rewards/config';
+import { RewardsUtils } from '@/lib/rewards/utils';
 
 export default function RewardsOverview({ points, tier }) {
-  const availableRewards = REWARDS_CONFIG.getRewardAmount(points);
-  const pointsToNext = REWARDS_CONFIG.getPointsToNextReward(points);
+  const progress = RewardsUtils.calculateProgress(points);
+  const availableRewards = progress.availableReward;
+  const pointsToNext = progress.pointsToNextReward;
   const currentTier = REWARDS_CONFIG.MEMBERSHIP_TIERS[tier];
 
   return (

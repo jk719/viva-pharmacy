@@ -3,13 +3,15 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { BsCoin } from 'react-icons/bs';
-import { FaCrown, FaGift, FaTrophy, FaChartLine, FaHistory } from 'react-icons/fa';
+import { FaCrown, FaGift, FaTrophy, FaChartLine, FaHistory, FaStar, FaCoins } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 import TierBenefits from './rewards/TierBenefits';
 import RewardHistory from './rewards/RewardHistory';
 import TestPoints from './TestPoints';
 import eventEmitter, { Events } from '@/lib/eventEmitter';
 import { motion, AnimatePresence } from 'framer-motion';
+import { REWARDS_CONFIG } from '@/lib/rewards/config';
+import { RewardsUtils } from '@/lib/rewards/utils';
 
 const TIER_COLORS = {
   'Standard': '#6B7280',
@@ -116,6 +118,12 @@ export default function VivaBucksDashboard() {
     }
   };
 
+  // Calculate values using REWARDS_CONFIG
+  const currentVivaBucks = Math.floor(rewardsData?.rewardPoints || 0);
+  const availableReward = REWARDS_CONFIG.getRewardAmount(currentVivaBucks);
+  const progress = (currentVivaBucks % REWARDS_CONFIG.REWARD_RATE.POINTS_NEEDED) / REWARDS_CONFIG.REWARD_RATE.POINTS_NEEDED * 100;
+  const tierColor = REWARDS_CONFIG.MEMBERSHIP_TIERS[rewardsData?.currentTier]?.color || 'text-gray-500';
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 py-8">
@@ -160,34 +168,68 @@ export default function VivaBucksDashboard() {
           <p className="text-lg text-gray-600">Track your rewards and benefits</p>
         </motion.div>
 
-        {/* Stats Grid - Single row layout with smaller text */}
+        {/* Stats Grid - Updated with new values */}
         <div className="flex flex-col sm:flex-row gap-4 lg:gap-6 mb-10 overflow-x-auto pb-4 -mx-4 px-4">
-          {/* Available Balance Card */}
+          {/* Current Points Card */}
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.1 }}
             className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-300
-                     border border-gray-100 overflow-hidden group
-                     w-full sm:w-1/3 flex-shrink-0"
+                     border border-gray-100 overflow-hidden group w-full sm:w-1/3 flex-shrink-0"
           >
             <div className="p-4 lg:p-6">
               <div className="flex items-start sm:items-center gap-3">
                 <div className="p-2.5 rounded-xl bg-orange-100 text-orange-500 
-                            group-hover:scale-110 transition-transform duration-300
-                            shrink-0">
-                  <BsCoin className="text-lg" />
+                            group-hover:scale-110 transition-transform duration-300 shrink-0">
+                  <FaCoins className="text-lg" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-xs font-medium text-gray-500 mb-0.5">Available Balance</h3>
-                  <p className="text-lg lg:text-xl font-bold text-gray-900 truncate">
-                    ${rewardsData.vivaBucks.toFixed(2)}
+                  <h3 className="text-xs font-medium text-gray-500 mb-0.5">Lifetime Points</h3>
+                  <p className="text-lg lg:text-xl font-bold text-gray-900">
+                    {REWARDS_CONFIG.formatPoints(rewardsData.cumulativePoints)}
                   </p>
                 </div>
               </div>
-              <div className="mt-2 text-xs text-gray-500 leading-relaxed pl-[44px]">
-                Ready to use on your next purchase
+              <div className="mt-2">
+                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-[#FF9F43] to-[#FFB976]"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {REWARDS_CONFIG.formatPoints(currentVivaBucks % REWARDS_CONFIG.REWARD_RATE.POINTS_NEEDED)} / 
+                  {REWARDS_CONFIG.REWARD_RATE.POINTS_NEEDED} points to next reward
+                </p>
               </div>
+            </div>
+          </motion.div>
+
+          {/* Available Rewards Card */}
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-300
+                     border border-gray-100 overflow-hidden group w-full sm:w-1/3 flex-shrink-0"
+          >
+            <div className="p-4 lg:p-6">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-emerald-100 text-emerald-500 
+                            group-hover:scale-110 transition-transform duration-300 shrink-0">
+                  <FaGift className="text-lg" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-xs font-medium text-gray-500 mb-0.5">Available Rewards</h3>
+                  <p className="text-lg lg:text-xl font-bold text-emerald-600">
+                    {REWARDS_CONFIG.formatCurrency(availableReward)}
+                  </p>
+                </div>
+              </div>
+              <p className="mt-2 text-xs text-gray-500 pl-[44px]">
+                Ready to redeem on your next purchase
+              </p>
             </div>
           </motion.div>
 
@@ -195,62 +237,26 @@ export default function VivaBucksDashboard() {
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.2 }}
+            transition={{ delay: 0.3 }}
             className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-300
-                     border border-gray-100 overflow-hidden group
-                     w-full sm:w-1/3 flex-shrink-0"
+                     border border-gray-100 overflow-hidden group w-full sm:w-1/3 flex-shrink-0"
           >
             <div className="p-4 lg:p-6">
               <div className="flex items-start sm:items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-indigo-100 text-indigo-500 
-                            group-hover:scale-110 transition-transform duration-300
-                            shrink-0">
-                  <FaCrown className="text-lg" />
+                <div className={`p-2.5 rounded-xl bg-opacity-10 ${tierColor} 
+                            group-hover:scale-110 transition-transform duration-300 shrink-0`}>
+                  <FaCrown className={`text-lg ${tierColor}`} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <h3 className="text-xs font-medium text-gray-500 mb-0.5">Current Tier</h3>
-                  <div className="flex items-baseline gap-1.5 truncate">
-                    <p className="text-base lg:text-lg font-bold text-gray-900">
-                      {rewardsData.currentTier}
-                    </p>
-                    <span className="text-xs font-medium text-gray-500">
-                      ({rewardsData.pointsMultiplier}x)
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div className="mt-2 text-xs text-gray-500 leading-relaxed pl-[44px]">
-                Your current membership level
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Lifetime Points Card */}
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-300
-                     border border-gray-100 overflow-hidden group
-                     w-full sm:w-1/3 flex-shrink-0"
-          >
-            <div className="p-4 lg:p-6">
-              <div className="flex items-start sm:items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-emerald-100 text-emerald-500 
-                            group-hover:scale-110 transition-transform duration-300
-                            shrink-0">
-                  <FaTrophy className="text-lg" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="text-xs font-medium text-gray-500 mb-0.5">Lifetime Points</h3>
-                  <p className="text-lg lg:text-xl font-bold text-gray-900 truncate">
-                    {rewardsData.cumulativePoints}
+                  <p className={`text-lg lg:text-xl font-bold ${tierColor}`}>
+                    {rewardsData?.currentTier || 'STANDARD'}
                   </p>
                 </div>
               </div>
-              <div className="mt-2 text-xs text-gray-500 leading-relaxed pl-[44px]">
-                Total points earned to date
-              </div>
+              <p className="mt-2 text-xs text-gray-500 pl-[44px]">
+                {rewardsData?.pointsMultiplier}x points multiplier active
+              </p>
             </div>
           </motion.div>
         </div>

@@ -4,6 +4,7 @@ import User from '@/models/User';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { REWARDS_CONFIG } from '@/lib/rewards/config';
+import { RewardsUtils } from '@/lib/rewards/utils';
 
 export async function POST(request) {
   try {
@@ -26,7 +27,9 @@ export async function POST(request) {
     }
 
     // Validation logic
-    const availableReward = REWARDS_CONFIG.getRewardAmount(user.rewardPoints);
+    const progress = RewardsUtils.calculateProgress(user.rewardPoints);
+    const availableReward = progress.availableReward;
+    
     if (availableReward === 0 || amount > availableReward) {
       return NextResponse.json({ 
         error: amount > availableReward ? 

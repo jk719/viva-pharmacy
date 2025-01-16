@@ -2,6 +2,7 @@
 
 import { FaCrown } from 'react-icons/fa';
 import { REWARDS_CONFIG } from '@/lib/rewards/config';
+import { RewardsUtils } from '@/lib/rewards/utils';
 
 // Add tier colors
 const TIER_COLORS = {
@@ -20,21 +21,9 @@ export default function TierBenefits({
     return null;
   }
 
-  const nextTier = getNextTier(currentTier);
-  const pointsToNextTier = getPointsToNextTier(currentTier, cumulativePoints);
+  const nextTier = RewardsUtils.getMembershipTier(cumulativePoints).next;
+  const pointsToNextTier = RewardsUtils.getProgressToNextTier(cumulativePoints).pointsNeeded;
   const currentTierConfig = REWARDS_CONFIG.MEMBERSHIP_TIERS[currentTier] || REWARDS_CONFIG.MEMBERSHIP_TIERS.STANDARD;
-
-  function getNextTier(tier) {
-    const tiers = Object.keys(REWARDS_CONFIG.MEMBERSHIP_TIERS);
-    const currentIndex = tiers.indexOf(tier);
-    return currentIndex < tiers.length - 1 ? tiers[currentIndex + 1] : null;
-  }
-
-  function getPointsToNextTier(tier, points) {
-    const nextTierName = getNextTier(tier);
-    if (!nextTierName) return null;
-    return Math.max(0, REWARDS_CONFIG.MEMBERSHIP_TIERS[nextTierName].minPoints - points);
-  }
 
   function getProgressPercentage(points, nextTierPoints) {
     const currentTierMin = REWARDS_CONFIG.MEMBERSHIP_TIERS[currentTier].minPoints;

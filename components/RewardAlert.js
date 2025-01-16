@@ -6,6 +6,8 @@ import { useSession } from 'next-auth/react';
 import eventEmitter, { Events } from '@/lib/eventEmitter';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import { REWARDS_CONFIG } from '@/lib/rewards/config';
+import { RewardsUtils } from '@/lib/rewards/utils';
 
 export default function RewardAlert() {
   const { data: session, status } = useSession();

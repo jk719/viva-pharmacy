@@ -4,14 +4,8 @@ import dbConnect from '@/lib/dbConnect';
 import User from '@/models/User';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-
-// Define tiers directly if REWARDS_CONFIG is not working
-const TIERS = {
-  STANDARD: { name: 'STANDARD', threshold: 0, multiplier: 1 },
-  SILVER: { name: 'SILVER', threshold: 1000, multiplier: 1.2 },
-  GOLD: { name: 'GOLD', threshold: 2500, multiplier: 1.5 },
-  PLATINUM: { name: 'PLATINUM', threshold: 5000, multiplier: 2 }
-};
+import { REWARDS_CONFIG } from '@/lib/rewards/config';
+import { RewardsUtils } from '@/lib/rewards/utils';
 
 export async function GET(request) {
   try {
@@ -104,16 +98,9 @@ export async function POST(request) {
 
     // Check and update tier
     const currentPoints = user.cumulativePoints;
-    let newTier = TIERS.STANDARD;
-    
-    for (const tier of Object.values(TIERS)) {
-      if (currentPoints >= tier.threshold) {
-        newTier = tier;
-      }
-    }
-
-    user.currentTier = newTier.name;
-    user.pointsMultiplier = newTier.multiplier;
+    const tierInfo = RewardsUtils.getMembershipTier(currentPoints);
+    user.currentTier = tierInfo.name;
+    user.pointsMultiplier = tierInfo.multiplier;
 
     // Update next reward milestone
     user.nextRewardMilestone = Math.ceil(user.rewardPoints / 100) * 100;

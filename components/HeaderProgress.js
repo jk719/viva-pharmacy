@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import eventEmitter, { Events } from '@/lib/eventEmitter';
 import { FaStar, FaGift, FaCoins } from 'react-icons/fa';
 import { REWARDS_CONFIG } from '@/lib/rewards/config';
+import { RewardsUtils } from '@/lib/rewards/utils';
 import { Dialog } from '@headlessui/react';
 import confetti from 'canvas-confetti';
 import { useRewardsStore } from '@/lib/stores/rewardsStore';
@@ -113,11 +114,14 @@ export default function HeaderProgress() {
   }, [fetchRewardsData]);
 
   const currentVivaBucks = Math.floor(rewardsData?.rewardPoints || 0);
-  const vivaBucksToNextReward = REWARDS_CONFIG.getPointsToNextReward(currentVivaBucks);
-  const availableReward = REWARDS_CONFIG.getRewardAmount(currentVivaBucks);
-  const progress = (currentVivaBucks % REWARDS_CONFIG.REWARD_RATE.POINTS_NEEDED) / REWARDS_CONFIG.REWARD_RATE.POINTS_NEEDED * 100;
-  const currentProgressVivaBucks = Math.floor(currentVivaBucks % REWARDS_CONFIG.REWARD_RATE.POINTS_NEEDED);
+  const progress = RewardsUtils.calculateProgress(currentVivaBucks);
+  const tierInfo = RewardsUtils.getMembershipTier(rewardsData?.cumulativePoints || 0);
+  const availableReward = progress.availableReward;
   const tierColor = REWARDS_CONFIG.MEMBERSHIP_TIERS[rewardsData?.currentTier]?.color || 'text-gray-500';
+
+  const currentProgressVivaBucks = progress.currentProgressPoints;
+  const pointsToNextReward = progress.pointsToNextReward;
+  const progressPercentage = progress.progress;
 
   const handleRewardClick = () => {
     if (availableReward > 0) {
@@ -342,7 +346,7 @@ export default function HeaderProgress() {
                         animate={{ scale: 1 }}
                         transition={{ type: "spring", stiffness: 300, damping: 15 }}
                       >
-                        {REWARDS_CONFIG.formatPoints(currentVivaBucks)}
+                        {REWARDS_CONFIG.formatPoints(rewardsData.cumulativePoints)}
                       </motion.span>
                       <FaCoins className="text-[#FF9F43] text-xs animate-bounce-subtle" />
                     </div>
@@ -396,10 +400,10 @@ export default function HeaderProgress() {
                     <motion.div
                       className="absolute h-full bg-gradient-to-r from-[#FF9F43] to-[#FFB976] rounded-full"
                       initial={{ width: 0 }}
-                      animate={{ width: `${Math.min(progress, 100)}%` }}
+                      animate={{ width: `${Math.min(progressPercentage, 100)}%` }}
                       transition={{ 
                         duration: 0.8, 
-                        ease: [0.34, 1.56, 0.64, 1]  // Custom spring-like easing
+                        ease: [0.34, 1.56, 0.64, 1]
                       }}
                     >
                       {/* Progress indicator with enhanced animations */}
@@ -444,7 +448,7 @@ export default function HeaderProgress() {
                         animate={{ scale: 1 }}
                         transition={{ type: "spring", stiffness: 300, damping: 15 }}
                       >
-                        {REWARDS_CONFIG.formatPoints(currentVivaBucks)}
+                        {REWARDS_CONFIG.formatPoints(rewardsData.cumulativePoints)}
                       </motion.span>
                       <FaCoins className="text-[#FF9F43] text-sm animate-float" />
                     </div>
@@ -499,7 +503,7 @@ export default function HeaderProgress() {
                     <motion.div
                       className="absolute h-full bg-gradient-to-r from-[#FF9F43] to-[#FFB976] rounded-full"
                       initial={{ width: 0 }}
-                      animate={{ width: `${Math.min(progress, 100)}%` }}
+                      animate={{ width: `${Math.min(progressPercentage, 100)}%` }}
                       transition={{ 
                         duration: 0.8, 
                         ease: [0.34, 1.56, 0.64, 1]
