@@ -7,6 +7,7 @@ import crypto from 'crypto';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export async function POST(request) {
+    console.log('💳 Payment endpoint hit');
     try {
         // Get session
         const session = await getServerSession(authOptions);
@@ -15,6 +16,34 @@ export async function POST(request) {
                 { error: 'Unauthorized' },
                 { status: 401 }
             );
+        }
+
+        // Get request ID from headers
+        const requestId = request.headers.get('x-payment-request-id');
+        if (!requestId) {
+            return NextResponse.json(
+                { error: 'Missing request ID' },
+                { status: 400 }
+            );
+        }
+
+        // Check for existing payment intent with this request ID
+        const existingIntents = await stripe.paymentIntents.list({
+            limit: 1,
+            created: {
+                gte: Math.floor(Date.now() / 1000) - 300 // Last 5 minutes
+            }
+        });
+
+        const duplicateIntent = existingIntents.data.find(
+            intent => intent.metadata.requestId === requestId
+        );
+
+        if (duplicateIntent) {
+            console.log('⚠️ Duplicate payment request detected:', requestId);
+            return NextResponse.json({
+                clientSecret: duplicateIntent.client_secret
+            });
         }
 
         // Parse request body
@@ -74,7 +103,8 @@ export async function POST(request) {
                     selectedTime,
                     shippingAddress: JSON.stringify(shippingAddress || {}),
                     amountInDollars: amount.toString(),
-                    amountInCents: amountInCents.toString()
+                    amountInCents: amountInCents.toString(),
+                    requestId
                 }
             }, {
                 idempotencyKey
@@ -121,7 +151,8 @@ export async function POST(request) {
                         selectedTime,
                         shippingAddress: JSON.stringify(shippingAddress || {}),
                         amountInDollars: amount.toString(),
-                        amountInCents: amountInCents.toString()
+                        amountInCents: amountInCents.toString(),
+                        requestId
                     }
                 }, {
                     idempotencyKey: newIdempotencyKey

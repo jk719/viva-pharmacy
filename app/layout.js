@@ -16,7 +16,7 @@ import { authOptions } from "./api/auth/[...nextauth]/route";
 import { SWRConfig } from 'swr';
 
 // Add this line before the siteConfig
-EventEmitter.defaultMaxListeners = 15;
+EventEmitter.defaultMaxListeners = 50;
 
 // Metadata can be exported as a constant
 const siteConfig = {

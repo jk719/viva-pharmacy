@@ -7,8 +7,10 @@ import stripePromise from '@/lib/stripe/client';
 import eventEmitter, { Events } from '@/lib/eventEmitter';
 import { useSession } from "next-auth/react";
 import { useCart } from '@/context/CartContext';
+import { useRouter } from 'next/navigation';
 
 const CheckoutForm = ({ amount }) => {
+  const router = useRouter();
   const stripe = useStripe();
   const elements = useElements();
   const [error, setError] = useState(null);
@@ -16,44 +18,45 @@ const CheckoutForm = ({ amount }) => {
   const { data: session } = useSession();
   const { clearCart } = useCart();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    console.log('🔄 Starting payment submission...');
     
-    if (!stripe || !elements || isProcessing) {
-      return;
-    }
-
-    setIsProcessing(true);
-    setError(null);
-
     try {
-      const { error: submitError, paymentIntent } = await stripe.confirmPayment({
-        elements,
-        confirmParams: {
-          return_url: `${window.location.origin}/checkout/success`,
-        },
-        redirect: 'if_required'
-      });
-
-      if (submitError) {
-        console.error('❌ Payment confirmation error:', submitError);
-        setError(submitError.message);
-        return;
-      }
-
-      if (paymentIntent && paymentIntent.status === 'succeeded') {
-        console.log('✅ Payment successful:', paymentIntent.id);
-        sessionStorage.setItem('paymentProcessed', 'true');
-        sessionStorage.setItem('paymentIntentId', paymentIntent.id);
+        setIsProcessing(true);
+        console.log('💳 Processing payment with Stripe...');
         
-        clearCart();
-        window.location.href = `${window.location.origin}/checkout/success`;
-      }
-    } catch (err) {
-      console.error('❌ Unexpected payment error:', err);
-      setError('An unexpected error occurred during payment. Please try again.');
+        const { paymentIntent, error } = await stripe.confirmPayment({
+            elements,
+            redirect: 'if_required',
+            confirmParams: {
+                return_url: `${window.location.origin}/checkout/success`,
+            },
+        });
+
+        if (error) {
+            console.error('❌ Payment confirmation error:', error);
+            setError(error.message);
+        } else if (paymentIntent.status === 'succeeded') {
+            console.log('✅ Payment confirmed successfully');
+            
+            eventEmitter.emit(Events.PAYMENT_COMPLETED, {
+                paymentIntentId: paymentIntent.id,
+                amount: amount,
+                timestamp: Date.now()
+            });
+
+            clearCart();
+            
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            router.push('/checkout/success');
+        }
+    } catch (error) {
+        console.error('❌ Payment submission error:', error);
+        setError('An unexpected error occurred.');
     } finally {
-      setIsProcessing(false);
+        setIsProcessing(false);
     }
   };
 
@@ -93,17 +96,19 @@ export default function PaymentForm({ amount, items, shippingAddress, deliveryMe
   const [clientSecret, setClientSecret] = useState('');
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [paymentInitialized, setPaymentInitialized] = useState(false);
   const { data: session } = useSession();
 
   useEffect(() => {
-    const initializePayment = async () => {
-      if (!amount || amount <= 0) {
-        setError('Invalid payment amount');
-        setIsLoading(false);
-        return;
-      }
+    if (paymentInitialized || !amount || amount <= 0) {
+      return;
+    }
 
+    const initializePayment = async () => {
       try {
+        setIsLoading(true);
+        setPaymentInitialized(true);
+
         const formattedAddress = shippingAddress ? {
           street: shippingAddress.street,
           city: shippingAddress.city,
@@ -135,6 +140,7 @@ export default function PaymentForm({ amount, items, shippingAddress, deliveryMe
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'X-Payment-Request-ID': `${session?.user?.id}_${Date.now()}`
           },
           body: JSON.stringify(payload),
         });
@@ -145,19 +151,22 @@ export default function PaymentForm({ amount, items, shippingAddress, deliveryMe
         }
 
         const data = await response.json();
-        console.log('✅ Payment initialized successfully');
-        setClientSecret(data.clientSecret);
+        if (data.clientSecret) {
+          console.log('✅ Payment initialized successfully');
+          setClientSecret(data.clientSecret);
+        }
 
       } catch (err) {
         console.error('❌ Payment initialization error:', err);
         setError(err.message || 'Failed to initialize payment');
+        setPaymentInitialized(false);
       } finally {
         setIsLoading(false);
       }
     };
 
     initializePayment();
-  }, [amount, shippingAddress, deliveryMethod, selectedTime, session, getFormattedItems]);
+  }, [amount]);
 
   if (isLoading) {
     return (

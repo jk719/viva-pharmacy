@@ -14,6 +14,18 @@ app.prepare().then(() => {
     try {
       const parsedUrl = parse(req.url, true);
       
+      // Handle SSE endpoints
+      if (req.url.includes('/api/user/vivabucks') && req.url.endsWith('/events')) {
+        res.setHeader('Connection', 'keep-alive');
+        res.setHeader('Cache-Control', 'no-cache, no-transform');
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('X-Accel-Buffering', 'no');
+        
+        // Increase timeout for SSE connections
+        req.setTimeout(0);
+        res.setTimeout(0);
+      }
+
       // Handle NextAuth.js session endpoint specially
       if (req.url.startsWith('/api/auth')) {
         res.setHeader('Access-Control-Allow-Credentials', 'true');

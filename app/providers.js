@@ -19,7 +19,7 @@ export function Providers({ children, session }) {
   console.log('Providers: Initializing');
   
   return (
-    <SessionProvider session={session} refetchInterval={5 * 60}>
+    <SessionProvider session={session} refetchInterval={20}>
       <SWRConfig 
         value={{
           fetcher,

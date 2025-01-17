@@ -1,9 +1,25 @@
 // src/middleware.js
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
+import { paymentTracker } from '@/lib/stripe/paymentTracker';
 
 export default withAuth(
   function middleware(req) {
+    // Check payment state for success page
+    if (req.nextUrl.pathname === '/checkout/success') {
+      const paymentIntentId = req.cookies.get('paymentIntentId')?.value;
+      if (!paymentIntentId || !paymentTracker.isProcessing(paymentIntentId)) {
+        return NextResponse.redirect(new URL('/', req.url));
+      }
+    }
+
+    // Special handling for SSE connections
+    if (req.nextUrl.pathname.includes('/api/user/vivabucks') && 
+        req.nextUrl.pathname.endsWith('/events')) {
+      req.timeoutMs = 0;
+      return NextResponse.next();
+    }
+
     const isPublicRoute = 
       (req.nextUrl.pathname.startsWith('/api/products') && req.method === 'GET') ||
       req.nextUrl.pathname === '/api/webhook';
@@ -18,7 +34,6 @@ export default withAuth(
       req.nextUrl.pathname.startsWith('/api/products') && 
       ['POST', 'PUT', 'DELETE'].includes(req.method);
 
-    // Check admin access
     if ((isAdminRoute || isProtectedApiRoute) && 
         (!token?.role || !['ADMIN', 'MANAGER'].includes(token.role))) {
       return new NextResponse(
@@ -32,6 +47,12 @@ export default withAuth(
   {
     callbacks: {
       authorized: ({ token, req }) => {
+        // Allow SSE connections with valid session
+        if (req.nextUrl.pathname.includes('/api/user/vivabucks') && 
+            req.nextUrl.pathname.endsWith('/events')) {
+          return !!token;
+        }
+
         // Public routes
         if (req.nextUrl.pathname.startsWith('/api/products') && req.method === 'GET') {
           return true;

@@ -27,6 +27,9 @@ const nextConfig = {
           { key: 'Access-Control-Allow-Origin', value: '*' },
           { key: 'Access-Control-Allow-Methods', value: 'GET,DELETE,PATCH,POST,PUT,OPTIONS' },
           { key: 'Access-Control-Allow-Headers', value: 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, stripe-signature' },
+          { key: 'Connection', value: 'keep-alive' },
+          { key: 'Cache-Control', value: 'no-cache, no-transform' },
+          { key: 'X-Accel-Buffering', value: 'no' }
         ],
       },
       {

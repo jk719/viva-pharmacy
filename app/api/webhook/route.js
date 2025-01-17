@@ -8,6 +8,8 @@ import { generateOrderConfirmationEmail } from '@/lib/email-templates/order-conf
 import { sendOrderConfirmationEmail } from '@/lib/email/sendEmail';
 import { REWARDS_CONFIG } from '@/lib/rewards/config';
 import { RewardsUtils } from '@/lib/rewards/utils';
+import mongoose from 'mongoose';
+import { paymentTracker } from '@/lib/stripe/paymentTracker';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const WEBHOOK_SECRET = process.env.STRIPE_SIGNING_SECRET;
@@ -15,25 +17,29 @@ const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 const createOrder = async (paymentIntent, retryCount = 0) => {
+    const session = await mongoose.startSession();
+    
     try {
-        await dbConnect();
+        session.startTransaction();
         
-        // First check if order already exists with this payment intent
+        // Check for existing order first
         const existingOrder = await Order.findOne({ 
             paymentIntentId: paymentIntent.id 
-        });
+        }).session(session);
 
         if (existingOrder) {
             console.log('ℹ️ Order already exists:', existingOrder._id);
+            await session.commitTransaction();
             return existingOrder;
         }
-        
+
         const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
         const metadata = paymentIntent.metadata || {};
         
-        // Check for existing order number
-        const existingOrderNumber = await Order.findOne({ orderNumber });
+        // Check for existing order number within transaction
+        const existingOrderNumber = await Order.findOne({ orderNumber }).session(session);
         if (existingOrderNumber && retryCount < 3) {
+            await session.abortTransaction();
             return createOrder(paymentIntent, retryCount + 1);
         }
 
@@ -49,7 +55,7 @@ const createOrder = async (paymentIntent, retryCount = 0) => {
                 zipCode: 'Store Pickup'
             };
 
-        const order = await Order.create({
+        const order = await Order.create([{
             orderNumber,
             userId: metadata.userId,
             items: cartItems.map(item => ({
@@ -66,17 +72,56 @@ const createOrder = async (paymentIntent, retryCount = 0) => {
             selectedTime: metadata.selectedTime,
             shippingAddress,
             paymentIntentId: paymentIntent.id
-        });
+        }], { session });
 
-        console.log('✅ Order created successfully:', order._id);
-        return order;
+        await session.commitTransaction();
+        console.log('✅ Order created successfully:', order[0]._id);
+        return order[0];
 
     } catch (error) {
         console.error('❌ Order creation error:', error);
-        if (error.code === 11000 && retryCount < 3) { // Duplicate key error
-            return createOrder(paymentIntent, retryCount + 1);
+        if (session.inTransaction()) {
+            await session.abortTransaction();
         }
         throw error;
+    } finally {
+        await session.endSession();
+    }
+};
+
+const processRewards = async (order, userId) => {
+    const session = await mongoose.startSession();
+    
+    try {
+        session.startTransaction();
+        
+        const user = await User.findById(userId).session(session);
+        if (!user) {
+            throw new Error('User not found');
+        }
+
+        const basePoints = Math.floor(order.total * REWARDS_CONFIG.POINTS_PER_DOLLAR);
+        const result = await user.addPoints(basePoints, false);
+        
+        await Order.findByIdAndUpdate(
+            order._id,
+            {
+                rewardsProcessed: true,
+                pointsAwarded: result.adjustedPoints
+            },
+            { session }
+        );
+
+        await session.commitTransaction();
+        return result;
+
+    } catch (error) {
+        if (session.inTransaction()) {
+            await session.abortTransaction();
+        }
+        throw error;
+    } finally {
+        await session.endSession();
     }
 };
 

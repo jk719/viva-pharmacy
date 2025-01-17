@@ -16,19 +16,18 @@ export function useCart() {
 
 // Add these helper functions at the top
 const normalizeProduct = (product) => {
-  if (!product) return null;
-  return {
-    id: product._id || product.id,
-    name: product.name,
-    price: parseFloat(product.price),
-    image: product.image,
-    quantity: product.quantity || 1
-  };
+    if (!product) return null;
+    return {
+        id: product._id || product.id,
+        name: product.name,
+        price: parseFloat(product.price),
+        image: product.image,
+        quantity: product.quantity || 1
+    };
 };
 
-// CartProvider component to wrap around parts of the app that need access to the cart context
+// CartProvider component
 export function CartProvider({ children }) {
-    console.log('CartContext: Initializing provider');
     const [items, setItems] = useState([]);
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);
@@ -37,6 +36,11 @@ export function CartProvider({ children }) {
     const [showTimeError, setShowTimeError] = useState(false);
     const [subtotal, setSubtotal] = useState(0);
     const [tax, setTax] = useState(0);
+    const [paymentStatus, setPaymentStatus] = useState({
+        processing: false,
+        paymentIntentId: null,
+        error: null
+    });
 
     // Load cart from localStorage on initial mount
     useEffect(() => {
@@ -171,6 +175,51 @@ export function CartProvider({ children }) {
         }));
     }, [items, getProductId]);
 
+    const startPaymentProcessing = useCallback((paymentIntentId) => {
+        setPaymentStatus({
+            processing: true,
+            paymentIntentId,
+            error: null
+        });
+    }, []);
+
+    const completePaymentProcessing = useCallback(() => {
+        setPaymentStatus({
+            processing: false,
+            paymentIntentId: null,
+            error: null
+        });
+        clearCart();
+    }, []);
+
+    const handlePaymentError = useCallback((error) => {
+        setPaymentStatus({
+            processing: false,
+            paymentIntentId: null,
+            error
+        });
+    }, []);
+
+    const handlePaymentSuccess = async (paymentIntentId) => {
+        try {
+            console.log('🎉 Payment successful, processing...');
+            
+            // Add a small delay to ensure webhook has processed
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Clear cart
+            setItems([]);
+            localStorage.removeItem('cart');
+            
+            console.log('✅ Cart cleared successfully');
+            
+            return true;
+        } catch (error) {
+            console.error('❌ Error in handlePaymentSuccess:', error);
+            throw error;
+        }
+    };
+
     const value = {
         items,
         total,
@@ -189,7 +238,12 @@ export function CartProvider({ children }) {
         showTimeError,
         setShowTimeError,
         getCartSize,
-        getFormattedItems
+        getFormattedItems,
+        paymentStatus,
+        startPaymentProcessing,
+        completePaymentProcessing,
+        handlePaymentError,
+        handlePaymentSuccess
     };
 
     return (

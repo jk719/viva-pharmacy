@@ -136,42 +136,21 @@ OrderSchema.methods.getStatusColor = function() {
 };
 
 OrderSchema.pre('save', async function(next) {
-    if (this.status) {
-        this.status = this.status.charAt(0).toUpperCase() + this.status.slice(1).toLowerCase();
-    }
-    
-    if (!this.orderNumber) {
-        let attempts = 0;
-        const maxAttempts = 5;
-        
-        while (attempts < maxAttempts) {
-            const timestamp = Date.now();
-            const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-            const candidateOrderNumber = `ORD-${timestamp}-${random}`;
-            
-            try {
-                const existingOrder = await mongoose.models.Order.findOne({ 
-                    orderNumber: candidateOrderNumber 
-                });
-                
-                if (!existingOrder) {
-                    this.orderNumber = candidateOrderNumber;
-                    break;
-                }
-            } catch (err) {
-                console.error('Error checking order number:', err);
-            }
-            
-            attempts++;
-            await new Promise(resolve => setTimeout(resolve, 100)); // Small delay between attempts
+    console.log('📦 Pre-save order hook:', {
+        orderNumber: this.orderNumber,
+        status: this.status,
+        total: this.total
+    });
+    try {
+        if (this.isNew) {
+            // ... existing code ...
+            console.log('✅ Order created successfully:', this._id);
         }
-        
-        if (!this.orderNumber) {
-            return next(new Error('Failed to generate unique order number after multiple attempts'));
-        }
+        next();
+    } catch (error) {
+        console.error('❌ Order pre-save error:', error);
+        next(error);
     }
-    
-    next();
 });
 
 OrderSchema.virtual('formattedDate').get(function() {

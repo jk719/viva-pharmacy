@@ -39,10 +39,7 @@ function SuccessContent() {
         setCountdown(prev => prev - 1);
       }, 1000);
     } else {
-      timeoutId = setTimeout(() => {
-        sessionStorage.removeItem('paymentProcessed');
-        router.push('/');
-      }, 0);
+      router.replace('/');
     }
 
     return () => {

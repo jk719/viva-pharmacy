@@ -5,7 +5,9 @@ import ClientProductView from './ClientProductView';
 import { notFound } from 'next/navigation';
 
 // Metadata generator
-export async function generateMetadata({ params: { id } }) {
+export async function generateMetadata({ params }) {
+  const id = params?.id;
+  
   try {
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products/${id}`, {
       next: { revalidate: 60 }
@@ -37,7 +39,9 @@ export async function generateMetadata({ params: { id } }) {
 }
 
 // Main page component
-export default async function ProductPage({ params: { id } }) {
+export default async function ProductPage({ params }) {
+  const id = params?.id;
+  
   try {
     if (!id) {
       console.error('No product ID provided');
