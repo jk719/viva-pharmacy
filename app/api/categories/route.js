@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/dbConnect';
+import dbConnect from '@/lib/dbConnect';
 import Product from '@/models/Product';
 
 export async function GET() {
   try {
     // Ensure DB connection
-    const db = await connectToDatabase();
+    await dbConnect();
     
     // Find all distinct categories
     const distinctCategories = await Product.distinct('category');

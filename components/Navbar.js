@@ -34,6 +34,7 @@ export default function Navbar() {
   const [isFocused, setIsFocused] = useState(false);
   const router = useRouter();
   const { data: session } = useSession();
+  const [avatarError, setAvatarError] = useState(false);
 
   // Memoized search function
   const searchProducts = useCallback((searchQuery) => {
@@ -86,6 +87,18 @@ export default function Navbar() {
   useEffect(() => {
     console.log('Navbar: Session updated:', session?.user);
   }, [session]);
+
+  const DefaultAvatar = () => (
+    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+      <svg 
+        className="w-6 h-6 text-gray-400" 
+        fill="currentColor" 
+        viewBox="0 0 24 24"
+      >
+        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+      </svg>
+    </div>
+  );
 
   return (
     <>
@@ -198,7 +211,35 @@ export default function Navbar() {
               >
                 <ClientCartIcon />
               </Link>
-              <AuthButtons />
+              {session?.user ? (
+                <div className="flex items-center gap-3">
+                  <Link href="/profile" className="flex items-center gap-2">
+                    {session.user.image ? (
+                      <div className="relative w-8 h-8 rounded-full overflow-hidden bg-gray-100">
+                        <Image
+                          src={session.user.image}
+                          alt={session.user.name || 'User profile'}
+                          fill
+                          className="object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            e.currentTarget.parentElement.innerHTML = DefaultAvatar();
+                          }}
+                          priority
+                        />
+                      </div>
+                    ) : (
+                      <DefaultAvatar />
+                    )}
+                    <span className="text-white hover:text-white/80 transition-colors duration-300">
+                      {session.user.name}
+                    </span>
+                  </Link>
+                  <AuthButtons />
+                </div>
+              ) : (
+                <AuthButtons />
+              )}
             </div>
           </div>
 

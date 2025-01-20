@@ -5,13 +5,22 @@ const nextConfig = {
   reactStrictMode: false,
   trailingSlash: false,
   images: {
-    domains: ['res.cloudinary.com'],
+    domains: [
+      'res.cloudinary.com',
+      'www.gravatar.com',
+      'via.placeholder.com'
+    ],
     remotePatterns: [
       {
         protocol: 'https',
         hostname: 'res.cloudinary.com',
         pathname: '/dv3cd1aoy/image/upload/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'via.placeholder.com',
+        pathname: '/**',
+      }
     ],
     unoptimized: true,
   },

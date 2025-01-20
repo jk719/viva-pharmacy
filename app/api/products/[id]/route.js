@@ -5,12 +5,15 @@ import Product from '@/models/Product';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { isValidObjectId } from 'mongoose';
 
+// Add the fallback image URL as a constant
+const FALLBACK_IMAGE = 'https://res.cloudinary.com/dv3cd1aoy/image/upload/v1737391942/viva-pharmacy/products/placeholder.svg';
+
 export async function GET(request, context) {
-    const { id } = await Promise.resolve(context.params);
-    console.log('GET request for product:', id);
-    
     try {
         await dbConnect();
+        
+        const id = await Promise.resolve(context.params).then(p => p.id);
+        console.log('GET request for product:', id);
         
         if (!id) {
             console.error('No product ID provided');
@@ -31,14 +34,6 @@ export async function GET(request, context) {
 
         const product = await Product.findById(id);
         
-        // Add image URL logging
-        console.log('Product lookup result:', {
-            id,
-            found: !!product,
-            name: product?.name,
-            imageUrl: product?.image
-        });
-        
         if (!product) {
             return NextResponse.json(
                 { success: false, message: 'Product not found' },
@@ -46,22 +41,30 @@ export async function GET(request, context) {
             );
         }
 
-        // Validate image URL
-        if (!product.image?.startsWith('https://res.cloudinary.com/')) {
-            console.warn('Invalid image URL format:', product.image);
-        }
+        // Use Cloudinary URL if available, otherwise use fallback
+        const imageUrl = product.image?.startsWith('https://res.cloudinary.com/') 
+            ? product.image 
+            : FALLBACK_IMAGE;
+
+        // Add image URL logging
+        console.log('Product lookup result:', {
+            id,
+            found: true,
+            name: product.name,
+            imageUrl
+        });
+
+        // Return the product with the validated image URL
+        const productData = product.toObject();
+        productData.image = imageUrl;
 
         return NextResponse.json({ 
             success: true, 
-            product,
+            product: productData,
             message: 'Product fetched successfully'
         });
     } catch (error) {
-        console.error('Error fetching product:', {
-            id,
-            error: error.message,
-            stack: error.stack
-        });
+        console.error('Error fetching product:', error);
         return NextResponse.json(
             { 
                 success: false, 
@@ -74,10 +77,10 @@ export async function GET(request, context) {
 }
 
 export async function PUT(request, context) {
-    const { id } = await Promise.resolve(context.params);
-    console.log('PUT request for product:', id);
-    
     try {
+        const id = await Promise.resolve(context.params).then(p => p.id);
+        console.log('PUT request for product:', id);
+        
         const session = await getServerSession(authOptions);
         console.log('Session user role:', session?.user?.role);
         
@@ -131,10 +134,10 @@ export async function PUT(request, context) {
 }
 
 export async function DELETE(request, context) {
-    const { id } = await Promise.resolve(context.params);
-    console.log('DELETE request for product:', id);
-    
     try {
+        const id = await Promise.resolve(context.params).then(p => p.id);
+        console.log('DELETE request for product:', id);
+        
         const session = await getServerSession(authOptions);
         console.log('Session user role:', session?.user?.role);
         

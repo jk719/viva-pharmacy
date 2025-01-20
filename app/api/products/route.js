@@ -8,53 +8,51 @@ export async function GET(request) {
   console.log('GET /api/products: Starting request');
   
   try {
-    console.log('Connecting to database...');
     await dbConnect();
-    console.log('Database connected successfully');
     
-    // Ensure proper URL parsing
-    let searchParams;
-    try {
-      const url = new URL(request.url);
-      searchParams = url.searchParams;
-      console.log('URL parsed successfully:', url.toString());
-    } catch (error) {
-      console.error('URL parsing error:', error);
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Invalid request URL',
-        products: [] 
-      }, { status: 400 });
-    }
+    const url = new URL(request.url);
+    const searchParams = url.searchParams;
     
-    // Build query with type checking
+    // Build query
     const query = {};
     const category = searchParams.get('category');
     const search = searchParams.get('search');
     const featured = searchParams.get('featured');
     const minPrice = searchParams.get('minPrice');
     const maxPrice = searchParams.get('maxPrice');
+    const dosageForm = searchParams.get('dosageForm');
     
-    if (category && typeof category === 'string') query.category = category;
+    if (category) query.category = category;
     if (featured === 'true') query.isFeatured = true;
-    if (search && typeof search === 'string') {
+    if (dosageForm) query.dosageForm = dosageForm;
+    
+    if (search) {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } }
+        { description: { $regex: search, $options: 'i' } },
+        { 'activeIngredients.name': { $regex: search, $options: 'i' } }
       ];
     }
+    
     if (minPrice || maxPrice) {
       query.price = {};
       if (minPrice) query.price.$gte = parseFloat(minPrice);
       if (maxPrice) query.price.$lte = parseFloat(maxPrice);
     }
 
+    // Add stock filter
+    const inStock = searchParams.get('inStock');
+    if (inStock === 'true') {
+      query.stock = { $gt: 0 };
+    }
+
     console.log('Executing query:', JSON.stringify(query, null, 2));
-    const products = await Product.find(query).sort({ createdAt: -1 });
-    console.log(`Found ${products.length} products`);
     
-    // Return consistent response structure
-    const response = {
+    const products = await Product.find(query)
+      .sort({ createdAt: -1 })
+      .populate('createdBy', 'name email');
+
+    return NextResponse.json({
       success: true,
       products,
       pagination: {
@@ -64,10 +62,7 @@ export async function GET(request) {
         perPage: products.length,
         hasMore: false
       }
-    };
-    
-    console.log('Sending successful response');
-    return NextResponse.json(response);
+    });
 
   } catch (error) {
     console.error('Products fetch error:', error);
@@ -94,31 +89,54 @@ export async function POST(request) {
     const body = await request.json();
     
     // Validate required fields
-    const { name, price, description, category, image, isFeatured = false } = body;
-    if (!name || !price || !description || !category) {
+    const requiredFields = ['name', 'price', 'description', 'category', 'stock', 'dosageForm'];
+    const missingFields = requiredFields.filter(field => !body[field]);
+    
+    if (missingFields.length > 0) {
       return NextResponse.json({ 
         success: false, 
-        message: 'Missing required fields' 
+        message: `Missing required fields: ${missingFields.join(', ')}` 
       }, { status: 400 });
     }
 
-    // Create new product with isFeatured field
-    const product = new Product({
-      name,
-      price: parseFloat(price),
-      description,
-      category,
-      image: image || "https://via.placeholder.com/400x400?text=No+Image",
-      isFeatured,
-      createdBy: session.user.id
-    });
+    // Validate price and stock
+    if (body.price < 0) {
+      return NextResponse.json({
+        success: false,
+        message: 'Price cannot be negative'
+      }, { status: 400 });
+    }
 
+    if (body.stock < 0) {
+      return NextResponse.json({
+        success: false,
+        message: 'Stock cannot be negative'
+      }, { status: 400 });
+    }
+
+    // Generate SKU
+    const sku = await Product.generateSKU(body.category);
+
+    // Clean and prepare data
+    const productData = {
+      ...body,
+      sku,
+      price: parseFloat(body.price),
+      stock: parseInt(body.stock),
+      image: body.image || "https://via.placeholder.com/400x400?text=No+Image",
+      activeIngredients: (body.activeIngredients || []).filter(i => i.name && i.amount),
+      warnings: (body.warnings || []).filter(w => w.trim()),
+      createdBy: session.user.id
+    };
+
+    // Create new product
+    const product = new Product(productData);
     await product.save();
 
     console.log('Created product:', {
       id: product._id,
       name: product.name,
-      isFeatured: product.isFeatured
+      sku: product.sku
     });
 
     return NextResponse.json({
@@ -129,6 +147,25 @@ export async function POST(request) {
 
   } catch (error) {
     console.error('Product creation error:', error);
+    
+    // Handle mongoose validation errors
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(err => err.message);
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Validation failed',
+        errors: validationErrors
+      }, { status: 400 });
+    }
+
+    // Handle duplicate SKU error
+    if (error.code === 11000) {
+      return NextResponse.json({ 
+        success: false, 
+        message: 'A product with this SKU already exists' 
+      }, { status: 400 });
+    }
+
     return NextResponse.json({ 
       success: false, 
       message: 'Failed to create product' 
@@ -159,6 +196,21 @@ export async function PUT(request) {
     }
 
     const updates = await request.json();
+    
+    // Clean updates
+    if (updates.activeIngredients) {
+      updates.activeIngredients = updates.activeIngredients.filter(i => i.name && i.amount);
+    }
+    if (updates.warnings) {
+      updates.warnings = updates.warnings.filter(w => w.trim());
+    }
+    if (updates.price) {
+      updates.price = parseFloat(updates.price);
+    }
+    if (updates.stock) {
+      updates.stock = parseInt(updates.stock);
+    }
+
     const product = await Product.findByIdAndUpdate(
       productId,
       { $set: updates },
@@ -180,6 +232,16 @@ export async function PUT(request) {
 
   } catch (error) {
     console.error('Product update error:', error);
+    
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(err => err.message);
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Validation failed',
+        errors: validationErrors
+      }, { status: 400 });
+    }
+
     return NextResponse.json({ 
       success: false, 
       message: 'Failed to update product' 

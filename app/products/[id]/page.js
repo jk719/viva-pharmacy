@@ -6,11 +6,11 @@ import { notFound } from 'next/navigation';
 
 // Metadata generator
 export async function generateMetadata({ params }) {
-  const id = params?.id;
+  const id = await Promise.resolve(params).then(p => p.id);
   
   try {
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products/${id}`, {
-      next: { revalidate: 60 }
+      cache: 'no-store'
     });
     
     if (!response.ok) {
@@ -40,16 +40,16 @@ export async function generateMetadata({ params }) {
 
 // Main page component
 export default async function ProductPage({ params }) {
-  const id = params?.id;
-  
-  try {
-    if (!id) {
-      console.error('No product ID provided');
-      notFound();
-    }
+  const id = await Promise.resolve(params).then(p => p.id);
 
+  if (!id) {
+    console.error('No product ID provided');
+    notFound();
+  }
+
+  try {
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products/${id}`, {
-      next: { revalidate: 60 }
+      cache: 'no-store'
     });
 
     if (!response.ok) {
@@ -78,6 +78,6 @@ export default async function ProductPage({ params }) {
 
   } catch (error) {
     console.error('Error loading product:', error);
-    throw error; // Let the nearest error boundary handle it
+    throw error;
   }
 }
