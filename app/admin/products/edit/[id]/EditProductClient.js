@@ -3,6 +3,9 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import EditProductForm from "@/components/products/EditProductForm";
+import { motion } from "framer-motion";
+import { FiArrowLeft } from "react-icons/fi";
+import Link from "next/link";
 
 export default function EditProductClient({ productId }) {
   const { data: session, status } = useSession();
@@ -16,23 +19,54 @@ export default function EditProductClient({ productId }) {
     }
   }, [status, session, router]);
 
-  // Handle loading state
   if (status === "loading") {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="flex justify-center items-center min-h-screen bg-gray-50">
+        <div className="space-y-4 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
       </div>
     );
   }
 
-  // Handle unauthorized access
   if (!session?.user?.role || !["ADMIN", "MANAGER"].includes(session.user.role)) {
     return null;
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <EditProductForm productId={productId} />
+    <div className="min-h-screen bg-gray-50">
+      {/* Top Bar */}
+      <motion.div 
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="bg-white shadow-sm border-b sticky top-0 z-10"
+      >
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center gap-4">
+            <Link 
+              href="/admin"
+              className="flex items-center gap-2 text-gray-600 hover:text-primary
+                       transition-colors duration-200"
+            >
+              <FiArrowLeft className="text-lg" />
+              <span>Back to Dashboard</span>
+            </Link>
+            <h1 className="text-2xl font-bold text-gray-800">Edit Product</h1>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Form Container */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="container mx-auto px-4 py-6"
+      >
+        <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-sm p-6">
+          <EditProductForm productId={productId} />
+        </div>
+      </motion.div>
     </div>
   );
 } 

@@ -22,7 +22,30 @@ module.exports = {
         text: {
           primary: '#2E2E2E',
           secondary: '#6B7280',
+        },
+        form: {
+          input: {
+            border: '#E5E7EB',
+            focus: '#3B82F6',
+            error: '#EF4444',
+            success: '#10B981',
+          },
+          label: '#374151',
+          placeholder: '#9CA3AF',
+        },
+        dropzone: {
+          active: '#DBEAFE',
+          border: {
+            DEFAULT: '#E5E7EB',
+            active: '#60A5FA',
+          },
         }
+      },
+      spacing: {
+        '4.5': '1.125rem',
+      },
+      borderRadius: {
+        'lg-xl': '0.625rem',
       },
       keyframes: {
         slideDown: {
@@ -61,7 +84,16 @@ module.exports = {
         float: {
           '0%, 100%': { transform: 'translateY(0)' },
           '50%': { transform: 'translateY(-4px)' }
-        }
+        },
+        slideUp: {
+          '0%': { transform: 'translateY(10px)', opacity: 0 },
+          '100%': { transform: 'translateY(0)', opacity: 1 },
+        },
+        shake: {
+          '0%, 100%': { transform: 'translateX(0)' },
+          '25%': { transform: 'translateX(-2px)' },
+          '75%': { transform: 'translateX(2px)' },
+        },
       },
       animation: {
         slideDown: 'slideDown 0.2s ease-out',
@@ -72,9 +104,16 @@ module.exports = {
         pulse: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         wiggle: 'wiggle 1s ease-in-out infinite',
         'bounce-subtle': 'bounce-subtle 2s ease-in-out infinite',
-        float: 'float 3s ease-in-out infinite'
+        float: 'float 3s ease-in-out infinite',
+        'bounce-once': 'bounce 0.5s ease-in-out 1',
+        'slide-up': 'slideUp 0.2s ease-out',
+        'shake': 'shake 0.5s ease-in-out',
       }
     },
   },
-  plugins: [],
+  plugins: [
+    require('@tailwindcss/forms')({
+      strategy: 'class',
+    }),
+  ],
 };

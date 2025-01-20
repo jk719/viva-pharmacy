@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import AddProductForm from "@/components/products/AddProductForm";
 import { motion } from "framer-motion";
-import { FiArrowLeft } from "react-icons/fi";
+import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
 
 export default function AddProduct() {
@@ -36,34 +36,34 @@ export default function AddProduct() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Top Bar */}
       <motion.div 
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         className="bg-white shadow-sm border-b sticky top-0 z-10"
       >
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Link 
-              href="/admin"
-              className="flex items-center gap-2 text-gray-600 hover:text-primary
-                       transition-colors duration-200"
-            >
-              <FiArrowLeft className="text-lg" />
-              <span>Back to Dashboard</span>
-            </Link>
-            <h1 className="text-2xl font-bold text-gray-800">Add New Product</h1>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link 
+                href="/admin"
+                className="flex items-center gap-2 text-gray-600 hover:text-primary transition-colors duration-200"
+              >
+                <ArrowLeftIcon className="h-5 w-5" />
+                <span>Back to Dashboard</span>
+              </Link>
+              <h1 className="text-2xl font-bold text-gray-900">Add New Product</h1>
+            </div>
           </div>
         </div>
       </motion.div>
 
-      {/* Form Container */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="container mx-auto px-4 py-6"
+        transition={{ delay: 0.1 }}
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
       >
-        <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-sm p-6">
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
           <AddProductForm />
         </div>
       </motion.div>
