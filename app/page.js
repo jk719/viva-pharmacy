@@ -11,6 +11,8 @@ import { IoArrowForward } from 'react-icons/io5';
 import { fetchProducts } from '@/lib/api';
 import toast from 'react-hot-toast';
 
+export const dynamic = 'force-dynamic';
+
 export default function Home() {
   const { selectedCategory, setSelectedCategory } = useCategory();
   const [categories, setCategories] = useState(["All"]);
@@ -83,16 +85,34 @@ export default function Home() {
     const loadCategories = async () => {
       try {
         setIsLoading(true);
-        const { success, products } = await fetchProducts();
+        const { success, products, error } = await fetchProducts();
         
-        if (success && products.length > 0) {
-          // Extract unique categories from products and sort them
+        if (success && products?.length > 0) {
           const uniqueCategories = ["All", ...new Set(products.map(p => p.category))].sort();
           setCategories(uniqueCategories);
+        } else if (error) {
+          console.error('Error loading products:', error);
+          toast.error('Failed to load products', {
+            style: {
+              background: '#EF4444',
+              color: '#FFFFFF',
+              padding: '16px',
+              borderRadius: '10px',
+            },
+          });
+          setCategories(["All"]); // Fallback to default
         }
       } catch (error) {
         console.error('Error loading products:', error);
-        setCategories(["All"]); // Fallback to just "All" if there's an error
+        setCategories(["All"]); // Fallback to default
+        toast.error('Unable to load categories', {
+          style: {
+            background: '#EF4444',
+            color: '#FFFFFF',
+            padding: '16px',
+            borderRadius: '10px',
+          },
+        });
       } finally {
         setIsLoading(false);
       }

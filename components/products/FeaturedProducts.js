@@ -8,7 +8,7 @@ import { useCategory } from '../../context/CategoryContext';
 import { motion } from 'framer-motion';
 import { IoMdAdd } from 'react-icons/io';
 import { HiMinusSm, HiPlusSm } from 'react-icons/hi';
-import { useProducts } from '@/lib/api';
+import useSWR from 'swr';
 
 // Extracted components for better organization
 const ProductCard = ({ product, quantity, onAdd, onDecrement }) => {
@@ -146,32 +146,13 @@ export default function FeaturedProducts() {
   const { addToCart, decrement, items = [] } = useCart();
   const { selectedCategory, setSelectedCategory } = useCategory();
   
-  // Replace useState and useEffect with SWR hook
-  const { products, isLoading, isError } = useProducts(
-    selectedCategory && selectedCategory !== 'All' 
-      ? { category: selectedCategory }
-      : {}
-  );
-
-  const categoriesWithCounts = products 
-    ? [...new Set(products.map((product) => product.category))]
-      .map((category) => ({
-        name: category,
-        count: products.filter((product) => product.category === category).length,
-      }))
-      .sort((a, b) => b.count - a.count)
-    : [];
-
-  const filteredCategories = selectedCategory === 'All' 
-    ? categoriesWithCounts 
-    : categoriesWithCounts.filter(category => category.name === selectedCategory);
-
+  // 1. Define all hooks first
   const getItemQuantity = useCallback((productId) => {
     const item = items?.find((item) => item?.id === productId);
     return item ? item.quantity : 0;
   }, [items]);
 
-  const handleAddToCart = (product) => {
+  const handleAddToCart = useCallback((product) => {
     console.log('Adding to cart:', product);
     addToCart({
       id: product._id,
@@ -180,13 +161,44 @@ export default function FeaturedProducts() {
       image: product.image,
       quantity: 1
     });
-  };
+  }, [addToCart]);
 
-  const handleDecrement = (productId) => {
+  const handleDecrement = useCallback((productId) => {
     decrement(productId);
-  };
+  }, [decrement]);
 
-  // Update available categories when products change
+  // 2. SWR hook
+  const { data, error, isLoading } = useSWR(
+    '/api/products',
+    async (url) => {
+      console.log('SWR: Starting fetch');
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const jsonData = await response.json();
+        console.log('SWR: Fetch successful', {
+          success: jsonData.success,
+          productCount: jsonData.products?.length
+        });
+        return jsonData;
+      } catch (err) {
+        console.error('SWR: Fetch failed', err);
+        throw err;
+      }
+    },
+    {
+      fallbackData: { success: false, products: [] },
+      suspense: false,
+      revalidateOnFocus: false,
+      dedupingInterval: 10000
+    }
+  );
+
+  const products = data?.products || [];
+
+  // 3. Effects after all hooks
   useEffect(() => {
     if (products) {
       const availableCategories = ["All", ...new Set(products.map(p => p.category))];
@@ -196,14 +208,38 @@ export default function FeaturedProducts() {
     }
   }, [products, selectedCategory, setSelectedCategory]);
 
+  // 4. Logging
+  console.log('FeaturedProducts: State', {
+    isLoading,
+    hasError: !!error,
+    productsCount: products.length,
+    selectedCategory
+  });
+
+  // 5. Render logic
   if (isLoading) {
-    return <LoadingState />;
+    return (
+      <div className="py-6">
+        <LoadingState />
+        <div className="text-center text-gray-500 mt-4">
+          Loading products...
+        </div>
+      </div>
+    );
   }
 
-  if (isError) {
+  if (error) {
     return (
-      <div className="py-6 text-center text-red-500">
-        Error loading products. Please try again later.
+      <div className="py-6 text-center">
+        <div className="text-red-500 mb-4">
+          Error loading products. Please try again.
+        </div>
+        <button 
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-primary text-white rounded-md"
+        >
+          Retry
+        </button>
       </div>
     );
   }
@@ -211,6 +247,18 @@ export default function FeaturedProducts() {
   if (!products || products.length === 0) {
     return <EmptyState />;
   }
+
+  // Filter products if needed
+  const filteredCategories = selectedCategory === 'All' 
+    ? [...new Set(products.map(p => p.category))]
+        .map(cat => ({
+          name: cat,
+          count: products.filter(p => p.category === cat).length
+        }))
+    : [{
+        name: selectedCategory,
+        count: products.filter(p => p.category === selectedCategory).length
+      }];
 
   return (
     <section className="py-4 sm:py-6">

@@ -5,14 +5,19 @@ import Product from '@/models/Product';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 export async function GET(request) {
+  console.log('GET /api/products: Starting request');
+  
   try {
+    console.log('Connecting to database...');
     await dbConnect();
+    console.log('Database connected successfully');
     
     // Ensure proper URL parsing
     let searchParams;
     try {
       const url = new URL(request.url);
       searchParams = url.searchParams;
+      console.log('URL parsed successfully:', url.toString());
     } catch (error) {
       console.error('URL parsing error:', error);
       return NextResponse.json({ 
@@ -21,12 +26,6 @@ export async function GET(request) {
         products: [] 
       }, { status: 400 });
     }
-    
-    // Log incoming request
-    console.log('API Request:', {
-      url: request.url,
-      params: Object.fromEntries(searchParams.entries())
-    });
     
     // Build query with type checking
     const query = {};
@@ -50,11 +49,12 @@ export async function GET(request) {
       if (maxPrice) query.price.$lte = parseFloat(maxPrice);
     }
 
-    // Execute query
+    console.log('Executing query:', JSON.stringify(query, null, 2));
     const products = await Product.find(query).sort({ createdAt: -1 });
+    console.log(`Found ${products.length} products`);
     
     // Return consistent response structure
-    return NextResponse.json({
+    const response = {
       success: true,
       products,
       pagination: {
@@ -64,7 +64,10 @@ export async function GET(request) {
         perPage: products.length,
         hasMore: false
       }
-    });
+    };
+    
+    console.log('Sending successful response');
+    return NextResponse.json(response);
 
   } catch (error) {
     console.error('Products fetch error:', error);

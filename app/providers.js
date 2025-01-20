@@ -25,7 +25,11 @@ export function Providers({ children, session }) {
           fetcher,
           revalidateOnFocus: false, // Disable revalidation on window focus
           dedupingInterval: 10000, // Dedupe requests within 10 seconds
-          shouldRetryOnError: false // Disable automatic retries on error
+          shouldRetryOnError: false, // Disable automatic retries on error
+          suspense: false,
+          fallback: {
+            '/api/products': { products: [] }
+          }
         }}
       >
         <CartProvider>

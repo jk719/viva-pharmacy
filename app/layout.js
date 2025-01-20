@@ -56,7 +56,7 @@ export default async function RootLayout({ children }) {
             </div>
           </header>
 
-          <div className="h-[200px] sm:h-[200px]" aria-hidden="true" />
+          <div className="h-[120px] sm:h-[140px]" aria-hidden="true" />
 
           <main className="min-h-screen w-full">
             <div className="container mx-auto px-4">
