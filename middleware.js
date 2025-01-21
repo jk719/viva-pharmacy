@@ -13,6 +13,13 @@ export default withAuth(
       }
     }
 
+    // Add checkout protection
+    if (req.nextUrl.pathname.startsWith('/checkout') && !req.nextauth?.token) {
+      return NextResponse.redirect(
+        new URL('/login?callbackUrl=' + encodeURIComponent(req.url), req.url)
+      );
+    }
+
     // Special handling for SSE connections
     if (req.nextUrl.pathname.includes('/api/user/vivabucks') && 
         req.nextUrl.pathname.endsWith('/events')) {
@@ -64,7 +71,9 @@ export default withAuth(
         // Protected routes
         if (req.nextUrl.pathname.startsWith('/profile') ||
             req.nextUrl.pathname.startsWith('/admin') ||
-            req.nextUrl.pathname.startsWith('/api/user')) {
+            req.nextUrl.pathname.startsWith('/api/user') ||
+            req.nextUrl.pathname.startsWith('/checkout') ||
+            req.nextUrl.pathname.startsWith('/cart')) {
           return !!token;
         }
 
@@ -81,6 +90,7 @@ export const config = {
     '/api/webhook',
     '/admin/:path*',
     '/api/products/:path*',
-    '/checkout/:path*'
+    '/checkout/:path*',
+    '/cart/:path*'  // Added cart to protected routes
   ],
 };

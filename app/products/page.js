@@ -1,36 +1,69 @@
 // src/products/page.js
 "use client";
 
-import { useState } from 'react';
-import { useCart } from '../../context/CartContext';
+import { useState, useEffect, useRef } from 'react';
+import { useInView } from 'react-intersection-observer';
+import { useCart } from '@/context/CartContext';
 import { useSearchParams, useRouter } from 'next/navigation';
 import ProductFilter from '@/components/products/ProductFilter';
+import QuickViewModal from '@/components/products/QuickViewModal';
+import ProductsLoadingSkeleton from '@/components/products/ProductsLoadingSkeleton';
+import NoProductsFound from '@/components/products/NoProductsFound';
+import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Image from 'next/image';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useProducts } from '@/lib/api';
+import { IoGridOutline, IoListOutline } from 'react-icons/io5';
+import RewardsBanner from '@/components/RewardsBanner';
 
 export default function ProductsPage() {
-  const { addToCart, items } = useCart();
+  const { addToCart } = useCart();
   const searchParams = useSearchParams();
   const router = useRouter();
   const [imgErrors, setImgErrors] = useState({});
+  const [page, setPage] = useState(1);
+  const [view, setView] = useState('grid');
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [showQuickView, setShowQuickView] = useState(false);
+  const loadingRef = useRef(false);
 
   // Get search parameters
   const category = searchParams.get('category') || 'All';
   const search = searchParams.get('search') || '';
   const minPrice = searchParams.get('minPrice') || '';
   const maxPrice = searchParams.get('maxPrice') || '';
+  const sort = searchParams.get('sort') || 'newest';
 
-  // Use SWR hook for products
-  const { products, isLoading, isError } = useProducts({
+  // Setup infinite scroll
+  const { ref: loadMoreRef, inView } = useInView({
+    threshold: 0.5,
+    triggerOnce: false
+  });
+
+  // Use SWR hook for products with pagination
+  const { products, isLoading, isError, mutate } = useProducts({
     category: category !== 'All' ? category : undefined,
     search,
     minPrice,
-    maxPrice
+    maxPrice,
+    sort,
+    page,
+    limit: 12
   });
 
-  // Extract unique categories from products
+  // Handle infinite scroll
+  useEffect(() => {
+    if (inView && !isLoading && !loadingRef.current && products?.length >= 12) {
+      loadingRef.current = true;
+      setPage(prev => prev + 1);
+      setTimeout(() => {
+        loadingRef.current = false;
+      }, 500);
+    }
+  }, [inView, isLoading, products]);
+
+  // Extract unique categories
   const categories = products 
     ? ['All', ...new Set(products.map(p => p.category))]
     : ['All'];
@@ -45,6 +78,7 @@ export default function ProductsPage() {
       }
     });
     router.push(`/products?${params.toString()}`);
+    setPage(1); // Reset page when filters change
   };
 
   const handleSearchChange = (value) => {
@@ -63,25 +97,6 @@ export default function ProductsPage() {
     });
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="container mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="bg-white p-6 rounded-lg animate-pulse">
-                <div className="h-48 bg-gray-200 rounded-lg mb-4"></div>
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
-                <div className="h-10 bg-gray-200 rounded"></div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   if (isError) {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
@@ -96,44 +111,102 @@ export default function ProductsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <ProductFilter 
-        categories={categories}
-        selectedCategory={category}
-        searchQuery={search}
-        minPrice={minPrice}
-        maxPrice={maxPrice}
-        onSearchChange={handleSearchChange}
-        onPriceChange={handlePriceChange}
-        onChange={handleCategoryChange}
-      />
+      <RewardsBanner variant="compact" />
+      <div className="sticky top-0 z-10 bg-white border-b shadow-sm">
+        <ProductFilter 
+          categories={categories}
+          selectedCategory={category}
+          searchQuery={search}
+          minPrice={minPrice}
+          maxPrice={maxPrice}
+          onSearchChange={handleSearchChange}
+          onPriceChange={handlePriceChange}
+          onChange={handleCategoryChange}
+        />
+        
+        {/* View Toggle & Sort */}
+        <div className="container mx-auto px-6 py-2 flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setView('grid')}
+              className={`p-2 rounded ${view === 'grid' ? 'bg-gray-100' : ''}`}
+            >
+              <IoGridOutline size={20} />
+            </button>
+            <button
+              onClick={() => setView('list')}
+              className={`p-2 rounded ${view === 'list' ? 'bg-gray-100' : ''}`}
+            >
+              <IoListOutline size={20} />
+            </button>
+          </div>
+          <select
+            value={sort}
+            onChange={(e) => updateSearchParams({ sort: e.target.value })}
+            className="p-2 border rounded-lg"
+          >
+            <option value="newest">Newest</option>
+            <option value="price-asc">Price: Low to High</option>
+            <option value="price-desc">Price: High to Low</option>
+          </select>
+        </div>
+      </div>
 
       <div className="container mx-auto px-6 py-8">
-        {!products || products.length === 0 ? (
-          <div className="text-center text-gray-500">
-            No products found.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {products.map((product) => (
-              <ProductCard 
-                key={product._id}
-                product={product}
-                onAddToCart={addToCart}
-                imgError={imgErrors[product._id]}
-                onImageError={() => {
-                  setImgErrors(prev => ({...prev, [product._id]: true}));
-                }}
-              />
-            ))}
-          </div>
-        )}
+        <AnimatePresence mode="wait">
+          {isLoading && page === 1 ? (
+            <ProductsLoadingSkeleton view={view} />
+          ) : !products || products.length === 0 ? (
+            <NoProductsFound />
+          ) : (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className={
+                view === 'grid'
+                  ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                  : "flex flex-col gap-4"
+              }
+            >
+              {products.map((product) => (
+                <ProductCard 
+                  key={product._id}
+                  product={product}
+                  view={view}
+                  onAddToCart={addToCart}
+                  onQuickView={() => {
+                    setSelectedProduct(product);
+                    setShowQuickView(true);
+                  }}
+                  imgError={imgErrors[product._id]}
+                  onImageError={() => {
+                    setImgErrors(prev => ({...prev, [product._id]: true}));
+                  }}
+                />
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Infinite Scroll Trigger */}
+        <div ref={loadMoreRef} className="h-20 flex items-center justify-center">
+          {isLoading && page > 1 && <LoadingSpinner />}
+        </div>
       </div>
+
+      {/* Quick View Modal */}
+      <QuickViewModal
+        product={selectedProduct}
+        isOpen={showQuickView}
+        onClose={() => setShowQuickView(false)}
+        onAddToCart={addToCart}
+      />
     </div>
   );
 }
 
 // Extracted ProductCard component for better organization
-const ProductCard = ({ product, onAddToCart, imgError, onImageError }) => (
+const ProductCard = ({ product, view, onAddToCart, onQuickView, imgError, onImageError }) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
@@ -169,7 +242,8 @@ const ProductCard = ({ product, onAddToCart, imgError, onImageError }) => (
       <button
         className="bg-primary text-white py-2 px-4 rounded-full hover:bg-primary/90 
                    transition-colors duration-200 flex items-center gap-2"
-        onClick={() => {
+        onClick={(e) => {
+          e.stopPropagation();
           onAddToCart({
             _id: product._id,
             name: product.name,

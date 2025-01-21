@@ -28,14 +28,20 @@ const normalizeProduct = (product) => {
 
 // CartProvider component
 export function CartProvider({ children }) {
-    const [items, setItems] = useState([]);
-    const [total, setTotal] = useState(0);
-    const [loading, setLoading] = useState(true);
-    const [deliveryOption, setDeliveryOption] = useState('pickup');
-    const [selectedTime, setSelectedTime] = useState('');
-    const [showTimeError, setShowTimeError] = useState(false);
-    const [subtotal, setSubtotal] = useState(0);
-    const [tax, setTax] = useState(0);
+    const [cartState, setCartState] = useState({
+        items: [],
+        total: 0,
+        subtotal: 0,
+        tax: 0,
+        loading: true
+    });
+
+    const [deliveryState, setDeliveryState] = useState({
+        option: 'pickup',
+        selectedTime: '',
+        showTimeError: false
+    });
+
     const [paymentStatus, setPaymentStatus] = useState({
         processing: false,
         paymentIntentId: null,
@@ -48,31 +54,37 @@ export function CartProvider({ children }) {
             const savedCart = localStorage.getItem('cart');
             if (savedCart) {
                 const parsedCart = JSON.parse(savedCart);
-                setItems(parsedCart);
+                setCartState(prev => ({
+                    ...prev,
+                    items: parsedCart,
+                    loading: false
+                }));
             }
         } catch (error) {
             console.error('Error loading cart:', error);
-        } finally {
-            setLoading(false);
+            setCartState(prev => ({ ...prev, loading: false }));
         }
     }, []);
 
     // Calculate totals when items change
     useEffect(() => {
-        if (!loading) {
-            const newSubtotal = items.reduce((sum, item) => 
-                sum + (item.price * item.quantity), 0
+        if (!cartState.loading) {
+            const newSubtotal = cartState.items.reduce(
+                (sum, item) => sum + (item.price * item.quantity), 
+                0
             );
-            const newTax = newSubtotal * 0.08; // 8% tax rate
-            const newTotal = newSubtotal + newTax;
+            const newTax = newSubtotal * 0.08;
             
-            setSubtotal(newSubtotal);
-            setTax(newTax);
-            setTotal(newTotal);
+            setCartState(prev => ({
+                ...prev,
+                subtotal: newSubtotal,
+                tax: newTax,
+                total: newSubtotal + newTax
+            }));
             
-            localStorage.setItem('cart', JSON.stringify(items));
+            localStorage.setItem('cart', JSON.stringify(cartState.items));
         }
-    }, [items, loading]);
+    }, [cartState.items, cartState.loading]);
 
     const getProductId = useCallback((product) => {
         return product._id || product.id; // Support both MongoDB _id and legacy id
@@ -84,88 +96,86 @@ export function CartProvider({ children }) {
             return;
         }
         
-        setItems(prevItems => {
+        setCartState(prevItems => {
             const productId = getProductId(product);
-            const existingItem = prevItems.find(item => 
+            const existingItem = prevItems.items.find(item => 
                 getProductId(item) === productId
             );
             
             if (existingItem) {
-                return prevItems.map(item =>
-                    getProductId(item) === productId
-                        ? { ...item, quantity: item.quantity + 1 }
-                        : item
-                );
+                return {
+                    ...prevItems,
+                    items: prevItems.items.map(item =>
+                        getProductId(item) === productId
+                            ? { ...item, quantity: item.quantity + 1 }
+                            : item
+                    )
+                };
             }
             
             // Normalize product data when adding to cart
             const normalizedProduct = normalizeProduct(product);
             console.log('Adding normalized product to cart:', normalizedProduct);
             
-            return [...prevItems, { 
-                ...normalizedProduct,
-                addedAt: new Date().toISOString() 
-            }];
+            return {
+                ...prevItems,
+                items: [...prevItems.items, { 
+                    ...normalizedProduct,
+                    addedAt: new Date().toISOString() 
+                }]
+            };
         });
     }, [getProductId]);
 
     const removeFromCart = useCallback((productId) => {
-        setItems(prevItems => 
-            prevItems.filter(item => getProductId(item) !== productId)
-        );
+        setCartState(prevItems => ({
+            ...prevItems,
+            items: prevItems.items.filter(item => getProductId(item) !== productId)
+        }));
     }, [getProductId]);
 
     const updateQuantity = useCallback((productId, quantity) => {
         const newQuantity = Math.max(0, parseInt(quantity));
         
-        setItems(prevItems => {
-            if (newQuantity === 0) {
-                return prevItems.filter(item => getProductId(item) !== productId);
-            }
-            
-            return prevItems.map(item =>
+        setCartState(prevItems => ({
+            ...prevItems,
+            items: prevItems.items.map(item =>
                 getProductId(item) === productId
                     ? { ...item, quantity: newQuantity }
                     : item
-            );
-        });
+            )
+        }));
     }, [getProductId]);
 
     const decrement = useCallback((productId) => {
-        setItems(prevItems => {
-            const existingItem = prevItems.find(item => getProductId(item) === productId);
-            
-            if (existingItem) {
-                if (existingItem.quantity === 1) {
-                    return prevItems.filter(item => getProductId(item) !== productId);
-                }
-                
-                return prevItems.map(item =>
-                    getProductId(item) === productId
-                        ? { ...item, quantity: item.quantity - 1 }
-                        : item
-                );
-            }
-            
-            return prevItems;
-        });
+        setCartState(prevItems => ({
+            ...prevItems,
+            items: prevItems.items.map(item =>
+                getProductId(item) === productId
+                    ? { ...item, quantity: item.quantity - 1 }
+                    : item
+            )
+        }));
     }, [getProductId]);
 
     const clearCart = useCallback(() => {
         localStorage.removeItem('cart');
-        setItems([]);
-        setTotal(0);
-        setSubtotal(0);
-        setTax(0);
+        setCartState(prev => ({
+            ...prev,
+            items: [],
+            total: 0,
+            subtotal: 0,
+            tax: 0
+        }));
     }, []);
 
     const getCartSize = useCallback(() => {
-        return items.reduce((total, item) => total + item.quantity, 0);
-    }, [items]);
+        return cartState.items.reduce((total, item) => total + item.quantity, 0);
+    }, [cartState.items]);
 
     // Add a method to get formatted cart items
     const getFormattedItems = useCallback(() => {
-        return items.map(item => ({
+        return cartState.items.map(item => ({
             id: getProductId(item),
             name: item.name,
             price: parseFloat(item.price),
@@ -173,7 +183,7 @@ export function CartProvider({ children }) {
             image: item.image,
             subtotal: parseFloat(item.price) * parseInt(item.quantity)
         }));
-    }, [items, getProductId]);
+    }, [cartState.items, getProductId]);
 
     const startPaymentProcessing = useCallback((paymentIntentId) => {
         setPaymentStatus({
@@ -208,7 +218,13 @@ export function CartProvider({ children }) {
             await new Promise(resolve => setTimeout(resolve, 1000));
             
             // Clear cart
-            setItems([]);
+            setCartState(prev => ({
+                ...prev,
+                items: [],
+                total: 0,
+                subtotal: 0,
+                tax: 0
+            }));
             localStorage.removeItem('cart');
             
             console.log('✅ Cart cleared successfully');
@@ -221,22 +237,22 @@ export function CartProvider({ children }) {
     };
 
     const value = {
-        items,
-        total,
-        subtotal,
-        tax,
-        loading,
+        items: cartState.items,
+        total: cartState.total,
+        subtotal: cartState.subtotal,
+        tax: cartState.tax,
+        loading: cartState.loading,
         addToCart,
         removeFromCart,
         updateQuantity,
         clearCart,
         decrement,
-        deliveryOption,
-        setDeliveryOption,
-        selectedTime,
-        setSelectedTime,
-        showTimeError,
-        setShowTimeError,
+        deliveryOption: deliveryState.option,
+        setDeliveryOption: (option) => setDeliveryState(prev => ({ ...prev, option })),
+        selectedTime: deliveryState.selectedTime,
+        setSelectedTime: (time) => setDeliveryState(prev => ({ ...prev, selectedTime: time })),
+        showTimeError: deliveryState.showTimeError,
+        setShowTimeError: (error) => setDeliveryState(prev => ({ ...prev, showTimeError: error })),
         getCartSize,
         getFormattedItems,
         paymentStatus,

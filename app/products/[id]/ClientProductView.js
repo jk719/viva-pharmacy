@@ -7,13 +7,19 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { IoArrowBack, IoAdd } from 'react-icons/io5';
 import { HiMinusSm, HiPlusSm } from 'react-icons/hi';
 import { useState, useCallback } from 'react';
+import { categories } from '@/data/categories';
 
 // Moved outside component to prevent recreation on each render
-const getCategoryContent = (category) => ({
+const getCategoryContent = (product) => ({
   Details: product => product.description || "No description available.",
-  Ingredients: product => product.ingredients || "Ingredients information not available.",
+  Ingredients: product => {
+    const ingredients = product.activeIngredients
+      ?.map(i => `${i.name} (${i.amount})`)
+      .join(', ');
+    return ingredients || "Ingredients information not available.";
+  },
   Directions: product => product.directions || "Take as directed by your healthcare provider. Read all product information before use.",
-  "Storage & Warnings": product => `Store at room temperature. Keep out of reach of children. ${product.warnings || ''}`
+  "Storage & Warnings": product => `Store at room temperature. Keep out of reach of children. ${product.warnings?.join('. ') || ''}`
 });
 
 // Update the fallbackImageUrl with the one from your Cloudinary
@@ -62,6 +68,11 @@ export default function ClientProductView({ product }) {
     setExpandedSection(prev => prev === section ? null : section);
   };
 
+  // Get category information
+  const category = categories.find(c => c.slug === product.categorySlug);
+  const subcategory = category?.subcategories.find(s => s.slug === product.subcategorySlug);
+  const item = subcategory?.items.find(i => i.slug === product.itemSlug);
+
   if (!product) {
     return (
       <motion.div 
@@ -83,7 +94,7 @@ export default function ClientProductView({ product }) {
     );
   }
 
-  const sectionContent = getCategoryContent(product.category);
+  const sectionContent = getCategoryContent(product);
 
   return (
     <motion.div 
@@ -157,7 +168,9 @@ export default function ClientProductView({ product }) {
                 <h1 id="product-details" className="text-lg md:text-2xl font-bold text-gray-800">
                   {product.name}
                 </h1>
-                <p className="text-xs md:text-sm text-gray-500">{product.category}</p>
+                <p className="text-xs md:text-sm text-gray-500">
+                  {category?.name} &gt; {subcategory?.name} &gt; {item?.name}
+                </p>
               </div>
 
               <p className="text-xl md:text-3xl font-bold text-primary">

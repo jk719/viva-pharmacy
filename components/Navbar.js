@@ -27,8 +27,6 @@ function debounce(func, wait) {
 }
 
 export default function Navbar() {
-  console.log('Navbar: Component rendering');
-
   const [query, setQuery] = useState("");
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [isFocused, setIsFocused] = useState(false);
@@ -36,31 +34,33 @@ export default function Navbar() {
   const { data: session } = useSession();
   const [avatarError, setAvatarError] = useState(false);
 
-  // Memoized search function
-  const searchProducts = useCallback((searchQuery) => {
-    console.log('Navbar: Searching products with query:', searchQuery);
-    if (!searchQuery.trim()) {
-      setFilteredProducts([]);
-      return;
-    }
+  // Memoize search function with useCallback
+  const searchProducts = useCallback(
+    debounce((searchQuery) => {
+      if (!searchQuery.trim()) {
+        setFilteredProducts([]);
+        return;
+      }
 
-    const searchTerms = searchQuery.toLowerCase().split(' ');
-    
-    const results = products.filter((product) => {
-      const productName = product.name.toLowerCase();
-      const productCategory = product.category.toLowerCase();
-      const productDescription = product.description.toLowerCase();
+      const searchTerms = searchQuery.toLowerCase().split(' ');
+      const results = products
+        .filter((product) => {
+          const productName = product.name.toLowerCase();
+          const productCategory = product.category.toLowerCase();
+          const productDescription = product.description.toLowerCase();
 
-      return searchTerms.every(term => 
-        productName.includes(term) || 
-        productCategory.includes(term) || 
-        productDescription.includes(term)
-      );
-    }).slice(0, 5);
+          return searchTerms.every(term => 
+            productName.includes(term) || 
+            productCategory.includes(term) || 
+            productDescription.includes(term)
+          );
+        })
+        .slice(0, 5);
 
-    console.log('Navbar: Found matching products:', results.length);
-    setFilteredProducts(results);
-  }, [setFilteredProducts]);
+      setFilteredProducts(results);
+    }, 300),
+    []
+  );
 
   const handleInputChange = (e) => {
     const input = e.target.value;
@@ -142,24 +142,6 @@ export default function Navbar() {
                 </Link>
               </div>
             </div>
-
-            <div className="relative">
-              <input
-                type="text"
-                value={query}
-                onChange={handleInputChange}
-                onFocus={() => setIsFocused(true)}
-                onBlur={() => setTimeout(() => setIsFocused(false), 200)}
-                onKeyDown={handleKeyDown}
-                placeholder="Search products..."
-                className="w-full h-9 pl-9 pr-3 text-gray-900 placeholder-gray-500 
-                  bg-white rounded-lg border border-gray-200
-                  focus:border-[#FF9F43] focus:outline-none focus:ring-1 focus:ring-[#FF9F43]/50
-                  text-sm transition-all"
-                aria-label="Search products"
-              />
-              <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
-            </div>
           </div>
 
           {/* Desktop Layout */}
@@ -175,26 +157,6 @@ export default function Navbar() {
                 priority
               />
             </Link>
-
-            <div className="flex-1 max-w-xl mx-8 relative">
-              <div className="relative">
-                <input
-                  type="text"
-                  value={query}
-                  onChange={handleInputChange}
-                  onFocus={() => setIsFocused(true)}
-                  onBlur={() => setTimeout(() => setIsFocused(false), 200)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Search products..."
-                  className="w-full h-12 pl-12 pr-4 text-gray-900 placeholder-gray-500 
-                    bg-white rounded-xl border-2 border-gray-200
-                    focus:border-[#FF9F43] focus:outline-none focus:ring-1 focus:ring-[#FF9F43]
-                    transition-all"
-                  aria-label="Search products"
-                />
-                <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-              </div>
-            </div>
 
             <div className="flex items-center space-x-6">
               {session?.user?.role && ['ADMIN', 'MANAGER'].includes(session.user.role) && (
@@ -242,45 +204,6 @@ export default function Navbar() {
               )}
             </div>
           </div>
-
-          {/* Search Results Dropdown */}
-          <AnimatePresence>
-            {filteredProducts.length > 0 && isFocused && (
-              <motion.div 
-                className="absolute left-3 right-3 md:left-4 md:right-4 mt-1 z-50"
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-              >
-                <div className="bg-white rounded-xl shadow-lg overflow-hidden 
-                  border border-gray-100 max-h-[60vh] overflow-y-auto">
-                  {filteredProducts.map((product) => (
-                    <motion.button
-                      key={product.id}
-                      onClick={() => handleProductClick(product.id)}
-                      className="w-full px-4 py-3 text-left text-gray-900 hover:bg-gray-50 
-                        flex items-center space-x-3 transition-colors"
-                      whileHover={{ x: 4 }}
-                    >
-                      <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-gray-50">
-                        <Image
-                          src={product.image}
-                          alt={product.name}
-                          fill
-                          className="object-contain p-1"
-                        />
-                      </div>
-                      <div>
-                        <div className="font-medium">{product.name}</div>
-                        <div className="text-sm text-gray-500">${product.price}</div>
-                      </div>
-                    </motion.button>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
       </motion.nav>
 

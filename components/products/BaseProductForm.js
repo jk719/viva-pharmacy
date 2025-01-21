@@ -11,6 +11,7 @@ import {
   MinusCircleIcon
 } from '@heroicons/react/24/outline';
 import { uploadToCloudinary } from '@/lib/cloudinary';
+import { categories } from '@/data/categories';
 
 export default function BaseProductForm({ 
   initialData = {}, 
@@ -23,7 +24,9 @@ export default function BaseProductForm({
     name: initialData.name || "",
     description: initialData.description || "",
     price: initialData.price?.toString() || "",
-    category: initialData.category || "",
+    categorySlug: initialData.categorySlug || "",
+    subcategorySlug: initialData.subcategorySlug || "",
+    itemSlug: initialData.itemSlug || "",
     image: initialData.image || "",
     isFeatured: initialData.isFeatured || false,
     stock: initialData.stock || 0,
@@ -33,23 +36,23 @@ export default function BaseProductForm({
     directions: initialData.directions || ""
   });
 
+  const [availableSubcategories, setAvailableSubcategories] = useState(
+    formData.categorySlug ? 
+      categories.find(c => c.slug === formData.categorySlug)?.subcategories || [] 
+      : []
+  );
+  
+  const [availableItems, setAvailableItems] = useState(
+    formData.subcategorySlug ? 
+      availableSubcategories.find(s => s.slug === formData.subcategorySlug)?.items || [] 
+      : []
+  );
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [imagePreview, setImagePreview] = useState(initialData.image || null);
   const [imageFile, setImageFile] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
-
-  const categories = [
-    "Pain Relief",
-    "Cold & Flu Relief",
-    "Digestive Health",
-    "First Aid",
-    "Feminine Care",
-    "Vitamins",
-    "Allergy Relief",
-    "Sleep Aid",
-    "Foot Care"
-  ].sort();
 
   const dosageForms = [
     "Tablet",
@@ -131,6 +134,34 @@ export default function BaseProductForm({
       ...prev,
       warnings: prev.warnings.filter((_, i) => i !== index)
     }));
+  };
+
+  const handleCategoryChange = (e) => {
+    const categorySlug = e.target.value;
+    const category = categories.find(c => c.slug === categorySlug);
+    
+    setFormData(prev => ({
+      ...prev,
+      categorySlug,
+      subcategorySlug: '',
+      itemSlug: ''
+    }));
+    
+    setAvailableSubcategories(category?.subcategories || []);
+    setAvailableItems([]);
+  };
+
+  const handleSubcategoryChange = (e) => {
+    const subcategorySlug = e.target.value;
+    const subcategory = availableSubcategories.find(s => s.slug === subcategorySlug);
+    
+    setFormData(prev => ({
+      ...prev,
+      subcategorySlug,
+      itemSlug: ''
+    }));
+    
+    setAvailableItems(subcategory?.items || []);
   };
 
   const handleSubmit = async (e) => {
@@ -219,7 +250,7 @@ export default function BaseProductForm({
           </div>
         </div>
 
-        {/* Basic Information */}
+        {/* Updated Category Selection */}
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-gray-900">Basic Information</h3>
           
@@ -236,20 +267,64 @@ export default function BaseProductForm({
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Category *</label>
-              <select
-                name="category"
-                value={formData.category}
-                onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                required
-              >
-                <option value="">Select a category</option>
-                {categories.map(category => (
-                  <option key={category} value={category}>{category}</option>
-                ))}
-              </select>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Category *</label>
+                <select
+                  name="categorySlug"
+                  value={formData.categorySlug}
+                  onChange={handleCategoryChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  required
+                >
+                  <option value="">Select a category</option>
+                  {categories.map(category => (
+                    <option key={category.slug} value={category.slug}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {formData.categorySlug && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Subcategory *</label>
+                  <select
+                    name="subcategorySlug"
+                    value={formData.subcategorySlug}
+                    onChange={handleSubcategoryChange}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    required
+                  >
+                    <option value="">Select a subcategory</option>
+                    {availableSubcategories.map(sub => (
+                      <option key={sub.slug} value={sub.slug}>
+                        {sub.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {formData.subcategorySlug && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Item Category *</label>
+                  <select
+                    name="itemSlug"
+                    value={formData.itemSlug}
+                    onChange={handleChange}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    required
+                  >
+                    <option value="">Select an item category</option>
+                    {availableItems.map(item => (
+                      <option key={item.slug} value={item.slug}>
+                        {item.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           </div>
 

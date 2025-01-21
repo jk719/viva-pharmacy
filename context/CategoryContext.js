@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
+import { categories, getCategoryBySlug, getSubcategoryBySlug } from '@/data/categories';
 
 // Create a context for the category
 const CategoryContext = createContext();
@@ -16,126 +17,81 @@ export function useCategory() {
 
 // CategoryProvider component
 export function CategoryProvider({ children }) {
-    const [selectedCategory, setSelectedCategory] = useState('All');
-    const [categories, setCategories] = useState([]);
+    const [selectedCategory, setSelectedCategory] = useState("All");
+    const [selectedSubcategory, setSelectedSubcategory] = useState(null);
+    const [selectedItem, setSelectedItem] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // Fetch categories from API
-    useEffect(() => {
-        const fetchCategories = async () => {
-            try {
-                const response = await fetch('/api/products');
-                const data = await response.json();
-                
-                if (data.success) {
-                    // Extract unique categories from products
-                    const uniqueCategories = ['All', ...new Set(
-                        data.products.map(product => product.category)
-                    )].sort();
-                    
-                    setCategories(uniqueCategories);
-                    setError(null);
-                } else {
-                    setError('Failed to fetch categories');
-                }
-            } catch (error) {
-                console.error('Error fetching categories:', error);
-                setError('Failed to load categories');
-            }
-        };
-
-        fetchCategories();
-    }, []);
-
-    // Load selected category from localStorage on initial mount
+    // Load selected categories from localStorage
     useEffect(() => {
         try {
-            const savedCategory = localStorage.getItem('selectedCategory');
-            if (savedCategory && categories.includes(savedCategory)) {
-                setSelectedCategory(savedCategory);
+            const saved = JSON.parse(localStorage.getItem('selectedCategories')) || {};
+            if (saved.category) {
+                // Handle both "All" and category slugs
+                if (saved.category === "All") {
+                    setSelectedCategory("All");
+                } else if (categories.some(c => c.slug === saved.category)) {
+                    setSelectedCategory(saved.category);
+                    if (saved.subcategory) setSelectedSubcategory(saved.subcategory);
+                    if (saved.item) setSelectedItem(saved.item);
+                } else {
+                    setSelectedCategory("All"); // Fallback to "All" if invalid
+                }
+            } else {
+                setSelectedCategory("All"); // Default to "All"
             }
         } catch (error) {
-            console.error('Error loading category:', error);
+            console.error('Error loading categories:', error);
+            setSelectedCategory("All"); // Fallback to "All" on error
         } finally {
             setLoading(false);
         }
-    }, [categories]);
+    }, []);
 
-    // Save to localStorage when category changes
+    // Save selections to localStorage
     useEffect(() => {
         if (!loading) {
-            localStorage.setItem('selectedCategory', selectedCategory);
+            localStorage.setItem('selectedCategories', JSON.stringify({
+                category: selectedCategory,
+                subcategory: selectedSubcategory,
+                item: selectedItem
+            }));
         }
-    }, [selectedCategory, loading]);
+    }, [selectedCategory, selectedSubcategory, selectedItem, loading]);
 
-    // Helper function to get products by category
-    const getProductsByCategory = useCallback(async (category = selectedCategory) => {
-        try {
-            const params = new URLSearchParams();
-            
-            // Only add category parameter if not "All"
-            if (category !== 'All') {
-                params.append('category', category);
-            }
-            
-            // Log the request for debugging
-            console.log('Fetching products with params:', params.toString());
-            
-            const response = await fetch(`/api/products?${params}`);
-            const data = await response.json();
-            
-            if (data.success) {
-                // Log the response for debugging
-                console.log('Products fetched:', {
-                    category,
-                    count: data.products.length,
-                    categories: [...new Set(data.products.map(p => p.category))]
-                });
-                return data.products;
-            } else {
-                throw new Error(data.message || 'Failed to fetch products');
-            }
-        } catch (error) {
-            console.error('Error fetching products:', error);
-            throw error;
-        }
-    }, [selectedCategory]);
-
-    // Helper function to check if a category exists
-    const categoryExists = useCallback((category) => {
-        return categories.includes(category);
-    }, [categories]);
-
-    // Helper function to get category statistics
-    const getCategoryStats = useCallback(async () => {
-        try {
-            const products = await getProductsByCategory('All');
-            const stats = categories.reduce((acc, category) => {
-                if (category === 'All') return acc;
-                const categoryProducts = products.filter(p => p.category === category);
-                acc[category] = {
-                    count: categoryProducts.length,
-                    averagePrice: categoryProducts.reduce((sum, p) => sum + p.price, 0) / categoryProducts.length || 0
-                };
-                return acc;
-            }, {});
-            return stats;
-        } catch (error) {
-            console.error('Error getting category stats:', error);
-            throw error;
-        }
-    }, [categories, getProductsByCategory]);
+    // Handle category selection
+    const handleCategorySelect = (category) => {
+        setSelectedCategory(category);
+        setSelectedSubcategory(null);
+        setSelectedItem(null);
+    };
 
     const value = {
         selectedCategory,
-        setSelectedCategory,
-        categories,
+        setSelectedCategory: handleCategorySelect,
+        selectedSubcategory,
+        setSelectedSubcategory,
+        selectedItem,
+        setSelectedItem,
+        categories: ["All", ...categories.map(c => c.name)], // Include "All" in categories
         loading,
         error,
-        getProductsByCategory,
-        categoryExists,
-        getCategoryStats
+        getCurrentCategory: () => {
+            if (selectedCategory === "All") return null;
+            return getCategoryBySlug(selectedCategory);
+        },
+        getCurrentSubcategory: () => {
+            if (!selectedCategory || selectedCategory === "All") return null;
+            return selectedSubcategory ? 
+                getSubcategoryBySlug(selectedCategory, selectedSubcategory) : null;
+        },
+        // Helper function to get category display name
+        getCategoryDisplayName: (categorySlug) => {
+            if (categorySlug === "All") return "All";
+            const category = categories.find(c => c.slug === categorySlug);
+            return category ? category.name : categorySlug;
+        }
     };
 
     return (

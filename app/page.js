@@ -10,6 +10,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { IoArrowForward } from 'react-icons/io5';
 import { fetchProducts } from '@/lib/api';
 import toast from 'react-hot-toast';
+import SearchBar from '@/components/SearchBar';
+import CategoryGrid from '@/components/CategoryGrid';
+import ProductTabs from '@/components/products/ProductTabs';
+import HealthBlog from '@/components/HealthBlog';
+import RewardsBanner from '@/components/RewardsBanner';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,6 +24,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const searchParams = useSearchParams();
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState('featured');
   
   useEffect(() => {
     const verified = searchParams.get('verified');
@@ -123,74 +129,75 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Enhanced Filter Section */}
-      <motion.div 
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="sticky top-0 z-10 bg-white border-b shadow-sm"
-      >
-        <div className="w-full max-w-7xl mx-auto">
-          <div className="relative px-4 py-3">
-            <div 
-              className="flex items-center space-x-3 overflow-x-auto 
-                       scrollbar-thin scrollbar-thumb-gray-300 
-                       scrollbar-track-transparent pb-2"
-              style={{
-                msOverflowStyle: 'none',
-                scrollbarWidth: 'none',
-                WebkitOverflowScrolling: 'touch'
-              }}
-            >
-              {!isLoading && categories.map((category) => (
-                <motion.button
-                  key={category}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setSelectedCategory(category)}
-                  className={`
-                    whitespace-nowrap px-4 py-1.5 rounded-full
-                    text-sm font-medium transition-all duration-200
-                    ${selectedCategory === category 
-                      ? 'bg-primary text-white shadow-md hover:shadow-lg' 
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }
-                    focus:outline-none focus:ring-2 focus:ring-primary/20
-                  `}
-                  aria-pressed={selectedCategory === category}
-                >
-                  {category}
-                </motion.button>
-              ))}
-              
-              {isLoading && (
-                <div className="flex space-x-3">
-                  {[1, 2, 3].map((n) => (
-                    <div 
-                      key={n}
-                      className="h-8 w-24 bg-gray-200 rounded-full animate-pulse"
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-            
-            {/* Fade edges for better scroll indication */}
-            <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white to-transparent pointer-events-none" />
-            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent pointer-events-none" />
-          </div>
+      {/* Hero Section with Search */}
+      <div className="relative bg-gradient-to-br from-blue-900 to-blue-700 py-16">
+        <div className="container mx-auto px-4">
+          <motion.h1 
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="text-4xl md:text-5xl font-bold mb-4 text-white"
+          >
+            Your Health, Our Priority
+          </motion.h1>
+          <motion.p 
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            className="text-xl text-white/90 mb-8"
+          >
+            Browse our wide selection of pharmaceuticals and health products
+          </motion.p>
+          <SearchBar />
         </div>
-      </motion.div>
+      </div>
 
-      {/* Products Section */}
-      <div className="container mx-auto px-4">
+      {/* Category Grid */}
+      <div className="container mx-auto px-4 py-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            { name: 'Photo Medications', icon: '💊' },
+            { name: 'Household & Children\'s Health', icon: '🏠' },
+            { name: 'Everyday Essentials', icon: '✨' },
+            { name: 'Health & Wellness', icon: '❤️' },
+            { name: 'Electronics & Accessories', icon: '🔌' },
+            { name: 'Beauty & Personal Care', icon: '✨' },
+            { name: 'Seasonal Items', icon: '🌞' }
+          ].map((category, index) => (
+            <Link 
+              key={category.name}
+              href={`/products?category=${encodeURIComponent(category.name)}`}
+              className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 
+                       transition-colors text-center"
+            >
+              <span className="text-2xl mb-2 block">{category.icon}</span>
+              <span className="text-sm font-medium">{category.name}</span>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* Product Tabs */}
+      <div className="container mx-auto px-4 py-8 border-t">
+        <div className="flex gap-4 mb-6">
+          {['Featured', 'New Arrivals', 'Best Sellers'].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab.toLowerCase())}
+              className={`px-4 py-2 rounded-lg ${
+                activeTab === tab.toLowerCase()
+                  ? 'bg-primary text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
         <FeaturedProducts />
       </div>
 
       {/* View All Products CTA */}
-      <motion.section 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="text-center py-8"
-      >
+      <div className="text-center py-8">
         <Link 
           href="/products"
           className="inline-flex items-center gap-2 px-6 py-2.5 
@@ -200,7 +207,7 @@ export default function Home() {
           <span>View All Products</span>
           <IoArrowForward />
         </Link>
-      </motion.section>
+      </div>
     </div>
   );
 }

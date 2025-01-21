@@ -3,66 +3,135 @@ import { getServerSession } from 'next-auth/next';
 import dbConnect from '@/lib/dbConnect';
 import Product from '@/models/Product';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { categories } from '@/data/categories';
+import rateLimit from '@/lib/rateLimit';
+
+// Helper function to get category names
+function getCategoryNames(categorySlug, subcategorySlug, itemSlug) {
+  const category = categories.find(c => c.slug === categorySlug);
+  const subcategory = category?.subcategories.find(s => s.slug === subcategorySlug);
+  const item = subcategory?.items.find(i => i.slug === itemSlug);
+  
+  return {
+    category: category?.name || '',
+    subcategory: subcategory?.name || '',
+    item: item?.name || ''
+  };
+}
 
 export async function GET(request) {
   console.log('GET /api/products: Starting request');
   
   try {
+    // Apply rate limiting
+    if (!rateLimit.check(request)) {
+      return NextResponse.json({
+        success: false,
+        message: 'Too many requests. Please try again later.'
+      }, { 
+        status: 429,
+        headers: {
+          'Retry-After': '60',
+          'X-RateLimit-Limit': '30',
+          'X-RateLimit-Remaining': '0'
+        }
+      });
+    }
+
     await dbConnect();
     
     const url = new URL(request.url);
     const searchParams = url.searchParams;
     
-    // Build query
+    // Build the query object
     const query = {};
-    const category = searchParams.get('category');
-    const search = searchParams.get('search');
-    const featured = searchParams.get('featured');
-    const minPrice = searchParams.get('minPrice');
-    const maxPrice = searchParams.get('maxPrice');
-    const dosageForm = searchParams.get('dosageForm');
     
-    if (category) query.category = category;
-    if (featured === 'true') query.isFeatured = true;
-    if (dosageForm) query.dosageForm = dosageForm;
-    
-    if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-        { 'activeIngredients.name': { $regex: search, $options: 'i' } }
-      ];
-    }
-    
-    if (minPrice || maxPrice) {
-      query.price = {};
-      if (minPrice) query.price.$gte = parseFloat(minPrice);
-      if (maxPrice) query.price.$lte = parseFloat(maxPrice);
+    // Get filter parameters
+    const filters = {
+      category: searchParams.get('category'),
+      search: searchParams.get('search'),
+      minPrice: searchParams.get('minPrice'),
+      maxPrice: searchParams.get('maxPrice'),
+      isNew: searchParams.get('new') === 'true',
+      isPopular: searchParams.get('popular') === 'true',
+      isFeatured: searchParams.get('featured') === 'true',
+      inStock: searchParams.get('inStock') === 'true'
+    };
+
+    console.log('Applied filters:', filters);
+
+    // Apply category filter
+    if (filters.category && filters.category !== 'All') {
+      const categoryData = categories.find(c => c.name === filters.category);
+      if (categoryData) {
+        query.categorySlug = categoryData.slug;
+      }
     }
 
-    // Add stock filter
-    const inStock = searchParams.get('inStock');
-    if (inStock === 'true') {
-      query.stock = { $gt: 0 };
+    // Handle price range
+    if (filters.minPrice || filters.maxPrice) {
+      query.price = {};
+      if (filters.minPrice && !isNaN(parseFloat(filters.minPrice))) {
+        query.price.$gte = parseFloat(filters.minPrice);
+      }
+      if (filters.maxPrice && !isNaN(parseFloat(filters.maxPrice))) {
+        query.price.$lte = parseFloat(filters.maxPrice);
+      }
+      if (Object.keys(query.price).length === 0) {
+        delete query.price;
+      }
+    }
+
+    // Add search functionality
+    if (filters.search) {
+      query.$text = { $search: filters.search };
     }
 
     console.log('Executing query:', JSON.stringify(query, null, 2));
-    
+
     const products = await Product.find(query)
+      .select('-contraindications -sideEffects')
       .sort({ createdAt: -1 })
+      .lean()
       .populate('createdBy', 'name email');
 
-    return NextResponse.json({
+    // Transform products to include category names
+    const transformedProducts = products.map(product => {
+      const names = getCategoryNames(
+        product.categorySlug,
+        product.subcategorySlug,
+        product.itemSlug
+      );
+      
+      return {
+        ...product,
+        category: names.category,
+        subcategory: names.subcategory,
+        item: names.item
+      };
+    });
+
+    console.log(`Found ${transformedProducts.length} products`);
+
+    const response = NextResponse.json({
       success: true,
-      products,
+      products: transformedProducts,
       pagination: {
-        total: products.length,
+        total: transformedProducts.length,
         pages: 1,
         currentPage: 1,
-        perPage: products.length,
+        perPage: transformedProducts.length,
         hasMore: false
       }
     });
+
+    // Add rate limit headers to successful response
+    const ip = request.headers.get('x-forwarded-for') || 'anonymous';
+    const remaining = 30 - rateLimit.getTokens(ip);
+    response.headers.set('X-RateLimit-Limit', '30');
+    response.headers.set('X-RateLimit-Remaining', remaining.toString());
+    
+    return response;
 
   } catch (error) {
     console.error('Products fetch error:', error);
@@ -76,6 +145,20 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
+    if (!rateLimit.check(request, 10)) { // Stricter limit for POST
+      return NextResponse.json({
+        success: false,
+        message: 'Too many requests. Please try again later.'
+      }, { 
+        status: 429,
+        headers: {
+          'Retry-After': '60',
+          'X-RateLimit-Limit': '10',
+          'X-RateLimit-Remaining': '0'
+        }
+      });
+    }
+
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.role || !['ADMIN', 'MANAGER'].includes(session.user.role)) {
@@ -88,8 +171,13 @@ export async function POST(request) {
     await dbConnect();
     const body = await request.json();
     
-    // Validate required fields
-    const requiredFields = ['name', 'price', 'description', 'category', 'stock', 'dosageForm'];
+    // Add new required fields
+    const requiredFields = [
+      'name', 'price', 'description', 
+      'categorySlug', 'subcategorySlug', 'itemSlug',
+      'stock', 'dosageForm'
+    ];
+    
     const missingFields = requiredFields.filter(field => !body[field]);
     
     if (missingFields.length > 0) {
@@ -114,10 +202,9 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    // Generate SKU
-    const sku = await Product.generateSKU(body.category);
+    // Generate SKU with new category structure
+    const sku = await Product.generateSKU(body.categorySlug, body.subcategorySlug);
 
-    // Clean and prepare data
     const productData = {
       ...body,
       sku,
@@ -126,10 +213,12 @@ export async function POST(request) {
       image: body.image || "https://via.placeholder.com/400x400?text=No+Image",
       activeIngredients: (body.activeIngredients || []).filter(i => i.name && i.amount),
       warnings: (body.warnings || []).filter(w => w.trim()),
+      dosageForm: body.dosageForm,
+      isPopular: body.isPopular || false,
+      isFeatured: body.isFeatured || false,
       createdBy: session.user.id
     };
 
-    // Create new product
     const product = new Product(productData);
     await product.save();
 
@@ -175,6 +264,20 @@ export async function POST(request) {
 
 export async function PUT(request) {
   try {
+    if (!rateLimit.check(request, 15)) { // Moderate limit for PUT
+      return NextResponse.json({
+        success: false,
+        message: 'Too many requests. Please try again later.'
+      }, { 
+        status: 429,
+        headers: {
+          'Retry-After': '60',
+          'X-RateLimit-Limit': '15',
+          'X-RateLimit-Remaining': '0'
+        }
+      });
+    }
+
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.role || !['ADMIN', 'MANAGER'].includes(session.user.role)) {
@@ -251,6 +354,20 @@ export async function PUT(request) {
 
 export async function DELETE(request) {
   try {
+    if (!rateLimit.check(request, 10)) { // Stricter limit for DELETE
+      return NextResponse.json({
+        success: false,
+        message: 'Too many requests. Please try again later.'
+      }, { 
+        status: 429,
+        headers: {
+          'Retry-After': '60',
+          'X-RateLimit-Limit': '10',
+          'X-RateLimit-Remaining': '0'
+        }
+      });
+    }
+
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.role || !['ADMIN', 'MANAGER'].includes(session.user.role)) {

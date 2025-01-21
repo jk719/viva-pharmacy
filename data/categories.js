@@ -8,6 +8,74 @@ const generateSlug = (text) => {
 
 export const categories = [
   {
+    name: "Medications",
+    slug: "medications",
+    icon: "MedicineIcon",
+    featured: true,
+    subcategories: [
+      {
+        name: "Cold & Flu",
+        slug: "cold-flu",
+        items: [
+          { name: "Cough Medicines", slug: "cough-medicines" },
+          { name: "Nasal Sprays", slug: "nasal-sprays" },
+          { name: "Multi-Symptom Relief", slug: "multi-symptom" }
+        ]
+      },
+      {
+        name: "Pain & Fever",
+        slug: "pain-fever",
+        items: [
+          { name: "Oral Pain Relief", slug: "oral-pain" },
+          { name: "Topical Pain Relief", slug: "topical-pain" }
+        ]
+      },
+      {
+        name: "Digestive Health",
+        slug: "digestive",
+        items: [
+          { name: "Antacids", slug: "antacids" },
+          { name: "Laxatives", slug: "laxatives" },
+          { name: "Anti-Diarrheal", slug: "anti-diarrheal" }
+        ]
+      },
+      {
+        name: "Allergy Relief",
+        slug: "allergy",
+        items: [
+          { name: "Antihistamines", slug: "antihistamines" },
+          { name: "Nasal Allergy", slug: "nasal-allergy" }
+        ]
+      }
+    ]
+  },
+  {
+    name: "Children's Health",
+    slug: "childrens-health",
+    icon: "ChildIcon",
+    featured: true,
+    subcategories: [
+      {
+        name: "Children's Medicine",
+        slug: "childrens-medicine",
+        items: [
+          { name: "Cough & Cold", slug: "cough-cold" },
+          { name: "Pain & Fever", slug: "pain-fever" },
+          { name: "Allergy", slug: "allergy" }
+        ]
+      },
+      {
+        name: "Children's Wellness",
+        slug: "childrens-wellness",
+        items: [
+          { name: "Vitamins", slug: "vitamins" },
+          { name: "Probiotics", slug: "probiotics" },
+          { name: "Sleep Support", slug: "sleep-support" }
+        ]
+      }
+    ]
+  },
+  {
     name: "Health & Wellness",
     slug: generateSlug("Health & Wellness"),
     description: "Healthcare products and wellness essentials",

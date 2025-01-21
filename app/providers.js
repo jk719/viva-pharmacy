@@ -5,8 +5,8 @@ import { CartProvider } from "../context/CartContext";
 import { CategoryProvider } from "../context/CategoryContext";
 import { Toaster } from 'react-hot-toast';
 import { SWRConfig } from 'swr';
+import { useEffect } from 'react';
 
-// Global fetcher for SWR
 const fetcher = async (url) => {
   const res = await fetch(url);
   if (!res.ok) {
@@ -16,20 +16,44 @@ const fetcher = async (url) => {
 };
 
 export function Providers({ children, session }) {
-  console.log('Providers: Initializing');
-  
+  // Cleanup effect for SSE connections
+  useEffect(() => {
+    return () => {
+      if (typeof window !== 'undefined') {
+        // Close any existing EventSource connections
+        const closeSSEConnections = () => {
+          const sources = Array.from(document.getElementsByTagName('*'))
+            .filter(element => element._eventSource)
+            .map(element => element._eventSource);
+          
+          sources.forEach(source => {
+            if (source && source.close) {
+              source.close();
+            }
+          });
+        };
+        
+        closeSSEConnections();
+      }
+    };
+  }, []);
+
   return (
-    <SessionProvider session={session} refetchInterval={20}>
+    <SessionProvider 
+      session={session} 
+      refetchInterval={0}
+      refetchOnWindowFocus={false}
+      refetchWhenOffline={false}
+    >
       <SWRConfig 
         value={{
           fetcher,
-          revalidateOnFocus: false, // Disable revalidation on window focus
-          dedupingInterval: 10000, // Dedupe requests within 10 seconds
-          shouldRetryOnError: false, // Disable automatic retries on error
-          suspense: false,
-          fallback: {
-            '/api/products': { products: [] }
-          }
+          revalidateOnFocus: false,
+          revalidateOnReconnect: false,
+          dedupingInterval: 10000,
+          shouldRetryOnError: false,
+          errorRetryCount: 2,
+          suspense: false
         }}
       >
         <CartProvider>
@@ -51,18 +75,6 @@ export function Providers({ children, session }) {
                   maxWidth: '90vw',
                   textAlign: 'center',
                   zIndex: 10000,
-                },
-                success: {
-                  iconTheme: {
-                    primary: 'white',
-                    secondary: '#003366',
-                  },
-                },
-                error: {
-                  iconTheme: {
-                    primary: 'white',
-                    secondary: '#003366',
-                  },
                 },
               }}
             />

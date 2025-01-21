@@ -88,17 +88,53 @@ export function AuthButtons() {
   const handleSignOut = async () => {
     try {
       setShowLogin(false);
+      
+      // Clear local storage first
+      if (typeof window !== 'undefined') {
+        const itemsToClear = ['cart', 'selectedCategories'];
+        itemsToClear.forEach(item => localStorage.removeItem(item));
+      }
+      
+      // Close any existing SSE connections
+      if (session?.user?.id) {
+        try {
+          const events = new EventSource(`/api/user/vivabucks/${session.user.id}/events`);
+          events.close();
+        } catch (error) {
+          console.error('Error closing SSE connection:', error);
+        }
+      }
+      
+      // Show success message before sign out
+      toast.success('Successfully signed out');
+      
+      // Perform sign out with immediate UI update
       await signOut({ 
-        redirect: false 
+        redirect: false,
+        callbackUrl: '/' 
       });
       
-      toast.success('Successfully signed out');
-      router.refresh();
+      // Clear any remaining session data
+      if (typeof window !== 'undefined') {
+        window.sessionStorage.clear();
+        
+        // Force a clean navigation
+        router.replace('/');
+        
+        // Force a refresh after a brief delay to ensure clean state
+        setTimeout(() => {
+          window.location.reload();
+        }, 100);
+      }
+      
     } catch (error) {
       console.error('Sign out error:', error);
       toast.error('Error signing out');
-      // Fallback
-      window.location.href = '/';
+      
+      // Fallback navigation
+      if (typeof window !== 'undefined') {
+        window.location.href = '/';
+      }
     }
   };
 

@@ -1,7 +1,7 @@
 "use client";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import EditProductForm from "@/components/products/EditProductForm";
 import { motion } from "framer-motion";
 import { FiArrowLeft } from "react-icons/fi";
@@ -10,6 +10,8 @@ import Link from "next/link";
 export default function EditProductClient({ productId }) {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (status === "unauthenticated" || 
@@ -19,7 +21,34 @@ export default function EditProductClient({ productId }) {
     }
   }, [status, session, router]);
 
-  if (status === "loading") {
+  useEffect(() => {
+    async function fetchProduct() {
+      try {
+        const response = await fetch(`/api/products/${productId}`);
+        const data = await response.json();
+        if (data.success) {
+          // Transform legacy category data if needed
+          const transformedProduct = {
+            ...data.product,
+            categorySlug: data.product.categorySlug || data.product.category,
+            subcategorySlug: data.product.subcategorySlug,
+            itemSlug: data.product.itemSlug
+          };
+          setProduct(transformedProduct);
+        }
+      } catch (error) {
+        console.error('Error fetching product:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (productId) {
+      fetchProduct();
+    }
+  }, [productId]);
+
+  if (status === "loading" || loading) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gray-50">
         <div className="space-y-4 text-center">
@@ -64,7 +93,11 @@ export default function EditProductClient({ productId }) {
         className="container mx-auto px-4 py-6"
       >
         <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-sm p-6">
-          <EditProductForm productId={productId} />
+          {product ? (
+            <EditProductForm product={product} />
+          ) : (
+            <p className="text-center text-gray-600">Product not found</p>
+          )}
         </div>
       </motion.div>
     </div>

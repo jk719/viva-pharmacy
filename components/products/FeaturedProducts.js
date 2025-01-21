@@ -1,17 +1,21 @@
 "use client";
 
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCart } from '../../context/CartContext';
 import { useCategory } from '../../context/CategoryContext';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { IoMdAdd } from 'react-icons/io';
 import { HiMinusSm, HiPlusSm } from 'react-icons/hi';
 import useSWR from 'swr';
+import { useRateLimit } from '@/lib/hooks/useRateLimit';
+import toast from 'react-hot-toast';
 
 // Extracted components for better organization
 const ProductCard = ({ product, quantity, onAdd, onDecrement }) => {
+  const [showIngredients, setShowIngredients] = useState(false);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -20,8 +24,30 @@ const ProductCard = ({ product, quantity, onAdd, onDecrement }) => {
                  min-w-[200px] max-w-[200px] 
                  sm:min-w-[280px] sm:max-w-[280px] 
                  scroll-snap-align-start border border-gray-100
-                 shadow-sm hover:shadow-md transition-shadow duration-200"
+                 shadow-sm hover:shadow-md transition-shadow duration-200
+                 relative"
     >
+      {product.isNew && (
+        <motion.span
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="absolute -top-2 -right-2 z-20 bg-blue-500 text-white 
+                   px-2 py-1 rounded-full text-xs font-medium"
+        >
+          New
+        </motion.span>
+      )}
+
+      {product.stock === 0 && (
+        <div className="absolute inset-0 bg-black/5 z-10 rounded-2xl
+                      flex items-center justify-center">
+          <span className="bg-red-500 text-white px-3 py-1.5 rounded-full
+                       text-sm font-medium">
+            Out of Stock
+          </span>
+        </div>
+      )}
+
       <Link href={`/products/${product._id}`}>
         <div className="relative h-36 sm:h-48 w-full mb-3 sm:mb-4 
                       rounded-xl overflow-hidden group">
@@ -49,69 +75,119 @@ const ProductCard = ({ product, quantity, onAdd, onDecrement }) => {
             onAdd={onAdd} 
             onDecrement={onDecrement}
             product={product}
+            disabled={product.stock === 0}
           />
         </div>
       </Link>
 
       <ProductInfo product={product} />
+
+      {product.activeIngredients?.length > 0 && (
+        <div className="mt-3 text-sm">
+          <button
+            onClick={() => setShowIngredients(!showIngredients)}
+            className="text-primary hover:text-primary-dark font-medium
+                     flex items-center gap-1"
+          >
+            Active Ingredients
+            <motion.span
+              animate={{ rotate: showIngredients ? 180 : 0 }}
+              className="text-lg"
+            >
+              ↓
+            </motion.span>
+          </button>
+          
+          <AnimatePresence>
+            {showIngredients && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="mt-2 space-y-1 text-gray-600"
+              >
+                {product.activeIngredients.map((ingredient, index) => (
+                  <p key={index} className="text-xs">
+                    • {ingredient.name}: {ingredient.amount}
+                  </p>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
+
+      {product.dosageForm && (
+        <span className="absolute bottom-2 right-2 text-xs
+                      bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+          {product.dosageForm}
+        </span>
+      )}
     </motion.div>
   );
 };
 
-const CartButton = ({ quantity, onAdd, onDecrement, product }) => (
+const CartButton = ({ quantity, onAdd, onDecrement, product, disabled }) => (
   <div className="absolute top-2 right-2 sm:top-3 sm:right-3 z-10">
     {quantity === 0 ? (
-      <AddButton onAdd={() => onAdd(product)} />
+      <AddButton onAdd={() => onAdd(product)} disabled={disabled} />
     ) : (
       <QuantityControls 
         quantity={quantity}
         onDecrement={() => onDecrement(product._id)}
         onAdd={() => onAdd(product)}
+        disabled={disabled}
       />
     )}
   </div>
 );
 
-const AddButton = ({ onAdd }) => (
+const AddButton = ({ onAdd, disabled }) => (
   <motion.button
-    whileTap={{ scale: 0.95 }}
+    whileTap={{ scale: disabled ? 1 : 0.95 }}
     onClick={(e) => {
       e.preventDefault();
-      onAdd();
+      if (!disabled) onAdd();
     }}
-    className="flex items-center gap-1 bg-primary text-white 
+    className={`flex items-center gap-1 
              px-2 py-1 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm
-             hover:bg-primary/90 transition-colors duration-200"
+             transition-colors duration-200
+             ${disabled 
+               ? 'bg-gray-300 cursor-not-allowed' 
+               : 'bg-primary text-white hover:bg-primary/90'
+             }`}
+    disabled={disabled}
   >
     <IoMdAdd className="text-base sm:text-lg" />
-    <span>Add</span>
+    <span>{disabled ? 'Out of Stock' : 'Add'}</span>
   </motion.button>
 );
 
-const QuantityControls = ({ quantity, onDecrement, onAdd }) => (
+const QuantityControls = ({ quantity, onDecrement, onAdd, disabled }) => (
   <div 
     onClick={(e) => e.preventDefault()}
     className="flex items-center gap-1 bg-white rounded-full 
              p-0.5 sm:p-1 border border-gray-100"
   >
-    <QuantityButton onClick={onDecrement} color="red" icon={<HiMinusSm />} />
+    <QuantityButton onClick={onDecrement} color="red" icon={<HiMinusSm />} disabled={disabled} />
     <span className="w-4 sm:w-6 text-center font-medium text-xs sm:text-base">
       {quantity}
     </span>
-    <QuantityButton onClick={onAdd} color="green" icon={<HiPlusSm />} />
+    <QuantityButton onClick={onAdd} color="green" icon={<HiPlusSm />} disabled={disabled} />
   </div>
 );
 
-const QuantityButton = ({ onClick, color, icon }) => (
+const QuantityButton = ({ onClick, color, icon, disabled }) => (
   <motion.button
     whileTap={{ scale: 0.95 }}
     onClick={(e) => {
       e.preventDefault();
-      onClick();
+      if (!disabled) onClick();
     }}
     className={`w-5 h-5 sm:w-8 sm:h-8 flex items-center justify-center 
               rounded-full text-${color}-500 hover:bg-${color}-50 
               transition-colors`}
+    disabled={disabled}
   >
     {icon}
   </motion.button>
@@ -145,7 +221,15 @@ const ProductInfo = ({ product }) => (
 export default function FeaturedProducts() {
   const { addToCart, decrement, items = [] } = useCart();
   const { selectedCategory, setSelectedCategory } = useCategory();
+  const { isRateLimited, handleRateLimit } = useRateLimit();
   
+  // Initialize with "All" instead of null
+  useEffect(() => {
+    if (!selectedCategory) {
+      setSelectedCategory("All");
+    }
+  }, [selectedCategory, setSelectedCategory]);
+
   // 1. Define all hooks first
   const getItemQuantity = useCallback((productId) => {
     const item = items?.find((item) => item?.id === productId);
@@ -167,20 +251,33 @@ export default function FeaturedProducts() {
     decrement(productId);
   }, [decrement]);
 
-  // 2. SWR hook
+  // Updated SWR hook with rate limit handling
   const { data, error, isLoading } = useSWR(
     '/api/products',
     async (url) => {
       console.log('SWR: Starting fetch');
       try {
         const response = await fetch(url);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+        
+        // Handle rate limiting
+        if (response.status === 429) {
+          const retryAfter = response.headers.get('Retry-After') || 60;
+          const error = new Error('Rate limit exceeded');
+          error.retryAfter = parseInt(retryAfter);
+          error.isRateLimit = true;
+          throw error;
         }
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.message || 'Unknown error'}`);
+        }
+        
         const jsonData = await response.json();
         console.log('SWR: Fetch successful', {
           success: jsonData.success,
-          productCount: jsonData.products?.length
+          productCount: jsonData.products?.length,
+          categories: [...new Set(jsonData.products?.map(p => p.category) || [])]
         });
         return jsonData;
       } catch (err) {
@@ -192,31 +289,57 @@ export default function FeaturedProducts() {
       fallbackData: { success: false, products: [] },
       suspense: false,
       revalidateOnFocus: false,
-      dedupingInterval: 10000
+      dedupingInterval: 10000,
+      onError: (err) => {
+        console.error('SWR Error:', err);
+        if (err.isRateLimit) {
+          handleRateLimit(err, () => {
+            // This will be called after the rate limit period
+            window.location.reload();
+          });
+        }
+      }
     }
   );
 
   const products = data?.products || [];
 
-  // 3. Effects after all hooks
+  // Update categories effect
   useEffect(() => {
-    if (products) {
+    if (products.length > 0) {
       const availableCategories = ["All", ...new Set(products.map(p => p.category))];
+      console.log('Available categories:', availableCategories);
+      
+      // If current category is not available, reset to "All"
       if (!availableCategories.includes(selectedCategory)) {
         setSelectedCategory("All");
       }
     }
   }, [products, selectedCategory, setSelectedCategory]);
 
-  // 4. Logging
-  console.log('FeaturedProducts: State', {
+  // Debug logging
+  console.log('FeaturedProducts: Render State', {
     isLoading,
     hasError: !!error,
     productsCount: products.length,
-    selectedCategory
+    selectedCategory,
+    categories: products.length > 0 ? [...new Set(products.map(p => p.category))] : []
   });
 
-  // 5. Render logic
+  // Updated render logic with rate limit handling
+  if (isRateLimited) {
+    return (
+      <div className="py-6 text-center">
+        <div className="text-amber-600 mb-4">
+          Too many requests. Please wait a moment before trying again.
+        </div>
+        <div className="text-sm text-gray-500">
+          The page will automatically refresh when ready.
+        </div>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="py-6">
@@ -229,27 +352,35 @@ export default function FeaturedProducts() {
   }
 
   if (error) {
-    return (
-      <div className="py-6 text-center">
-        <div className="text-red-500 mb-4">
-          Error loading products. Please try again.
+    // Don't show error state for rate limits as we handle it above
+    if (!error.isRateLimit) {
+      return (
+        <div className="py-6 text-center">
+          <div className="text-red-500 mb-4">
+            Error loading products. Please try again.
+          </div>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-primary text-white rounded-md"
+          >
+            Retry
+          </button>
         </div>
-        <button 
-          onClick={() => window.location.reload()}
-          className="px-4 py-2 bg-primary text-white rounded-md"
-        >
-          Retry
-        </button>
-      </div>
-    );
+      );
+    }
+    return null;
   }
 
   if (!products || products.length === 0) {
     return <EmptyState />;
   }
 
-  // Filter products if needed
-  const filteredCategories = selectedCategory === 'All' 
+  // Update the filtering logic in CategorySection
+  const filteredProducts = selectedCategory === 'All' 
+    ? products 
+    : products.filter(p => p.category === selectedCategory);
+
+  const categories = selectedCategory === 'All'
     ? [...new Set(products.map(p => p.category))]
         .map(cat => ({
           name: cat,
@@ -257,16 +388,18 @@ export default function FeaturedProducts() {
         }))
     : [{
         name: selectedCategory,
-        count: products.filter(p => p.category === selectedCategory).length
+        count: filteredProducts.length
       }];
 
   return (
     <section className="py-4 sm:py-6">
-      {filteredCategories.map((category) => (
+      {categories.map((category) => (
         <CategorySection 
           key={category.name}
           category={category}
-          products={products}
+          products={filteredProducts.filter(p => 
+            selectedCategory === 'All' ? p.category === category.name : true
+          )}
           getItemQuantity={getItemQuantity}
           onAddToCart={handleAddToCart}
           onDecrement={handleDecrement}
