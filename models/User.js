@@ -100,6 +100,11 @@ const userSchema = new mongoose.Schema({
       message: props => `${props.value} is not a valid email address!`
     }
   },
+  name: {
+    type: String,
+    required: [true, 'Name is required'],
+    trim: true
+  },
   password: {
     type: String,
     required: [true, 'Password is required'],

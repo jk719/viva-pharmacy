@@ -85,7 +85,7 @@ export const categories = [
         slug: generateSlug("Over-the-Counter Medications"),
         items: [
           { name: "Pain Relief", slug: generateSlug("Pain Relief") },
-          { name: "Cold, Flu, & Allergy", slug: generateSlug("Cold, Flu, & Allergy") },
+          { name: "Cold, Flu & Allergy", slug: "cold-flu-allergy" },
           { name: "Cough & Throat", slug: generateSlug("Cough & Throat") },
           { name: "Digestive Health", slug: generateSlug("Digestive Health") },
           { name: "Sleep Aids", slug: generateSlug("Sleep Aids") },
@@ -435,19 +435,50 @@ export const categories = [
   }
 ];
 
-// Helper functions
+// Helper functions with improved logging and matching
 export const getCategoryBySlug = (slug) => {
-  return categories.find(category => category.slug === slug);
+  console.log('Looking for category with slug:', slug);
+  const category = categories.find(category => {
+    const slugMatch = category.slug === slug;
+    const nameMatch = category.name.toLowerCase() === slug?.toLowerCase();
+    console.log(`Comparing category: ${category.name} (${category.slug})`);
+    console.log(`Slug match: ${slugMatch}, Name match: ${nameMatch}`);
+    return slugMatch || nameMatch;
+  });
+  console.log('Found category:', category?.name || 'Not found');
+  return category;
 };
 
 export const getSubcategoryBySlug = (categorySlug, subcategorySlug) => {
+  console.log('Looking for subcategory:', { categorySlug, subcategorySlug });
   const category = getCategoryBySlug(categorySlug);
-  return category?.subcategories.find(sub => sub.slug === subcategorySlug);
+  if (!category) return null;
+  
+  const subcategory = category.subcategories.find(sub => {
+    const slugMatch = sub.slug === subcategorySlug;
+    const nameMatch = sub.name.toLowerCase() === subcategorySlug?.toLowerCase();
+    console.log(`Comparing subcategory: ${sub.name} (${sub.slug})`);
+    console.log(`Slug match: ${slugMatch}, Name match: ${nameMatch}`);
+    return slugMatch || nameMatch;
+  });
+  console.log('Found subcategory:', subcategory?.name || 'Not found');
+  return subcategory;
 };
 
 export const getItemBySlug = (categorySlug, subcategorySlug, itemSlug) => {
+  console.log('Looking for item:', { categorySlug, subcategorySlug, itemSlug });
   const subcategory = getSubcategoryBySlug(categorySlug, subcategorySlug);
-  return subcategory?.items.find(item => item.slug === itemSlug);
+  if (!subcategory) return null;
+  
+  const item = subcategory.items.find(item => {
+    const slugMatch = item.slug === itemSlug;
+    const nameMatch = item.name.toLowerCase() === itemSlug?.toLowerCase();
+    console.log(`Comparing item: ${item.name} (${item.slug})`);
+    console.log(`Slug match: ${slugMatch}, Name match: ${nameMatch}`);
+    return slugMatch || nameMatch;
+  });
+  console.log('Found item:', item?.name || 'Not found');
+  return item;
 };
 
 export const getAllCategories = () => {
@@ -476,19 +507,29 @@ export const getAllItems = (categorySlug, subcategorySlug) => {
 // Constants
 export const DEFAULT_CATEGORY = 'all';
 
-// Utility functions
+// Utility functions with improved validation
 export const isCategoryValid = (categorySlug) => {
-  return categories.some(cat => cat.slug === categorySlug);
+  console.log('Validating category:', categorySlug);
+  const category = getCategoryBySlug(categorySlug);
+  const isValid = !!category;
+  console.log('Category validation result:', isValid);
+  return isValid;
 };
 
 export const isSubcategoryValid = (categorySlug, subcategorySlug) => {
-  const category = getCategoryBySlug(categorySlug);
-  return category?.subcategories.some(sub => sub.slug === subcategorySlug) || false;
+  console.log('Validating subcategory:', { categorySlug, subcategorySlug });
+  const subcategory = getSubcategoryBySlug(categorySlug, subcategorySlug);
+  const isValid = !!subcategory;
+  console.log('Subcategory validation result:', isValid);
+  return isValid;
 };
 
 export const isItemValid = (categorySlug, subcategorySlug, itemSlug) => {
-  const subcategory = getSubcategoryBySlug(categorySlug, subcategorySlug);
-  return subcategory?.items.some(item => item.slug === itemSlug) || false;
+  console.log('Validating item:', { categorySlug, subcategorySlug, itemSlug });
+  const item = getItemBySlug(categorySlug, subcategorySlug, itemSlug);
+  const isValid = !!item;
+  console.log('Item validation result:', isValid);
+  return isValid;
 };
 
 export const getCategoryPath = (categorySlug, subcategorySlug, itemSlug) => {

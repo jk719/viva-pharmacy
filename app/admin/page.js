@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { FiPackage, FiUsers, FiShoppingCart, FiSettings } from "react-icons/fi";
 import { useState } from "react";
 import Image from 'next/image'
+import ManagerManagement from '@/components/admin/ManagerManagement';
 
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
@@ -97,7 +98,7 @@ export default function AdminDashboard() {
         >
           {activeTab === 'products' && <ProductManagement />}
           {activeTab === 'orders' && <div>Orders Management (Coming Soon)</div>}
-          {activeTab === 'users' && <div>User Management (Coming Soon)</div>}
+          {activeTab === 'users' && session.user.role === 'ADMIN' && <ManagerManagement />}
           {activeTab === 'settings' && <div>Settings (Coming Soon)</div>}
         </motion.div>
       </div>

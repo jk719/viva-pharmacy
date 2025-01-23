@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDropzone } from 'react-dropzone';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
@@ -20,21 +20,39 @@ export default function BaseProductForm({
   isEdit = false 
 }) {
   const router = useRouter();
-  const [formData, setFormData] = useState({
-    name: initialData.name || "",
-    description: initialData.description || "",
-    price: initialData.price?.toString() || "",
-    categorySlug: initialData.categorySlug || "",
-    subcategorySlug: initialData.subcategorySlug || "",
-    itemSlug: initialData.itemSlug || "",
-    image: initialData.image || "",
-    isFeatured: initialData.isFeatured || false,
-    stock: initialData.stock || 0,
-    dosageForm: initialData.dosageForm || "",
-    activeIngredients: initialData.activeIngredients || [{ name: "", amount: "" }],
-    warnings: initialData.warnings || [""],
-    directions: initialData.directions || ""
+  const [formData, setFormData] = useState(initialData || {
+    name: '',
+    description: '',
+    price: '',
+    categorySlug: '',
+    subcategorySlug: '',
+    itemSlug: '',
+    image: '',
+    isFeatured: false,
+    stock: 0,
+    dosageForm: '',
+    activeIngredients: [{ name: "", amount: "" }],
+    warnings: [""],
+    directions: ''
   });
+
+  useEffect(() => {
+    if (initialData && Object.keys(initialData).length > 0) {
+      const category = categories.find(c => c.slug === initialData.categorySlug);
+      if (category) {
+        setAvailableSubcategories(category.subcategories || []);
+        
+        const subcategory = category.subcategories.find(
+          s => s.slug === initialData.subcategorySlug
+        );
+        if (subcategory) {
+          setAvailableItems(subcategory.items || []);
+        }
+      }
+      
+      setFormData(initialData);
+    }
+  }, [initialData]);
 
   const [availableSubcategories, setAvailableSubcategories] = useState(
     formData.categorySlug ? 
@@ -140,28 +158,50 @@ export default function BaseProductForm({
     const categorySlug = e.target.value;
     const category = categories.find(c => c.slug === categorySlug);
     
-    setFormData(prev => ({
-      ...prev,
-      categorySlug,
-      subcategorySlug: '',
-      itemSlug: ''
-    }));
-    
-    setAvailableSubcategories(category?.subcategories || []);
-    setAvailableItems([]);
+    if (category) {
+      console.log('Selected category:', category.name, category.slug);
+      setAvailableSubcategories(category.subcategories || []);
+      setAvailableItems([]);
+      
+      setFormData(prev => ({
+        ...prev,
+        categorySlug: category.slug,
+        subcategorySlug: '',
+        itemSlug: ''
+      }));
+    }
   };
 
   const handleSubcategoryChange = (e) => {
     const subcategorySlug = e.target.value;
-    const subcategory = availableSubcategories.find(s => s.slug === subcategorySlug);
+    const category = categories.find(c => c.slug === formData.categorySlug);
+    const subcategory = category?.subcategories.find(s => s.slug === subcategorySlug);
     
-    setFormData(prev => ({
-      ...prev,
-      subcategorySlug,
-      itemSlug: ''
-    }));
+    if (subcategory) {
+      console.log('Selected subcategory:', subcategory.name, subcategory.slug);
+      setAvailableItems(subcategory.items || []);
+      
+      setFormData(prev => ({
+        ...prev,
+        subcategorySlug: subcategory.slug,
+        itemSlug: ''
+      }));
+    }
+  };
+
+  const handleItemChange = (e) => {
+    const itemSlug = e.target.value;
+    const category = categories.find(c => c.slug === formData.categorySlug);
+    const subcategory = category?.subcategories.find(s => s.slug === formData.subcategorySlug);
+    const item = subcategory?.items.find(i => i.slug === itemSlug);
     
-    setAvailableItems(subcategory?.items || []);
+    if (item) {
+      console.log('Selected item:', item.name, item.slug);
+      setFormData(prev => ({
+        ...prev,
+        itemSlug: item.slug
+      }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -170,6 +210,18 @@ export default function BaseProductForm({
     setError("");
     
     try {
+      if (!formData.categorySlug || !formData.subcategorySlug || !formData.itemSlug) {
+        throw new Error('Please select all category options');
+      }
+
+      const category = categories.find(c => c.slug === formData.categorySlug);
+      const subcategory = category?.subcategories.find(s => s.slug === formData.subcategorySlug);
+      const item = subcategory?.items.find(i => i.slug === formData.itemSlug);
+
+      if (!category || !subcategory || !item) {
+        throw new Error('Invalid category selection');
+      }
+
       let imageUrl = formData.image;
 
       if (imageFile) {
@@ -185,9 +237,17 @@ export default function BaseProductForm({
         stock: parseInt(formData.stock),
         activeIngredients: formData.activeIngredients.filter(i => i.name && i.amount),
         warnings: formData.warnings.filter(w => w.trim()),
-        image: imageUrl || process.env.NEXT_PUBLIC_DEFAULT_PRODUCT_IMAGE
+        image: imageUrl || process.env.NEXT_PUBLIC_DEFAULT_PRODUCT_IMAGE,
+        categorySlug: category.slug,
+        subcategorySlug: subcategory.slug,
+        itemSlug: item.slug,
+        category: category.name,
+        subcategory: subcategory.name,
+        item: item.name,
+        categoryPath: `${category.name} > ${subcategory.name} > ${item.name}`
       };
       
+      console.log('Submitting form data:', cleanedData);
       await onSubmit(cleanedData);
     } catch (error) {
       console.error("Error submitting form:", error);
@@ -312,7 +372,7 @@ export default function BaseProductForm({
                   <select
                     name="itemSlug"
                     value={formData.itemSlug}
-                    onChange={handleChange}
+                    onChange={handleItemChange}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                     required
                   >

@@ -28,37 +28,39 @@ const productSchema = new mongoose.Schema({
       message: props => `${props.value} is not a valid Cloudinary URL`
     }
   },
+  category: {
+    type: String,
+    required: [true, 'Category name is required'],
+    trim: true
+  },
+  subcategory: {
+    type: String,
+    required: [true, 'Subcategory name is required'],
+    trim: true
+  },
+  item: {
+    type: String,
+    required: [true, 'Item name is required'],
+    trim: true
+  },
+  categoryPath: {
+    type: String,
+    required: [true, 'Category path is required'],
+    trim: true
+  },
   categorySlug: {
     type: String,
-    required: [true, 'Category is required'],
-    validate: {
-      validator: function(v) {
-        return isCategoryValid(v);
-      },
-      message: props => `${props.value} is not a valid category`
-    },
+    required: [true, 'Category slug is required'],
     index: true
   },
   subcategorySlug: {
     type: String,
-    required: [true, 'Subcategory is required'],
-    validate: {
-      validator: function(v) {
-        return isSubcategoryValid(this.categorySlug, v);
-      },
-      message: props => `${props.value} is not a valid subcategory`
-    },
+    required: [true, 'Subcategory slug is required'],
     index: true
   },
   itemSlug: {
     type: String,
-    required: [true, 'Item category is required'],
-    validate: {
-      validator: function(v) {
-        return isItemValid(this.categorySlug, this.subcategorySlug, v);
-      },
-      message: props => `${props.value} is not a valid item category`
-    },
+    required: [true, 'Item slug is required'],
     index: true
   },
   isFeatured: {
@@ -111,7 +113,10 @@ const productSchema = new mongoose.Schema({
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: function() {
+      return this.isNew; // Only required for new documents
+    },
+    immutable: true // This ensures createdBy can't be modified after creation
   }
 }, {
   timestamps: true,
@@ -134,11 +139,6 @@ productSchema.index({
 });
 
 // Virtual fields
-productSchema.virtual('categoryPath').get(function() {
-  const names = this.getCategoryName();
-  return `${names.category} > ${names.subcategory} > ${names.item}`;
-});
-
 productSchema.virtual('isInStock').get(function() {
   return this.stock > 0;
 });
@@ -195,4 +195,42 @@ productSchema.pre('save', function(next) {
   next();
 });
 
+// Update the pre-validate middleware
+productSchema.pre('validate', async function(next) {
+  if (this.isModified('categorySlug') || this.isModified('subcategorySlug') || this.isModified('itemSlug')) {
+    const category = categories.find(c => c.slug === this.categorySlug);
+    if (!category) {
+      throw new Error(`Invalid category: ${this.categorySlug}`);
+    }
+
+    const subcategory = category.subcategories.find(s => s.slug === this.subcategorySlug);
+    if (!subcategory) {
+      throw new Error(`Invalid subcategory: ${this.subcategorySlug}`);
+    }
+
+    const item = subcategory.items.find(i => i.slug === this.itemSlug);
+    if (!item) {
+      throw new Error(`Invalid item: ${this.itemSlug}`);
+    }
+
+    // Set the category names
+    this.category = category.name;
+    this.subcategory = subcategory.name;
+    this.item = item.name;
+    this.categoryPath = `${category.name} > ${subcategory.name} > ${item.name}`;
+  }
+  next();
+});
+
+// Add post-save middleware to handle validation errors
+productSchema.post('save', function(error, doc, next) {
+  if (error.name === 'ValidationError') {
+    console.error('Validation Error:', error);
+    next(new Error('Invalid product data: ' + Object.values(error.errors).map(e => e.message).join(', ')));
+  } else {
+    next(error);
+  }
+});
+
 export default mongoose.models.Product || mongoose.model('Product', productSchema);
+ 

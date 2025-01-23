@@ -12,6 +12,7 @@ import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaSearch } from "react-icons/fa";
 import { products } from '@/data/products'; // Import the products directly
+import { FiSettings } from 'react-icons/fi';
 
 // Debounce function
 function debounce(func, wait) {
@@ -25,6 +26,26 @@ function debounce(func, wait) {
     timeout = setTimeout(later, wait);
   };
 }
+
+const AdminDashboardButton = () => (
+  <motion.div
+    whileHover={{ scale: 1.02 }}
+    whileTap={{ scale: 0.98 }}
+  >
+    <Link 
+      href="/admin"
+      className="flex items-center gap-2 px-4 py-2 
+                 bg-[#4CAF50] rounded-lg
+                 hover:bg-[#45a049] transition-all duration-300
+                 shadow-md"
+    >
+      <FiSettings 
+        className="w-4 h-4 text-white" 
+      />
+      <span className="font-medium text-white">Admin Dashboard</span>
+    </Link>
+  </motion.div>
+);
 
 export default function Navbar() {
   const [query, setQuery] = useState("");
@@ -125,14 +146,22 @@ export default function Navbar() {
               </Link>
               
               <div className="flex items-center gap-2">
-                {session?.user?.role && ['ADMIN', 'MANAGER'].includes(session.user.role) && (
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
                   <Link 
                     href="/admin"
-                    className="text-white hover:text-white/80 transition-colors duration-300 text-sm"
+                    className="flex items-center gap-1.5 px-3 py-1.5 
+                               bg-[#4CAF50] rounded-md
+                               hover:bg-[#45a049] transition-all duration-300"
                   >
-                    Admin
+                    <FiSettings 
+                      className="w-3.5 h-3.5 text-white" 
+                    />
+                    <span className="text-white">Admin</span>
                   </Link>
-                )}
+                </motion.div>
                 <AuthButtons className="flex items-center text-sm scale-90" />
                 <Link 
                   href="/cart"
@@ -160,12 +189,7 @@ export default function Navbar() {
 
             <div className="flex items-center space-x-6">
               {session?.user?.role && ['ADMIN', 'MANAGER'].includes(session.user.role) && (
-                <Link 
-                  href="/admin"
-                  className="text-white hover:text-white/80 transition-colors duration-300 font-medium"
-                >
-                  Admin Dashboard
-                </Link>
+                <AdminDashboardButton />
               )}
               <Link 
                 href="/cart" 

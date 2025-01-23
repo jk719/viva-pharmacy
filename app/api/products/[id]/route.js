@@ -4,6 +4,7 @@ import dbConnect from '@/lib/dbConnect';
 import Product from '@/models/Product';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { isValidObjectId } from 'mongoose';
+import { categories, isCategoryValid, isSubcategoryValid, isItemValid } from '@/data/categories';
 
 // Add the fallback image URL as a constant
 const FALLBACK_IMAGE = 'https://res.cloudinary.com/dv3cd1aoy/image/upload/v1737391942/viva-pharmacy/products/placeholder.svg';
@@ -82,8 +83,6 @@ export async function PUT(request, context) {
         console.log('PUT request for product:', id);
         
         const session = await getServerSession(authOptions);
-        console.log('Session user role:', session?.user?.role);
-        
         if (!session?.user?.role || !['ADMIN', 'MANAGER'].includes(session.user.role)) {
             return NextResponse.json(
                 { success: false, message: 'Unauthorized' },
@@ -91,42 +90,115 @@ export async function PUT(request, context) {
             );
         }
 
-        if (!id) {
-            return NextResponse.json(
-                { success: false, message: 'Product ID is required' },
-                { status: 400 }
-            );
-        }
+        const data = await request.json();
+        console.log('Received update data:', data);
 
         await dbConnect();
-        const data = await request.json();
-        console.log('Updating product:', { id, updates: data });
 
-        const product = await Product.findByIdAndUpdate(
-            id,
-            { $set: data },
-            { new: true, runValidators: true }
-        );
-
-        if (!product) {
+        // First find the existing product
+        const existingProduct = await Product.findById(id);
+        if (!existingProduct) {
             return NextResponse.json(
                 { success: false, message: 'Product not found' },
                 { status: 404 }
             );
         }
 
+        // Validate category hierarchy and get the correct names
+        const category = categories.find(c => c.slug === data.categorySlug);
+        if (!category) {
+            return NextResponse.json(
+                { success: false, message: `Category not found: ${data.categorySlug}` },
+                { status: 400 }
+            );
+        }
+
+        const subcategory = category.subcategories.find(s => s.slug === data.subcategorySlug);
+        if (!subcategory) {
+            return NextResponse.json(
+                { success: false, message: `Subcategory not found: ${data.subcategorySlug}` },
+                { status: 400 }
+            );
+        }
+
+        const item = subcategory.items.find(i => i.slug === data.itemSlug);
+        if (!item) {
+            return NextResponse.json(
+                { success: false, message: `Item not found: ${data.itemSlug}` },
+                { status: 400 }
+            );
+        }
+
+        // Add this logging before updating the product
+        console.log('Updating product with data:', {
+            categorySlug: data.categorySlug,
+            category: data.category,
+            subcategorySlug: data.subcategorySlug,
+            subcategory: data.subcategory,
+            itemSlug: data.itemSlug,
+            item: data.item,
+            categoryPath: data.categoryPath
+        });
+
+        // Create update data with correct category names
+        const updateData = {
+            ...data,
+            createdBy: existingProduct.createdBy,
+            _id: existingProduct._id,
+            createdAt: existingProduct.createdAt,
+            category: category.name,
+            subcategory: subcategory.name,
+            item: item.name,
+            categoryPath: `${category.name} > ${subcategory.name} > ${item.name}`
+        };
+
+        // Log the category information for debugging
+        console.log('Category mapping:', {
+            categoryName: category.name,
+            subcategoryName: subcategory.name,
+            itemName: item.name,
+            categoryPath: updateData.categoryPath
+        });
+
+        // Use replaceOne instead of findOneAndUpdate to ensure complete document update
+        const result = await Product.replaceOne(
+            { _id: id },
+            updateData,
+            { 
+                upsert: false
+            }
+        );
+
+        if (result.modifiedCount !== 1) {
+            return NextResponse.json(
+                { success: false, message: 'Failed to update product' },
+                { status: 400 }
+            );
+        }
+
+        // Fetch the updated document
+        const updatedProduct = await Product.findById(id);
+
+        // Verify the update was successful
+        console.log('Updated product result:', {
+            category: updatedProduct.category,
+            subcategory: updatedProduct.subcategory,
+            item: updatedProduct.item,
+            categoryPath: updatedProduct.categoryPath
+        });
+
         return NextResponse.json({
             success: true,
-            message: 'Product updated successfully',
-            product
+            product: updatedProduct,
+            message: 'Product updated successfully'
         });
+
     } catch (error) {
-        console.error('Error updating product:', error);
+        console.error('Database error:', error);
         return NextResponse.json(
             { 
                 success: false, 
-                message: 'Failed to update product',
-                error: error.message 
+                message: error.message || 'Failed to update product'
             }, 
             { status: 500 }
         );
