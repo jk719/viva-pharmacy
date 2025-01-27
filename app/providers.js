@@ -39,45 +39,16 @@ export function Providers({ children, session }) {
   }, []);
 
   return (
-    <SessionProvider 
-      session={session} 
-      refetchInterval={0}
-      refetchOnWindowFocus={false}
-      refetchWhenOffline={false}
-    >
-      <SWRConfig 
-        value={{
-          fetcher,
-          revalidateOnFocus: false,
-          revalidateOnReconnect: false,
-          dedupingInterval: 10000,
-          shouldRetryOnError: false,
-          errorRetryCount: 2,
-          suspense: false
-        }}
-      >
+    <SessionProvider session={session}>
+      <SWRConfig value={{
+        fetcher,
+        revalidateOnFocus: false,
+        revalidateOnReconnect: false
+      }}>
         <CartProvider>
           <CategoryProvider>
             {children}
-            <Toaster
-              position="top-center"
-              containerStyle={{
-                top: '80px',
-                zIndex: 10000
-              }}
-              toastOptions={{
-                duration: 5000,
-                style: {
-                  background: '#003366',
-                  color: '#fff',
-                  padding: '16px',
-                  fontSize: '16px',
-                  maxWidth: '90vw',
-                  textAlign: 'center',
-                  zIndex: 10000,
-                },
-              }}
-            />
+            <Toaster />
           </CategoryProvider>
         </CartProvider>
       </SWRConfig>

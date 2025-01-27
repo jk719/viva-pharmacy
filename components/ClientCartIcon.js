@@ -5,7 +5,22 @@ import { useCart } from '../context/CartContext';
 import { HiOutlineShoppingBag } from 'react-icons/hi';
 
 export default function ClientCartIcon() {
-    const { items = [] } = useCart();
+    const { items = [], loading } = useCart();
+    
+    // Show loading state
+    if (loading) {
+        return (
+            <div className="relative flex items-center group">
+                <div className="p-2.5 rounded-full">
+                    <HiOutlineShoppingBag 
+                        className="w-6 h-6 text-white/50" 
+                        aria-label="Loading Cart"
+                    />
+                </div>
+            </div>
+        );
+    }
+
     const totalItems = items?.reduce((total, item) => 
         total + (Number(item?.quantity) || 0), 0
     ) || 0;

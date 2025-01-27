@@ -33,7 +33,7 @@ export function CartProvider({ children }) {
         total: 0,
         subtotal: 0,
         tax: 0,
-        loading: true
+        loading: true  // Start with loading true
     });
 
     const [deliveryState, setDeliveryState] = useState({
@@ -50,20 +50,35 @@ export function CartProvider({ children }) {
 
     // Load cart from localStorage on initial mount
     useEffect(() => {
-        try {
-            const savedCart = localStorage.getItem('cart');
-            if (savedCart) {
-                const parsedCart = JSON.parse(savedCart);
-                setCartState(prev => ({
-                    ...prev,
-                    items: parsedCart,
-                    loading: false
+        const loadCart = () => {
+            try {
+                const savedCart = localStorage.getItem('cart');
+                if (savedCart) {
+                    const parsedCart = JSON.parse(savedCart);
+                    setCartState(prev => ({
+                        ...prev,
+                        items: parsedCart,
+                        loading: false
+                    }));
+                } else {
+                    // If no cart in localStorage, still set loading to false
+                    setCartState(prev => ({
+                        ...prev,
+                        loading: false
+                    }));
+                }
+            } catch (error) {
+                console.error('Error loading cart:', error);
+                setCartState(prev => ({ 
+                    ...prev, 
+                    items: [],
+                    loading: false 
                 }));
             }
-        } catch (error) {
-            console.error('Error loading cart:', error);
-            setCartState(prev => ({ ...prev, loading: false }));
-        }
+        };
+
+        // Add a small timeout to ensure hydration is complete
+        setTimeout(loadCart, 0);
     }, []);
 
     // Calculate totals when items change
