@@ -13,11 +13,17 @@ export default withAuth(
       }
     }
 
-    // Add checkout protection
-    if (req.nextUrl.pathname.startsWith('/checkout') && !req.nextauth?.token) {
-      return NextResponse.redirect(
-        new URL('/login?callbackUrl=' + encodeURIComponent(req.url), req.url)
-      );
+    // Handle all protected routes that require authentication
+    if (!req.nextauth?.token) {
+      const protectedRoutes = ['/checkout', '/profile', '/cart', '/admin'];
+      if (protectedRoutes.some(route => req.nextUrl.pathname.startsWith(route))) {
+        return NextResponse.redirect(
+          new URL(
+            `/?showLogin=true&callbackUrl=${encodeURIComponent(req.nextUrl.pathname)}`,
+            req.url
+          )
+        );
+      }
     }
 
     // Special handling for SSE connections
@@ -43,9 +49,18 @@ export default withAuth(
 
     if ((isAdminRoute || isProtectedApiRoute) && 
         (!token?.role || !['ADMIN', 'MANAGER'].includes(token.role))) {
-      return new NextResponse(
-        JSON.stringify({ message: "Unauthorized" }), 
-        { status: 403 }
+      if (req.nextUrl.pathname.startsWith('/api/')) {
+        return new NextResponse(
+          JSON.stringify({ message: "Unauthorized" }), 
+          { status: 403 }
+        );
+      }
+      // Redirect non-API routes to home with login modal
+      return NextResponse.redirect(
+        new URL(
+          `/?showLogin=true&message=${encodeURIComponent('Please login as admin to access this page')}`,
+          req.url
+        )
       );
     }
 
@@ -91,6 +106,6 @@ export const config = {
     '/admin/:path*',
     '/api/products/:path*',
     '/checkout/:path*',
-    '/cart/:path*'  // Added cart to protected routes
+    '/cart/:path*'
   ],
 };

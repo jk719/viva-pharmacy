@@ -4,12 +4,13 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { PasswordStrengthIndicator } from '@/components/auth';
 import toast from 'react-hot-toast';
-import { FaStar, FaGift, FaCoins, FaEnvelope, FaLock, FaPhone } from 'react-icons/fa';
+import { FaStar, FaGift, FaCoins, FaEnvelope, FaLock, FaPhone, FaUser } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 
 function RegisterContent() {
   const router = useRouter();
   const [formData, setFormData] = useState({
+    name: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -34,6 +35,7 @@ function RegisterContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          name: formData.name,
           email: formData.email,
           password: formData.password,
           phoneNumber: formData.phoneNumber
@@ -111,6 +113,29 @@ function RegisterContent() {
             )}
 
             <div className="space-y-4">
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                  Full Name
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FaUser className="text-gray-400" />
+                  </div>
+                  <input
+                    id="name"
+                    type="text"
+                    required
+                    className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl
+                             text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-orange-500
+                             focus:border-orange-500 transition duration-150
+                             bg-gray-50/30 focus:bg-white sm:text-sm"
+                    placeholder="Your full name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  />
+                </div>
+              </div>
+
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                   Email address
@@ -247,7 +272,7 @@ function RegisterContent() {
           <p className="text-sm text-gray-600">
             Already have an account?{' '}
             <button
-              onClick={() => router.push('/')}
+              onClick={() => router.push('/?showLogin=true')}
               className="font-medium text-[#FF9F43] hover:text-[#ff9429]
                        transition-colors duration-200"
             >

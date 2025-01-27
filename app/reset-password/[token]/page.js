@@ -43,7 +43,7 @@ export default function ResetPassword() {
         throw new Error(data.error || 'Failed to reset password');
       }
 
-      router.push('/login?message=Password reset successful. Please login with your new password.');
+      router.push('/?showLogin=true&message=Password reset successful. Please login with your new password.');
     } catch (err) {
       setError(err.message || 'An error occurred while resetting the password');
     } finally {
@@ -175,7 +175,7 @@ export default function ResetPassword() {
 
         <div className="text-center">
           <Link 
-            href="/login"
+            href="/?showLogin=true"
             className="text-sm font-medium text-[#FF9F43] hover:text-[#ff9429]
                      transition-colors duration-200"
           >

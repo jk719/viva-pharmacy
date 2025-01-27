@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 
+const VERIFICATION_SUCCESS = 'verification_success';
+
 export function AuthButtons() {
   const { data: session, status } = useSession();
   const [showLogin, setShowLogin] = useState(false);
@@ -46,20 +48,37 @@ export function AuthButtons() {
     return () => document.removeEventListener('keydown', handleEscape);
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('verification') === 'success' || 
+        params.get('showLogin') === 'true') {
+      setShowLogin(true);
+      
+      // Store callbackUrl if present
+      const callbackUrl = params.get('callbackUrl');
+      if (callbackUrl) {
+        sessionStorage.setItem('loginCallbackUrl', callbackUrl);
+      }
+      
+      // Clean up the URL
+      window.history.replaceState({}, '', '/');
+    }
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
     try {
-      // Check if this is a verification auto-login
-      const isVerificationLogin = formData.verificationLogin === 'true';
-      
+      // Get stored callback URL if any
+      const callbackUrl = sessionStorage.getItem('loginCallbackUrl') || '/';
+      sessionStorage.removeItem('loginCallbackUrl'); // Clean up
+
       const result = await signIn('credentials', {
         redirect: false,
         email: formData.email.toLowerCase().trim(),
-        password: formData.password,
-        verificationLogin: isVerificationLogin ? 'true' : undefined
+        password: formData.password
       });
 
       if (result?.error) {
@@ -67,7 +86,8 @@ export function AuthButtons() {
         toast.error(result.error);
       } else {
         setShowLogin(false);
-        toast.success(isVerificationLogin ? 'Email verified and signed in!' : 'Successfully signed in!');
+        toast.success('Successfully signed in!');
+        router.push(callbackUrl); // Redirect to callback URL if available
         router.refresh();
       }
     } catch (err) {
@@ -77,12 +97,6 @@ export function AuthButtons() {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Add a method to handle verification auto-login
-  const handleVerificationLogin = async (email) => {
-    setFormData({ email, password: '', verificationLogin: 'true' });
-    return handleSubmit(new Event('submit'));
   };
 
   const handleSignOut = async () => {
@@ -416,12 +430,3 @@ export function AuthButtons() {
     </div>
   );
 }
-
-// Export the component and the verification login handler
-export const verificationLogin = async (email) => {
-  const authButtons = document.querySelector('[data-auth-buttons]');
-  if (authButtons) {
-    return authButtons.__verificationLogin(email);
-  }
-  return false;
-};

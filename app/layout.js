@@ -26,6 +26,11 @@ const siteConfig = {
   }
 };
 
+// Move this outside the RootLayout component
+function ClientToaster() {
+  return <Toaster position="top-center" />;
+}
+
 export default async function RootLayout({ children }) {
   const session = await getServerSession(authOptions);
 
@@ -44,6 +49,7 @@ export default async function RootLayout({ children }) {
       </head>
       <body className="bg-white text-primary-color">
         <Providers session={session}>
+          <ClientToaster />
           <SiteHeader />
           <main className="min-h-screen w-full">
             <div className="container mx-auto px-4">

@@ -9,6 +9,7 @@ import ShippingAddress from '@/components/checkout/ShippingAddress';
 import { useSession } from 'next-auth/react';
 import { FaClock, FaTruck, FaStore, FaMapMarkerAlt, FaRegClock, FaBox } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 
 // Define INCREMENT_SIZE as a regular constant outside of any components
 const INCREMENT_SIZE = {
@@ -31,6 +32,7 @@ function CheckoutContent() {
   const [shippingAddress, setShippingAddress] = useState(null);
   const [deliveryMethod, setDeliveryMethod] = useState('delivery');
   const { data: session } = useSession();
+  const router = useRouter();
 
   const [displayCount, setDisplayCount] = useState(
     typeof window !== 'undefined' && window.innerWidth < 768 
@@ -41,6 +43,12 @@ function CheckoutContent() {
   const [windowWidth, setWindowWidth] = useState(
     typeof window !== 'undefined' ? window.innerWidth : 0
   );
+
+  useEffect(() => {
+    if (!session) {
+      router.push('/?showLogin=true&redirect=/checkout');
+    }
+  }, [session, router]);
 
   useEffect(() => {
     const handleResize = () => {

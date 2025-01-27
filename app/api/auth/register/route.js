@@ -14,17 +14,23 @@ export async function POST(request) {
   try {
     await dbConnect();
     const body = await request.json();
-    console.log('Registration request body:', body); // Debug log
+    console.log('📝 Registration request received:', { email: body.email });
 
-    const { email, password, phoneNumber } = body;
+    const { name, email, password, phoneNumber } = body;
 
     // Input validation
-    if (!email || !password || !phoneNumber) {
-      console.log('Missing required fields:', { email: !!email, password: !!password, phone: !!phoneNumber });
+    if (!email || !password || !phoneNumber || !name) {
+      console.log('Missing required fields:', { 
+        name: !!name,
+        email: !!email,
+        password: !!password,
+        phone: !!phoneNumber
+      });
       return NextResponse.json({ 
         success: false, 
         message: 'All fields are required',
         errors: {
+          name: !name ? 'Name is required' : null,
           email: !email ? 'Email is required' : null,
           password: !password ? 'Password is required' : null,
           phoneNumber: !phoneNumber ? 'Phone number is required' : null
@@ -41,8 +47,9 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    // Generate verification token
+    // Generate verification token with logging
     const verificationToken = generateVerificationToken();
+    console.log('🔑 Verification token generated for:', email);
 
     // Initialize rewards data with the correct schema structure
     const rewardsData = {
@@ -65,6 +72,7 @@ export async function POST(request) {
 
     // Create new user with rewards
     const user = new User({
+      name,
       email: email.toLowerCase(),
       password,
       phoneNumber,
@@ -79,19 +87,22 @@ export async function POST(request) {
     });
 
     await user.save();
-    console.log('User created successfully:', user.email);
+    console.log('👤 User created successfully:', user.email);
 
-    // Send verification email
+    // Send verification email with better error handling
     try {
-      console.log('Attempting to send verification email to:', email);
+      console.log('📧 Initiating verification email send to:', email);
       await sendVerificationEmail(email, verificationToken);
-      console.log('Verification email sent successfully to:', email);
+      console.log('✅ Verification email sent successfully to:', email);
     } catch (emailError) {
-      console.error('Email error details:', {
+      console.error('❌ Email sending failed:', {
         error: emailError.message,
-        stack: emailError.stack,
+        code: emailError.code,
+        command: emailError.command,
         email: email
       });
+
+      // Still create the account but return with email error flag
       return NextResponse.json({
         success: true,
         userId: user._id,
@@ -99,7 +110,7 @@ export async function POST(request) {
           vivaBucks: rewardsData.vivaBucks,
           welcomeBonus: rewardsData.welcomeBonus
         },
-        message: 'Account created with rewards! Verification email failed to send. Please use resend option.',
+        message: 'Account created! However, the verification email failed to send. Please use the resend option.',
         emailError: true
       }, { status: 201 });
     }
@@ -116,10 +127,10 @@ export async function POST(request) {
     }, { status: 201 });
 
   } catch (error) {
-    console.error('Registration error details:', {
+    console.error('❌ Registration failed:', {
       error: error.message,
-      stack: error.stack,
-      type: error.name
+      type: error.name,
+      stack: error.stack
     });
     return NextResponse.json({ 
       success: false, 

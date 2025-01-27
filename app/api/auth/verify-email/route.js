@@ -28,9 +28,9 @@ export async function POST(request) {
 
     const response = {
       success: true,
-      message: 'Email verified successfully! Please log in to continue.',
-      email: user.email,
-      isVerified: true
+      message: 'Email verified successfully! Please sign in to continue.',
+      isVerified: true,
+      email: user.email
     };
     console.log('Sending response:', response);
 
@@ -76,7 +76,6 @@ export async function GET(request) {
     const response = {
       success: true,
       message: 'Valid verification token',
-      email: user.email,
       isVerified: user.isVerified
     };
     console.log('Sending GET response:', { ...response, email: '***' });
