@@ -50,10 +50,15 @@ const CheckoutForm = ({ amount, items, shippingAddress, deliveryMethod, selected
                     body: JSON.stringify({
                         orderNumber: paymentIntent.id,
                         email: session?.user?.email,
-                        items: items,
+                        items: items.map(item => ({
+                            name: item.name,
+                            price: item.price,
+                            quantity: item.quantity,
+                            image: item.image
+                        })),
                         subtotal: amount,
-                        tax: amount * 0.08875, // NYC tax rate
-                        total: amount,
+                        tax: amount * 0.08875,
+                        total: amount * 1.08875, // Include tax in total
                         shippingAddress,
                         deliveryMethod,
                         selectedTime,

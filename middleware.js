@@ -1,14 +1,25 @@
 // src/middleware.js
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
-import { paymentTracker } from '@/lib/stripe/paymentTracker';
+
+// Remove direct import of paymentTracker
+// Instead, use a simpler cookie-based check for payment state
+const isValidPayment = (cookies) => {
+  const paymentIntentId = cookies.get('paymentIntentId')?.value;
+  const paymentTimestamp = cookies.get('paymentTimestamp')?.value;
+  
+  if (!paymentIntentId || !paymentTimestamp) return false;
+  
+  // Check if payment was made in the last 30 minutes
+  const thirtyMinutesAgo = Date.now() - (30 * 60 * 1000);
+  return parseInt(paymentTimestamp) > thirtyMinutesAgo;
+};
 
 export default withAuth(
   function middleware(req) {
     // Check payment state for success page
     if (req.nextUrl.pathname === '/checkout/success') {
-      const paymentIntentId = req.cookies.get('paymentIntentId')?.value;
-      if (!paymentIntentId || !paymentTracker.isProcessing(paymentIntentId)) {
+      if (!isValidPayment(req.cookies)) {
         return NextResponse.redirect(new URL('/', req.url));
       }
     }

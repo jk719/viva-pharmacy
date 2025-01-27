@@ -8,9 +8,7 @@ const __dirname = path.dirname(__filename);
 const nextConfig = {
   reactStrictMode: false,
   trailingSlash: false,
-  experimental: {
-    esmExternals: true
-  },
+  serverExternalPackages: ['nodemailer'],
   webpack: (config) => {
     // Enable top-level await and other ES module features
     config.experiments = {
@@ -18,12 +16,9 @@ const nextConfig = {
       topLevelAwait: true,
       layers: true
     }
-    // Add cache configuration
+    // Simplify cache configuration
     config.cache = {
-      type: 'filesystem',
-      buildDependencies: {
-        config: [__filename]
-      }
+      type: 'filesystem'
     }
     return config
   },

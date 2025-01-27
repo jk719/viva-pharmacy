@@ -1,6 +1,14 @@
 {
-  "extends": "next",
+  "extends": ["next/core-web-vitals"],
   "rules": {
-    "react/no-unescaped-entities": "off"
+    "react/no-unescaped-entities": "off",
+    "react/react-in-jsx-scope": "off",
+    "@next/next/no-html-link-for-pages": "off"
+  },
+  "root": true,
+  "env": {
+    "browser": true,
+    "node": true,
+    "es6": true
   }
 }
