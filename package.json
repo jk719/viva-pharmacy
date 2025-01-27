@@ -9,8 +9,8 @@
     "lint": "next lint",
     "deploy": "npm run build && mv .next/standalone docs && git add . && git commit -m 'Deploy to GitHub Pages' && git push origin main",
     "cleanup-orders": "node -r dotenv/config scripts/cleanupDuplicateOrders.js",
-    "test:email": "GMAIL_USER=mathtutorjamil@gmail.com GMAIL_APP_PASSWORD=\"jiqp rrvi jpgc pwkq\" node test-email.js",
-    "test:email:to": "GMAIL_USER=mathtutorjamil@gmail.com GMAIL_APP_PASSWORD=\"jiqp rrvi jpgc pwkq\" node test-email.js"
+    "test:email": "GMAIL_USER=mathtutorjamil@gmail.com GMAIL_APP_PASSWORD=\"jiqp rrvi jpgc pwkq\" node test-email.mjs",
+    "test:email:to": "GMAIL_USER=mathtutorjamil@gmail.com GMAIL_APP_PASSWORD=\"jiqp rrvi jpgc pwkq\" node test-email.mjs"
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^6.6.0",
@@ -54,5 +54,10 @@
     "postcss": "^8.4.47",
     "prettier": "^3.4.2",
     "tailwindcss": "^3.4.14"
+  },
+  "nextConfig": {
+    "experimental": {
+      "esmExternals": true
+    }
   }
 }

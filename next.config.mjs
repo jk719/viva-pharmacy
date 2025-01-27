@@ -1,9 +1,32 @@
-const path = require('path');
+import { fileURLToPath } from 'url';
+import path from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
   trailingSlash: false,
+  experimental: {
+    esmExternals: true
+  },
+  webpack: (config) => {
+    // Enable top-level await and other ES module features
+    config.experiments = {
+      ...config.experiments,
+      topLevelAwait: true,
+      layers: true
+    }
+    // Add cache configuration
+    config.cache = {
+      type: 'filesystem',
+      buildDependencies: {
+        config: [__filename]
+      }
+    }
+    return config
+  },
   images: {
     domains: [
       'res.cloudinary.com',
@@ -54,4 +77,4 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+export default nextConfig;

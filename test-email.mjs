@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import fs from 'fs';
+import { sendOrderConfirmationEmail } from './lib/email/sendEmail.mjs';
 
 // Get command line arguments
 const args = process.argv.slice(2);
@@ -61,24 +62,50 @@ if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
   process.exit(1);
 }
 
-// Now import the email module
-import { sendOrderConfirmationEmail } from './lib/email/sendEmail.js';
+const testOrder = {
+    orderNumber: 'TEST-123',
+    customerName: 'Test User',
+    items: [{
+        name: 'Test Product',
+        price: 19.99,
+        quantity: 1,
+        image: 'https://res.cloudinary.com/your-cloud-name/image/upload/test-image.jpg'
+    }],
+    subtotal: 19.99,
+    tax: 1.99,
+    total: 21.98,
+    deliveryMethod: 'pickup',
+    selectedTime: '2:00 PM',
+    shippingAddress: {
+        street: '123 Test St',
+        city: 'Test City',
+        state: 'TS',
+        zipCode: '12345'
+    },
+    vivaBucksEarned: 5,
+    rewardPointsEarned: 100
+};
 
 async function testEmail() {
-  try {
-    console.log('\n🚀 Starting email test...');
-    console.log('📧 Sending to:', toEmail);
-    
-    const result = await sendOrderConfirmationEmail(
-      toEmail,
-      subject,
-      body
-    );
-    
-    console.log('✅ Email sent successfully:', result);
-  } catch (error) {
-    console.error('❌ Error:', error);
-  }
+    try {
+        console.log('📧 Sending test email...');
+        const result = await sendOrderConfirmationEmail(
+            process.env.TEST_EMAIL || process.env.GMAIL_USER,
+            testOrder
+        );
+
+        console.log('✅ Test email sent successfully:', {
+            messageId: result.messageId,
+            response: result.response,
+            accepted: result.accepted
+        });
+    } catch (error) {
+        console.error('❌ Error sending test email:', {
+            message: error.message,
+            stack: error.stack
+        });
+        process.exit(1);
+    }
 }
 
 testEmail(); 

@@ -9,7 +9,7 @@ import { useSession } from "next-auth/react";
 import { useCart } from '@/context/CartContext';
 import { useRouter } from 'next/navigation';
 
-const CheckoutForm = ({ amount }) => {
+const CheckoutForm = ({ amount, items, shippingAddress, deliveryMethod, selectedTime }) => {
   const router = useRouter();
   const stripe = useStripe();
   const elements = useElements();
@@ -40,6 +40,34 @@ const CheckoutForm = ({ amount }) => {
         } else if (paymentIntent.status === 'succeeded') {
             console.log('✅ Payment confirmed successfully');
             
+            // Send order confirmation email
+            try {
+                const orderConfirmationResponse = await fetch('/api/orders/confirmations', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        orderNumber: paymentIntent.id,
+                        email: session?.user?.email,
+                        items: items,
+                        subtotal: amount,
+                        tax: amount * 0.08875, // NYC tax rate
+                        total: amount,
+                        shippingAddress,
+                        deliveryMethod,
+                        selectedTime,
+                        customerName: session?.user?.name || 'Valued Customer'
+                    })
+                });
+
+                if (!orderConfirmationResponse.ok) {
+                    console.error('Failed to send order confirmation email');
+                }
+            } catch (emailError) {
+                console.error('Order confirmation email error:', emailError);
+            }
+
             eventEmitter.emit(Events.PAYMENT_COMPLETED, {
                 paymentIntentId: paymentIntent.id,
                 amount: amount,
@@ -47,9 +75,7 @@ const CheckoutForm = ({ amount }) => {
             });
 
             clearCart();
-            
             await new Promise(resolve => setTimeout(resolve, 1500));
-            
             router.push('/checkout/success');
         }
     } catch (error) {
@@ -201,9 +227,16 @@ export default function PaymentForm({ amount, items, shippingAddress, deliveryMe
             },
           }}
         >
-          <CheckoutForm amount={amount} />
+          <CheckoutForm 
+            amount={amount}
+            items={items}
+            shippingAddress={shippingAddress}
+            deliveryMethod={deliveryMethod}
+            selectedTime={selectedTime}
+          />
         </Elements>
       )}
     </div>
+    
   );
 }
