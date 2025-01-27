@@ -73,23 +73,25 @@ export default function Navbar() {
 
   const renderMobileLayout = () => (
     <div className="flex flex-col md:hidden space-y-2">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between px-4">
         <Link href="/" className="flex items-center">
           <Image
             src="/images/viva-online-logo.png"
             alt="VIVA Logo"
-            width={120}
-            height={36}
-            className="h-8 w-auto"
+            width={200}
+            height={40}
+            className="h-12 w-auto"
             style={{ 
-              height: "32px",
-              width: "auto"
+              height: "48px",
+              width: "auto",
+              maxWidth: "200px",
+              objectFit: "contain"
             }}
             priority
           />
         </Link>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           {session?.user?.role && ['ADMIN', 'MANAGER'].includes(session.user.role) && (
             <AdminDashboardButton isMobile />
           )}
@@ -100,7 +102,7 @@ export default function Navbar() {
             setFormData={setFormData}
             error={error}
             setError={setError}
-            className="flex items-center text-sm scale-90"
+            className="flex items-center text-xs scale-90"
           />
           <Link href="/cart" className="flex items-center justify-center scale-90">
             <ClientCartIcon />
@@ -111,27 +113,29 @@ export default function Navbar() {
   );
 
   const renderDesktopLayout = () => (
-    <div className="hidden md:flex md:items-center md:justify-between">
-      <Link href="/">
+    <div className="hidden md:flex md:items-center md:justify-between px-4">
+      <Link href="/" className="transform-gpu scale-175 origin-left">
         <Image
           src="/images/viva-online-logo.png"
           alt="VIVA Pharmacy & Wellness Logo"
-          width={160}
-          height={48}
-          className="h-12 w-auto"
+          width={400}
+          height={80}
+          className="h-20 w-auto"
           style={{ 
-            height: "48px",
-            width: "auto"
+            height: "80px",
+            width: "auto",
+            maxWidth: "500px",
+            objectFit: "contain"
           }}
           priority
         />
       </Link>
 
-      <div className="flex items-center space-x-6">
+      <div className="flex items-center space-x-6 ml-auto">
         {session?.user?.role && ['ADMIN', 'MANAGER'].includes(session.user.role) && (
           <AdminDashboardButton />
         )}
-        <Link href="/cart" className="text-white hover:text-white/80 transition-colors duration-300">
+        <Link href="/cart" className="text-primary hover:text-primary/80 transition-colors duration-300">
           <ClientCartIcon />
         </Link>
         {session?.user ? (
@@ -151,7 +155,7 @@ export default function Navbar() {
               ) : (
                 <DefaultAvatar />
               )}
-              <span className="text-white hover:text-white/80 transition-colors duration-300">
+              <span className="text-primary hover:text-primary/80 transition-colors duration-300">
                 {session.user.name}
               </span>
             </Link>
@@ -181,12 +185,12 @@ export default function Navbar() {
   return (
     <>
       <motion.nav 
-        className="viva-navbar py-2 md:py-3 w-full shadow-sm"
+        className="viva-navbar w-full shadow-sm"
         initial={{ y: -100 }}
         animate={{ y: 0 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
       >
-        <div className="container mx-auto px-3 md:px-4">
+        <div className="container mx-auto">
           {renderMobileLayout()}
           {renderDesktopLayout()}
         </div>

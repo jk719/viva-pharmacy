@@ -6,8 +6,8 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
-  --primary-color: #002B49;
-  --accent-color: #ff4a4a;
+  --primary-color: #002B49;      /* Navy blue */
+  --accent-color: #DC1F4E;
   --secondary-color: #f1f5f9;
   --text-color: #003366;
   --button-blue: #003366;
@@ -287,13 +287,37 @@ body {
 
 /* Add these navbar-specific styles */
 .viva-navbar {
-  background-color: var(--primary-color);
+  background-color: var(--primary-color); /* Changed back to navy */
   position: relative;
   z-index: 50;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 1rem 0;
+}
+
+@media (min-width: 768px) {
+  .viva-navbar {
+    padding: 1.25rem 0;
+  }
 }
 
 .viva-navbar-logo {
   height: auto;
   width: auto;
-  max-height: 60px;
+  max-height: 80px;
+}
+
+.viva-navbar .container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.viva-navbar a,
+.viva-navbar button {
+  color: white;
+}
+
+.viva-navbar a:hover,
+.viva-navbar button:hover {
+  color: rgba(255, 255, 255, 0.8);
 }
