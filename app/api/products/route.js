@@ -73,120 +73,66 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    if (!rateLimit.check(request, 10)) { // Stricter limit for POST
-      return NextResponse.json({
-        success: false,
-        message: 'Too many requests. Please try again later.'
-      }, { 
-        status: 429,
-        headers: {
-          'Retry-After': '60',
-          'X-RateLimit-Limit': '10',
-          'X-RateLimit-Remaining': '0'
-        }
-      });
-    }
-
     const session = await getServerSession(authOptions);
-    
     if (!session?.user?.role || !['ADMIN', 'MANAGER'].includes(session.user.role)) {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Unauthorized' 
-      }, { status: 403 });
+      return NextResponse.json(
+        { success: false, message: 'Unauthorized' },
+        { status: 403 }
+      );
     }
 
     await dbConnect();
+    const Product = getProductModel();
+
     const body = await request.json();
-    
-    // Add new required fields
-    const requiredFields = [
-      'name', 'price', 'description', 
-      'categorySlug', 'subcategorySlug', 'itemSlug',
-      'stock', 'dosageForm'
-    ];
-    
-    const missingFields = requiredFields.filter(field => !body[field]);
-    
-    if (missingFields.length > 0) {
-      return NextResponse.json({ 
-        success: false, 
-        message: `Missing required fields: ${missingFields.join(', ')}` 
-      }, { status: 400 });
+
+    // Validate category hierarchy
+    const category = categories.find(c => c.slug === body.categorySlug);
+    if (!category) {
+      return NextResponse.json(
+        { success: false, message: `Category not found: ${body.categorySlug}` },
+        { status: 400 }
+      );
     }
 
-    // Validate price and stock
-    if (body.price < 0) {
-      return NextResponse.json({
-        success: false,
-        message: 'Price cannot be negative'
-      }, { status: 400 });
+    const item = category.items.find(i => i.slug === body.itemSlug);
+    if (!item) {
+      return NextResponse.json(
+        { success: false, message: `Item not found: ${body.itemSlug}` },
+        { status: 400 }
+      );
     }
 
-    if (body.stock < 0) {
-      return NextResponse.json({
-        success: false,
-        message: 'Stock cannot be negative'
-      }, { status: 400 });
-    }
-
-    // Generate SKU with new category structure
-    const sku = await Product.generateSKU(body.categorySlug, body.subcategorySlug);
+    // Generate SKU
+    const sku = await Product.generateSKU(body.categorySlug);
 
     const productData = {
       ...body,
       sku,
-      price: parseFloat(body.price),
-      stock: parseInt(body.stock),
-      image: body.image || "https://via.placeholder.com/400x400?text=No+Image",
-      activeIngredients: (body.activeIngredients || []).filter(i => i.name && i.amount),
-      warnings: (body.warnings || []).filter(w => w.trim()),
-      dosageForm: body.dosageForm,
-      isPopular: body.isPopular || false,
-      isFeatured: body.isFeatured || false,
+      category: category.name,
+      subcategory: category.name, // Same as category
+      item: item.name,
+      categoryPath: `${category.name} > ${item.name}`,
       createdBy: session.user.id
     };
 
-    const product = new Product(productData);
-    await product.save();
-
-    console.log('Created product:', {
-      id: product._id,
-      name: product.name,
-      sku: product.sku
-    });
+    const product = await Product.create(productData);
 
     return NextResponse.json({
       success: true,
-      message: 'Product created successfully',
-      product
-    }, { status: 201 });
+      product,
+      message: 'Product created successfully'
+    });
 
   } catch (error) {
     console.error('Product creation error:', error);
-    
-    // Handle mongoose validation errors
-    if (error.name === 'ValidationError') {
-      const validationErrors = Object.values(error.errors).map(err => err.message);
-      return NextResponse.json({ 
+    return NextResponse.json(
+      { 
         success: false, 
-        message: 'Validation failed',
-        errors: validationErrors
-      }, { status: 400 });
-    }
-
-    // Handle duplicate SKU error
-    if (error.code === 11000) {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'A product with this SKU already exists' 
-      }, { status: 400 });
-    }
-
-    return NextResponse.json({ 
-      success: false, 
-      message: 'Failed to create product' 
-    }, { status: 500 });
+        message: error.message || 'Failed to create product'
+      }, 
+      { status: 500 }
+    );
   }
 }
 

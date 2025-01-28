@@ -40,29 +40,15 @@ export default function BaseProductForm({
     if (initialData && Object.keys(initialData).length > 0) {
       const category = categories.find(c => c.slug === initialData.categorySlug);
       if (category) {
-        setAvailableSubcategories(category.subcategories || []);
-        
-        const subcategory = category.subcategories.find(
-          s => s.slug === initialData.subcategorySlug
-        );
-        if (subcategory) {
-          setAvailableItems(subcategory.items || []);
-        }
+        setAvailableItems(category.items || []);
       }
-      
       setFormData(initialData);
     }
   }, [initialData]);
 
-  const [availableSubcategories, setAvailableSubcategories] = useState(
-    formData.categorySlug ? 
-      categories.find(c => c.slug === formData.categorySlug)?.subcategories || [] 
-      : []
-  );
-  
   const [availableItems, setAvailableItems] = useState(
-    formData.subcategorySlug ? 
-      availableSubcategories.find(s => s.slug === formData.subcategorySlug)?.items || [] 
+    formData.categorySlug ? 
+      categories.find(c => c.slug === formData.categorySlug)?.items || [] 
       : []
   );
 
@@ -160,30 +146,12 @@ export default function BaseProductForm({
     
     if (category) {
       console.log('Selected category:', category.name, category.slug);
-      setAvailableSubcategories(category.subcategories || []);
-      setAvailableItems([]);
+      setAvailableItems(category.items || []);
       
       setFormData(prev => ({
         ...prev,
         categorySlug: category.slug,
-        subcategorySlug: '',
-        itemSlug: ''
-      }));
-    }
-  };
-
-  const handleSubcategoryChange = (e) => {
-    const subcategorySlug = e.target.value;
-    const category = categories.find(c => c.slug === formData.categorySlug);
-    const subcategory = category?.subcategories.find(s => s.slug === subcategorySlug);
-    
-    if (subcategory) {
-      console.log('Selected subcategory:', subcategory.name, subcategory.slug);
-      setAvailableItems(subcategory.items || []);
-      
-      setFormData(prev => ({
-        ...prev,
-        subcategorySlug: subcategory.slug,
+        subcategorySlug: category.slug,
         itemSlug: ''
       }));
     }
@@ -192,8 +160,7 @@ export default function BaseProductForm({
   const handleItemChange = (e) => {
     const itemSlug = e.target.value;
     const category = categories.find(c => c.slug === formData.categorySlug);
-    const subcategory = category?.subcategories.find(s => s.slug === formData.subcategorySlug);
-    const item = subcategory?.items.find(i => i.slug === itemSlug);
+    const item = category?.items.find(i => i.slug === itemSlug);
     
     if (item) {
       console.log('Selected item:', item.name, item.slug);
@@ -210,15 +177,14 @@ export default function BaseProductForm({
     setError("");
     
     try {
-      if (!formData.categorySlug || !formData.subcategorySlug || !formData.itemSlug) {
+      if (!formData.categorySlug || !formData.itemSlug) {
         throw new Error('Please select all category options');
       }
 
       const category = categories.find(c => c.slug === formData.categorySlug);
-      const subcategory = category?.subcategories.find(s => s.slug === formData.subcategorySlug);
-      const item = subcategory?.items.find(i => i.slug === formData.itemSlug);
+      const item = category?.items.find(i => i.slug === formData.itemSlug);
 
-      if (!category || !subcategory || !item) {
+      if (!category || !item) {
         throw new Error('Invalid category selection');
       }
 
@@ -239,12 +205,12 @@ export default function BaseProductForm({
         warnings: formData.warnings.filter(w => w.trim()),
         image: imageUrl || process.env.NEXT_PUBLIC_DEFAULT_PRODUCT_IMAGE,
         categorySlug: category.slug,
-        subcategorySlug: subcategory.slug,
+        subcategorySlug: category.slug,
         itemSlug: item.slug,
         category: category.name,
-        subcategory: subcategory.name,
+        subcategory: category.name,
         item: item.name,
-        categoryPath: `${category.name} > ${subcategory.name} > ${item.name}`
+        categoryPath: `${category.name} > ${item.name}`
       };
       
       console.log('Submitting form data:', cleanedData);
@@ -348,27 +314,7 @@ export default function BaseProductForm({
 
               {formData.categorySlug && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Subcategory *</label>
-                  <select
-                    name="subcategorySlug"
-                    value={formData.subcategorySlug}
-                    onChange={handleSubcategoryChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    required
-                  >
-                    <option value="">Select a subcategory</option>
-                    {availableSubcategories.map(sub => (
-                      <option key={sub.slug} value={sub.slug}>
-                        {sub.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {formData.subcategorySlug && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Item Category *</label>
+                  <label className="block text-sm font-medium text-gray-700">Item Type *</label>
                   <select
                     name="itemSlug"
                     value={formData.itemSlug}
@@ -376,7 +322,7 @@ export default function BaseProductForm({
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                     required
                   >
-                    <option value="">Select an item category</option>
+                    <option value="">Select an item type</option>
                     {availableItems.map(item => (
                       <option key={item.slug} value={item.slug}>
                         {item.name}

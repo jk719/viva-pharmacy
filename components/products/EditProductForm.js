@@ -3,52 +3,70 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { mutate } from 'swr';
+import toast from 'react-hot-toast';
 import BaseProductForm from './BaseProductForm';
 import { categories } from '@/data/categories';
+console.log('Categories loaded:', { categoriesLength: categories?.length });
 
 // Helper function to find valid slugs
 const findValidSlugs = (category, subcategory, item, productName) => {
-    console.log('Finding valid slugs for:', { category, subcategory, item, productName });
+    console.log('Finding valid slugs for:', { 
+        category, 
+        subcategory, 
+        item, 
+        productName,
+        availableCategories: categories?.map(c => c.slug)
+    });
+    
+    if (!categories || !Array.isArray(categories)) {
+        console.error('Categories not properly loaded:', categories);
+        return null;
+    }
+
+    if (!category) {
+        console.error('No category provided');
+        return null;
+    }
     
     // Find the category
     const categoryObj = categories.find(c => 
         c.slug === category || 
         c.name === category ||
-        c.name.toLowerCase() === category?.toLowerCase()
+        c.name.toLowerCase() === category.toLowerCase()
     );
     
     if (!categoryObj) {
-        console.error('Category not found:', category);
+        console.error('Category not found:', { 
+            category, 
+            availableCategories: categories.map(c => ({name: c.name, slug: c.slug}))
+        });
         return null;
     }
 
-    // Find the subcategory
-    const subcategoryObj = categoryObj.subcategories.find(s => 
-        s.slug === subcategory || 
-        s.name === subcategory ||
-        s.name.toLowerCase() === subcategory?.toLowerCase()
-    );
-    
-    if (!subcategoryObj) {
-        console.error('Subcategory not found:', subcategory);
+    if (!item) {
+        console.error('No item provided');
         return null;
     }
 
     // Find the item
-    const itemObj = subcategoryObj.items.find(i => 
+    const itemObj = categoryObj.items.find(i => 
         i.slug === item || 
         i.name === item ||
-        i.name.toLowerCase() === item?.toLowerCase()
+        i.name.toLowerCase() === item.toLowerCase()
     );
     
     if (!itemObj) {
-        console.error('Item not found:', item);
+        console.error('Item not found:', {
+            item,
+            category: categoryObj.name,
+            availableItems: categoryObj.items.map(i => ({name: i.name, slug: i.slug}))
+        });
         return null;
     }
 
     return {
         categorySlug: categoryObj.slug,
-        subcategorySlug: subcategoryObj.slug,
+        subcategorySlug: categoryObj.slug,
         itemSlug: itemObj.slug
     };
 };
@@ -62,41 +80,56 @@ export default function EditProductForm({ product }) {
     const [initialData, setInitialData] = useState(null);
 
     useEffect(() => {
-        if (product) {
-            try {
-                // Get valid slugs based on the product's categories
-                const validSlugs = findValidSlugs(
-                    product.category || product.categorySlug,
-                    product.subcategory || product.subcategorySlug,
-                    product.item || product.itemSlug,
-                    product.name
-                );
+        if (!product) {
+            console.log('No product data available yet');
+            return;
+        }
 
-                if (!validSlugs) {
-                    console.error('Could not determine valid category slugs');
-                    return;
-                }
+        if (!categories || !Array.isArray(categories)) {
+            console.error('Categories not loaded properly');
+            return;
+        }
 
-                // Transform the product data to match the form structure
-                const transformedData = {
-                    ...product,
-                    ...validSlugs, // Spread the valid slugs
-                    // Ensure other required fields are present
-                    activeIngredients: product.activeIngredients || [],
-                    warnings: product.warnings || [],
-                    contraindications: product.contraindications || [],
-                    sideEffects: product.sideEffects || [],
-                    stock: product.stock || 0,
-                    isPopular: product.isPopular || false,
-                    isNewProduct: product.isNewProduct || false,
-                    isFeatured: product.isFeatured || false,
-                };
-                
-                console.log('Setting initial data:', transformedData);
-                setInitialData(transformedData);
-            } catch (error) {
-                console.error('Error transforming product data:', error);
+        try {
+            console.log('Processing product:', {
+                category: product.category || product.categorySlug,
+                item: product.item || product.itemSlug,
+            });
+
+            // Get valid slugs based on the product's categories
+            const validSlugs = findValidSlugs(
+                product.category || product.categorySlug,
+                product.item || product.itemSlug, // Use item for subcategory
+                product.item || product.itemSlug,
+                product.name
+            );
+
+            if (!validSlugs) {
+                console.error('Could not determine valid category slugs');
+                return;
             }
+
+            // Transform the product data to match the form structure
+            const transformedData = {
+                ...product,
+                ...validSlugs, // Spread the valid slugs
+                // Ensure other required fields are present
+                activeIngredients: product.activeIngredients || [],
+                warnings: product.warnings || [],
+                contraindications: product.contraindications || [],
+                sideEffects: product.sideEffects || [],
+                stock: product.stock || 0,
+                isPopular: product.isPopular || false,
+                isNewProduct: product.isNewProduct || false,
+                isFeatured: product.isFeatured || false,
+            };
+            
+            console.log('Setting initial data:', transformedData);
+            setInitialData(transformedData);
+        } catch (error) {
+            console.error('Error in EditProductForm useEffect:', error);
+            setIsError(true);
+            setErrorMessage('Error loading product data: ' + error.message);
         }
     }, [product]);
 
@@ -106,41 +139,60 @@ export default function EditProductForm({ product }) {
             setIsError(false);
             setErrorMessage("");
             
-            console.log('Form data before validation:', formData);
+            // Show loading toast
+            const loadingToast = toast.loading('Updating product...');
+            
+            console.log('Form data before validation:', {
+                category: formData.category || formData.categorySlug,
+                item: formData.item || formData.itemSlug,
+                formData
+            });
             
             // Get valid slugs for the submission
             const validSlugs = findValidSlugs(
-                formData.category,
-                formData.subcategory,
-                formData.item,
+                formData.categorySlug || formData.category, // Use categorySlug first
+                formData.categorySlug || formData.category, // Same for subcategory
+                formData.itemSlug || formData.item,        // Use itemSlug first
                 formData.name
             );
 
             console.log('Generated valid slugs:', validSlugs);
 
+            if (!validSlugs) {
+                throw new Error('Could not validate category hierarchy');
+            }
+
             // Find the actual category data
             const category = categories.find(c => c.slug === validSlugs.categorySlug);
-            const subcategory = category?.subcategories.find(s => s.slug === validSlugs.subcategorySlug);
-            const item = subcategory?.items.find(i => i.slug === validSlugs.itemSlug);
+            if (!category) {
+                console.error('Category not found:', validSlugs.categorySlug);
+                throw new Error('Invalid category');
+            }
 
-            if (!category || !subcategory || !item) {
-                throw new Error('Invalid category hierarchy');
+            const item = category.items.find(i => i.slug === validSlugs.itemSlug);
+            if (!item) {
+                console.error('Item not found:', {
+                    itemSlug: validSlugs.itemSlug,
+                    categoryItems: category.items.map(i => i.slug)
+                });
+                throw new Error('Invalid item');
             }
 
             // Clean up the form data with actual category names
             const cleanedData = {
                 ...formData,
-                categorySlug: validSlugs.categorySlug,
-                subcategorySlug: validSlugs.subcategorySlug,
-                itemSlug: validSlugs.itemSlug,
+                categorySlug: category.slug,
+                subcategorySlug: category.slug,  // Same as category
+                itemSlug: item.slug,
                 category: category.name,
-                subcategory: subcategory.name,
+                subcategory: category.name,      // Same as category
                 item: item.name,
-                categoryPath: `${category.name} > ${subcategory.name} > ${item.name}`
+                categoryPath: `${category.name} > ${item.name}`
             };
 
-            console.log('Submitting update for product:', product._id);
             console.log('Cleaned form data:', cleanedData);
+
+            console.log('Submitting update for product:', product._id);
 
             const response = await fetch(`/api/products/${product._id}`, {
                 method: "PUT",
@@ -151,28 +203,51 @@ export default function EditProductForm({ product }) {
             });
 
             const data = await response.json();
-            console.log('Server response:', data);
+            
+            // Dismiss loading toast
+            toast.dismiss(loadingToast);
 
             if (!response.ok) {
+                // Show error toast
+                toast.error(data.message || `Failed to update product`);
                 throw new Error(data.message || `Server error: ${response.status}`);
             }
 
             if (data.success) {
+                // Show success toast
+                toast.success('Product updated successfully!', {
+                    duration: 3000,
+                    position: 'top-center',
+                    // Customize for mobile
+                    style: {
+                        maxWidth: '90vw',
+                        margin: '0 auto',
+                    },
+                });
+                
                 await mutate('/api/products');
                 await mutate(`/api/products/${product._id}`);
-                setSuccessMessage("Product updated successfully");
+                
+                const REDIRECT_DELAY = 1500; // 1.5 seconds
                 setTimeout(() => {
                     router.push('/admin');
                     router.refresh();
-                }, 1500);
+                }, REDIRECT_DELAY);
                 return true;
-            } else {
-                throw new Error(data.message || "Failed to update product");
             }
         } catch (error) {
             console.error("Error updating product:", error);
             setIsError(true);
             setErrorMessage(error.message || "Failed to update product");
+            // Show error toast
+            toast.error(error.message || 'Failed to update product', {
+                duration: 4000,
+                position: 'top-center',
+                style: {
+                    maxWidth: '90vw',
+                    margin: '0 auto',
+                },
+            });
             throw error;
         } finally {
             setIsLoading(false);

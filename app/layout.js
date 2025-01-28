@@ -62,6 +62,38 @@ export default async function RootLayout({ children }) {
           <RewardAlert />
           <SiteFooter />
           <div id="modal-root" className="relative z-50" />
+          <Toaster 
+            position="top-center"
+            reverseOrder={false}
+            toastOptions={{
+              // Default options for all toasts
+              duration: 3000,
+              style: {
+                maxWidth: '90vw',
+                margin: '0 auto',
+              },
+              // Customize different types of toasts
+              success: {
+                style: {
+                  background: '#10B981',
+                  color: 'white',
+                },
+              },
+              error: {
+                style: {
+                  background: '#EF4444',
+                  color: 'white',
+                },
+                duration: 4000,
+              },
+              loading: {
+                style: {
+                  background: '#3B82F6',
+                  color: 'white',
+                },
+              },
+            }}
+          />
         </Providers>
       </body>
     </html>

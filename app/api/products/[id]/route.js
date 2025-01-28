@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import dbConnect from '@/lib/dbConnect';
-import Product from '@/models/Product';
+import getProductModel from '@/models/Product';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { isValidObjectId } from 'mongoose';
 import { categories, isCategoryValid, isSubcategoryValid, isItemValid } from '@/data/categories';
@@ -12,6 +12,7 @@ const FALLBACK_IMAGE = 'https://res.cloudinary.com/dv3cd1aoy/image/upload/v17373
 export async function GET(request, context) {
     try {
         await dbConnect();
+        const Product = getProductModel();
         
         const id = await Promise.resolve(context.params).then(p => p.id);
         console.log('GET request for product:', id);
@@ -96,6 +97,7 @@ export async function PUT(request, context) {
         await dbConnect();
 
         // First find the existing product
+        const Product = getProductModel();
         const existingProduct = await Product.findById(id);
         if (!existingProduct) {
             return NextResponse.json(
@@ -104,7 +106,7 @@ export async function PUT(request, context) {
             );
         }
 
-        // Validate category hierarchy and get the correct names
+        // Validate category hierarchy
         const category = categories.find(c => c.slug === data.categorySlug);
         if (!category) {
             return NextResponse.json(
@@ -113,32 +115,13 @@ export async function PUT(request, context) {
             );
         }
 
-        const subcategory = category.subcategories.find(s => s.slug === data.subcategorySlug);
-        if (!subcategory) {
-            return NextResponse.json(
-                { success: false, message: `Subcategory not found: ${data.subcategorySlug}` },
-                { status: 400 }
-            );
-        }
-
-        const item = subcategory.items.find(i => i.slug === data.itemSlug);
+        const item = category.items.find(i => i.slug === data.itemSlug);
         if (!item) {
             return NextResponse.json(
                 { success: false, message: `Item not found: ${data.itemSlug}` },
                 { status: 400 }
             );
         }
-
-        // Add this logging before updating the product
-        console.log('Updating product with data:', {
-            categorySlug: data.categorySlug,
-            category: data.category,
-            subcategorySlug: data.subcategorySlug,
-            subcategory: data.subcategory,
-            itemSlug: data.itemSlug,
-            item: data.item,
-            categoryPath: data.categoryPath
-        });
 
         // Create update data with correct category names
         const updateData = {
@@ -147,26 +130,16 @@ export async function PUT(request, context) {
             _id: existingProduct._id,
             createdAt: existingProduct.createdAt,
             category: category.name,
-            subcategory: subcategory.name,
+            subcategory: category.name, // Same as category name
             item: item.name,
-            categoryPath: `${category.name} > ${subcategory.name} > ${item.name}`
+            categoryPath: `${category.name} > ${item.name}`
         };
 
-        // Log the category information for debugging
-        console.log('Category mapping:', {
-            categoryName: category.name,
-            subcategoryName: subcategory.name,
-            itemName: item.name,
-            categoryPath: updateData.categoryPath
-        });
-
-        // Use replaceOne instead of findOneAndUpdate to ensure complete document update
+        // Use replaceOne instead of findOneAndUpdate
         const result = await Product.replaceOne(
             { _id: id },
             updateData,
-            { 
-                upsert: false
-            }
+            { upsert: false }
         );
 
         if (result.modifiedCount !== 1) {
@@ -178,14 +151,6 @@ export async function PUT(request, context) {
 
         // Fetch the updated document
         const updatedProduct = await Product.findById(id);
-
-        // Verify the update was successful
-        console.log('Updated product result:', {
-            category: updatedProduct.category,
-            subcategory: updatedProduct.subcategory,
-            item: updatedProduct.item,
-            categoryPath: updatedProduct.categoryPath
-        });
 
         return NextResponse.json({
             success: true,
@@ -207,6 +172,9 @@ export async function PUT(request, context) {
 
 export async function DELETE(request, context) {
     try {
+        await dbConnect();
+        const Product = getProductModel();
+        
         const id = await Promise.resolve(context.params).then(p => p.id);
         console.log('DELETE request for product:', id);
         
@@ -227,7 +195,6 @@ export async function DELETE(request, context) {
             );
         }
 
-        await dbConnect();
         const product = await Product.findByIdAndDelete(id);
         
         if (!product) {
