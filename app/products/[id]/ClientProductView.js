@@ -70,8 +70,7 @@ export default function ClientProductView({ product }) {
 
   // Get category information
   const category = categories.find(c => c.slug === product.categorySlug);
-  const subcategory = category?.subcategories.find(s => s.slug === product.subcategorySlug);
-  const item = subcategory?.items.find(i => i.slug === product.itemSlug);
+  const item = category?.items.find(i => i.slug === product.itemSlug);
 
   if (!product) {
     return (
@@ -169,7 +168,7 @@ export default function ClientProductView({ product }) {
                   {product.name}
                 </h1>
                 <p className="text-xs md:text-sm text-gray-500">
-                  {category?.name} &gt; {subcategory?.name} &gt; {item?.name}
+                  {category?.name} &gt; {item?.name}
                 </p>
               </div>
 
