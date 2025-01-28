@@ -20,12 +20,12 @@ const AdminDashboardButton = ({ isMobile = false }) => (
   >
     <Link 
       href="/admin"
-      className={`flex items-center gap-2 
+      className={`flex items-center gap-1  
                  bg-[#4CAF50] rounded-lg hover:bg-[#45a049] 
                  transition-all duration-300 shadow-md
-                 ${isMobile ? 'px-3 py-1.5 text-sm' : 'px-4 py-2'}`}
+                 ${isMobile ? 'px-2 py-1.5 text-xs' : 'px-4 py-2'}`}
     >
-      <FiSettings className={`text-white ${isMobile ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} />
+      <FiSettings className={`text-white ${isMobile ? 'w-3 h-3' : 'w-4 h-4'}`} />
       <span className="font-medium text-white">
         {isMobile ? 'Admin' : 'Admin Dashboard'}
       </span>
@@ -58,141 +58,111 @@ export default function Navbar() {
     if (typeof window === 'undefined') return;
 
     const verification = searchParams?.get('verification');
-    const message = searchParams?.get('message');
     const email = searchParams?.get('email');
     
-    if (message) {
-      toast.success(decodeURIComponent(message));
-    }
-    
-    if (verification === 'success' && email) {
-      setShowLogin(true);
-      setFormData(prev => ({ ...prev, email }));
-    }
-  }, [searchParams]);
-
-  const renderMobileLayout = () => (
-    <div className="flex flex-col md:hidden space-y-2">
-      <div className="flex items-center justify-between px-4">
-        <Link href="/" className="flex items-center">
-          <Image
-            src="/images/viva-online-logo.png"
-            alt="VIVA Logo"
-            width={200}
-            height={40}
-            className="h-12 w-auto"
-            style={{ 
-              height: "48px",
-              width: "auto",
-              maxWidth: "200px",
-              objectFit: "contain"
-            }}
-            priority
-          />
-        </Link>
+    const handleVerification = async () => {
+      if (verification === 'success' && email) {
+        setShowLogin(true);
+        setFormData(prev => ({ ...prev, email }));
         
-        <div className="flex items-center gap-1">
-          {session?.user?.role && ['ADMIN', 'MANAGER'].includes(session.user.role) && (
-            <AdminDashboardButton isMobile />
-          )}
-          <AuthButtons
-            showLogin={showLogin}
-            setShowLogin={setShowLogin}
-            formData={formData}
-            setFormData={setFormData}
-            error={error}
-            setError={setError}
-            className="flex items-center text-xs scale-90"
-          />
-          <Link href="/cart" className="flex items-center justify-center scale-90">
-            <ClientCartIcon />
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
+        try {
+          const result = await signIn('credentials', {
+            redirect: false,
+            email: email.toLowerCase().trim(),
+            verificationLogin: 'true'
+          });
 
-  const renderDesktopLayout = () => (
-    <div className="hidden md:flex md:items-center md:justify-between px-4">
-      <Link href="/" className="transform-gpu scale-175 origin-left">
-        <Image
-          src="/images/viva-online-logo.png"
-          alt="VIVA Pharmacy & Wellness Logo"
-          width={400}
-          height={80}
-          className="h-20 w-auto"
-          style={{ 
-            height: "80px",
-            width: "auto",
-            maxWidth: "500px",
-            objectFit: "contain"
-          }}
-          priority
-        />
-      </Link>
+          if (result?.ok) {
+            toast.success('Email verified and signed in successfully!');
+            router.refresh();
+          } else {
+            setError('Please sign in to continue');
+            setShowLogin(true);
+          }
+        } catch (err) {
+          console.error('Auto-login error:', err);
+          setError('Please sign in to continue');
+          setShowLogin(true);
+        }
+      }
+    };
 
-      <div className="flex items-center space-x-6 ml-auto">
-        {session?.user?.role && ['ADMIN', 'MANAGER'].includes(session.user.role) && (
-          <AdminDashboardButton />
-        )}
-        <Link href="/cart" className="text-primary hover:text-primary/80 transition-colors duration-300">
-          <ClientCartIcon />
-        </Link>
-        {session?.user ? (
-          <div className="flex items-center gap-3">
-            <Link href="/profile" className="flex items-center gap-2">
-              {session.user.image && !avatarError ? (
-                <div className="relative w-8 h-8 rounded-full overflow-hidden bg-gray-100">
-                  <Image
-                    src={session.user.image}
-                    alt={session.user.name || 'User profile'}
-                    fill
-                    className="object-cover"
-                    onError={() => setAvatarError(true)}
-                    priority
-                  />
-                </div>
-              ) : (
-                <DefaultAvatar />
-              )}
-              <span className="text-primary hover:text-primary/80 transition-colors duration-300">
-                {session.user.name}
-              </span>
-            </Link>
-            <AuthButtons
-              showLogin={showLogin}
-              setShowLogin={setShowLogin}
-              formData={formData}
-              setFormData={setFormData}
-              error={error}
-              setError={setError}
-            />
-          </div>
-        ) : (
-          <AuthButtons
-            showLogin={showLogin}
-            setShowLogin={setShowLogin}
-            formData={formData}
-            setFormData={setFormData}
-            error={error}
-            setError={setError}
-          />
-        )}
-      </div>
-    </div>
-  );
+    handleVerification();
+  }, [searchParams, router]);
 
   return (
     <>
       <motion.nav 
-        className="viva-navbar w-full shadow-sm"
+        className="viva-navbar w-full shadow-sm bg-[#002B49]"
         initial={{ y: -100 }}
         animate={{ y: 0 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
       >
-        <div className="container mx-auto">
-          {renderMobileLayout()}
-          {renderDesktopLayout()}
+        <div className="max-w-[1400px] mx-auto">
+          <div className="flex md:hidden flex-col w-full px-2">
+            <div className="flex items-center justify-between py-2">
+              <Link href="/" className="flex-shrink-0 relative w-[160px] h-[40px]">
+                <Image
+                  src="/images/viva-online-logo.png"
+                  alt="VIVA Logo"
+                  fill
+                  className="object-contain object-left"
+                  sizes="160px"
+                  priority
+                />
+              </Link>
+              
+              <div className="flex items-center gap-2">
+                {session?.user?.role && ['ADMIN', 'MANAGER'].includes(session.user.role) && (
+                  <AdminDashboardButton isMobile />
+                )}
+                <Link href="/cart" className="relative flex items-center">
+                  <ClientCartIcon />
+                </Link>
+                <div className="w-auto max-w-[120px]">
+                  <AuthButtons
+                    showLogin={showLogin}
+                    setShowLogin={setShowLogin}
+                    formData={formData}
+                    setFormData={setFormData}
+                    error={error}
+                    setError={setError}
+                    isMobile={true}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="hidden md:flex items-center justify-between py-3 px-6">
+            <Link href="/" className="flex-shrink-0 relative w-[280px] h-[60px]">
+              <Image
+                src="/images/viva-online-logo.png"
+                alt="VIVA Logo"
+                fill
+                className="object-contain object-left"
+                sizes="280px"
+                priority
+              />
+            </Link>
+
+            <div className="flex items-center gap-6">
+              {session?.user?.role && ['ADMIN', 'MANAGER'].includes(session.user.role) && (
+                <AdminDashboardButton />
+              )}
+              <Link href="/cart" className="relative flex items-center">
+                <ClientCartIcon />
+              </Link>
+              <AuthButtons
+                showLogin={showLogin}
+                setShowLogin={setShowLogin}
+                formData={formData}
+                setFormData={setFormData}
+                error={error}
+                setError={setError}
+              />
+            </div>
+          </div>
         </div>
       </motion.nav>
       <VerificationAlert />

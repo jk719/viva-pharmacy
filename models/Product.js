@@ -1,5 +1,10 @@
+// Add server-side check at the top
+if (typeof window !== 'undefined') {
+  throw new Error('This module can only be used on the server side');
+}
+
 import mongoose from 'mongoose';
-import { categories, isCategoryValid, isSubcategoryValid, isItemValid } from '@/data/categories';
+import { categories } from '../data/categories.js';
 
 const productSchema = new mongoose.Schema({
   name: {
@@ -31,12 +36,13 @@ const productSchema = new mongoose.Schema({
   category: {
     type: String,
     required: [true, 'Category name is required'],
-    trim: true
-  },
-  subcategory: {
-    type: String,
-    required: [true, 'Subcategory name is required'],
-    trim: true
+    trim: true,
+    validate: {
+      validator: function(v) {
+        return categories.some(cat => cat.name === v);
+      },
+      message: props => `${props.value} is not a valid category`
+    }
   },
   item: {
     type: String,
@@ -51,12 +57,13 @@ const productSchema = new mongoose.Schema({
   categorySlug: {
     type: String,
     required: [true, 'Category slug is required'],
-    index: true
-  },
-  subcategorySlug: {
-    type: String,
-    required: [true, 'Subcategory slug is required'],
-    index: true
+    index: true,
+    validate: {
+      validator: function(v) {
+        return categories.some(cat => cat.slug === v);
+      },
+      message: props => `${props.value} is not a valid category slug`
+    }
   },
   itemSlug: {
     type: String,
@@ -134,7 +141,6 @@ productSchema.index({
 
 productSchema.index({ 
   categorySlug: 1, 
-  subcategorySlug: 1, 
   itemSlug: 1 
 });
 
@@ -144,28 +150,20 @@ productSchema.virtual('isInStock').get(function() {
 });
 
 // Static methods
-productSchema.statics.generateSKU = async function(categorySlug, subcategorySlug) {
+productSchema.statics.generateSKU = async function(categorySlug) {
   const category = categories.find(c => c.slug === categorySlug);
-  const subcategory = category?.subcategories.find(s => s.slug === subcategorySlug);
-  
-  const prefix = `${category?.name.substring(0, 2)}${subcategory?.name.substring(0, 2)}`.toUpperCase();
-  const count = await this.countDocuments({ 
-    categorySlug,
-    subcategorySlug 
-  });
-  
+  const prefix = category?.name.substring(0, 3).toUpperCase() || 'PRD';
+  const count = await this.countDocuments({ categorySlug });
   return `${prefix}${(count + 1).toString().padStart(4, '0')}`;
 };
 
 // Instance methods
 productSchema.methods.getCategoryName = function() {
   const category = categories.find(c => c.slug === this.categorySlug);
-  const subcategory = category?.subcategories.find(s => s.slug === this.subcategorySlug);
-  const item = subcategory?.items.find(i => i.slug === this.itemSlug);
+  const item = category?.items.find(i => i.slug === this.itemSlug);
   
   return {
     category: category?.name || '',
-    subcategory: subcategory?.name || '',
     item: item?.name || ''
   };
 };
@@ -197,27 +195,21 @@ productSchema.pre('save', function(next) {
 
 // Update the pre-validate middleware
 productSchema.pre('validate', async function(next) {
-  if (this.isModified('categorySlug') || this.isModified('subcategorySlug') || this.isModified('itemSlug')) {
+  if (this.isModified('categorySlug') || this.isModified('itemSlug')) {
     const category = categories.find(c => c.slug === this.categorySlug);
     if (!category) {
       throw new Error(`Invalid category: ${this.categorySlug}`);
     }
 
-    const subcategory = category.subcategories.find(s => s.slug === this.subcategorySlug);
-    if (!subcategory) {
-      throw new Error(`Invalid subcategory: ${this.subcategorySlug}`);
-    }
-
-    const item = subcategory.items.find(i => i.slug === this.itemSlug);
+    const item = category.items.find(i => i.slug === this.itemSlug);
     if (!item) {
       throw new Error(`Invalid item: ${this.itemSlug}`);
     }
 
-    // Set the category names
+    // Set the names
     this.category = category.name;
-    this.subcategory = subcategory.name;
     this.item = item.name;
-    this.categoryPath = `${category.name} > ${subcategory.name} > ${item.name}`;
+    this.categoryPath = `${category.name} > ${item.name}`;
   }
   next();
 });
@@ -232,5 +224,200 @@ productSchema.post('save', function(error, doc, next) {
   }
 });
 
-export default mongoose.models.Product || mongoose.model('Product', productSchema);
+// Create a helper function to check if mongoose is ready
+const getModel = () => {
+  try {
+    return mongoose.models.Product || mongoose.model('Product', productSchema);
+  } catch (error) {
+    if (error.name === 'MissingSchemaError') {
+      // Schema hasn't been registered yet
+      const productSchema = new mongoose.Schema({
+        name: {
+          type: String,
+          required: [true, 'Product name is required'],
+          trim: true
+        },
+        description: {
+          type: String,
+          required: [true, 'Product description is required'],
+          trim: true
+        },
+        price: {
+          type: Number,
+          required: [true, 'Price is required'],
+          min: [0, 'Price cannot be negative']
+        },
+        image: {
+          type: String,
+          required: [true, 'Image URL is required'],
+          validate: {
+            validator: function(v) {
+              return !v || v.startsWith('https://res.cloudinary.com/');
+            },
+            message: props => `${props.value} is not a valid Cloudinary URL`
+          }
+        },
+        category: {
+          type: String,
+          required: [true, 'Category name is required'],
+          trim: true
+        },
+        item: {
+          type: String,
+          required: [true, 'Item name is required'],
+          trim: true
+        },
+        categoryPath: {
+          type: String,
+          required: [true, 'Category path is required'],
+          trim: true
+        },
+        categorySlug: {
+          type: String,
+          required: [true, 'Category slug is required'],
+          index: true
+        },
+        itemSlug: {
+          type: String,
+          required: [true, 'Item slug is required'],
+          index: true
+        },
+        isFeatured: {
+          type: Boolean,
+          default: false,
+          index: true
+        },
+        isPopular: {
+          type: Boolean,
+          default: false,
+          index: true
+        },
+        isNewProduct: {
+          type: Boolean,
+          default: true,
+          index: true
+        },
+        stock: {
+          type: Number,
+          required: [true, 'Stock quantity is required'],
+          min: [0, 'Stock cannot be negative'],
+          default: 0
+        },
+        sku: {
+          type: String,
+          required: [true, 'SKU is required'],
+          unique: true,
+          trim: true
+        },
+        dosageForm: {
+          type: String,
+          enum: ['Tablet', 'Capsule', 'Liquid', 'Cream', 'Gel', 'Spray', 'Drops', 'Gummies', 'Powder', 'Patch', 'Other'],
+          required: [true, 'Dosage form is required']
+        },
+        activeIngredients: [{
+          name: {
+            type: String,
+            required: [true, 'Ingredient name is required']
+          },
+          amount: {
+            type: String,
+            required: [true, 'Ingredient amount is required']
+          }
+        }],
+        warnings: [String],
+        directions: String,
+        contraindications: [String],
+        sideEffects: [String],
+        storage: String,
+        createdBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+          required: function() {
+            return this.isNew;
+          },
+          immutable: true
+        }
+      }, {
+        timestamps: true,
+        toJSON: { virtuals: true },
+        toObject: { virtuals: true },
+        suppressReservedKeysWarning: true
+      });
+
+      // Add your indexes
+      productSchema.index({ 
+        name: 'text', 
+        description: 'text',
+        'activeIngredients.name': 'text'
+      });
+
+      productSchema.index({ 
+        categorySlug: 1, 
+        itemSlug: 1 
+      });
+
+      // Add your virtuals
+      productSchema.virtual('isInStock').get(function() {
+        return this.stock > 0;
+      });
+
+      // Add your statics
+      productSchema.statics.generateSKU = async function(categorySlug) {
+        const category = categories.find(c => c.slug === categorySlug);
+        const prefix = category?.name.substring(0, 3).toUpperCase() || 'PRD';
+        const count = await this.countDocuments({ categorySlug });
+        return `${prefix}${(count + 1).toString().padStart(4, '0')}`;
+      };
+
+      // Add your middleware
+      productSchema.pre('save', function(next) {
+        if (this.isNew) {
+          this.isNewProduct = true;
+          const productId = this._id;
+          setTimeout(async () => {
+            try {
+              await mongoose.model('Product').findByIdAndUpdate(
+                productId,
+                { $set: { isNewProduct: false } }
+              );
+            } catch (error) {
+              console.error('Failed to update isNewProduct status:', error);
+            }
+          }, 30 * 24 * 60 * 60 * 1000);
+        }
+        next();
+      });
+
+      productSchema.pre('validate', async function(next) {
+        if (this.isModified('categorySlug') || this.isModified('itemSlug')) {
+          const category = categories.find(c => c.slug === this.categorySlug);
+          if (!category) {
+            throw new Error(`Invalid category: ${this.categorySlug}`);
+          }
+
+          const item = category.items.find(i => i.slug === this.itemSlug);
+          if (!item) {
+            throw new Error(`Invalid item: ${this.itemSlug}`);
+          }
+
+          this.category = category.name;
+          this.item = item.name;
+          this.categoryPath = `${category.name} > ${item.name}`;
+        }
+        next();
+      });
+
+      return mongoose.model('Product', productSchema);
+    }
+    throw error;
+  }
+};
+
+// Export a function that returns the model
+export default function getProductModel() {
+  if (typeof window !== 'undefined') {
+    throw new Error('getProductModel can only be used on the server side');
+  }
+  return getModel();
+}
  

@@ -1,28 +1,32 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Product from '@/models/Product';
+import { categories } from '@/data/categories';
 
 export async function GET() {
   try {
     // Ensure DB connection
     await dbConnect();
     
-    // Find all distinct categories
-    const distinctCategories = await Product.distinct('category');
-    console.log('Distinct categories found:', distinctCategories);
+    // Get categories from our static definition
+    const staticCategories = categories.map(cat => cat.name);
+    console.log('Static categories:', staticCategories);
     
-    // Add "All" and filter out any empty values
-    const categories = ["All", ...distinctCategories].filter(category => 
-      category && category.length > 0
-    );
+    // Find all distinct categories from products
+    const dbCategories = await Product.distinct('category');
+    console.log('DB categories found:', dbCategories);
     
-    console.log('Final categories list:', categories);
+    // Merge both sets and add "All"
+    const mergedCategories = ["All", ...new Set([...staticCategories, ...dbCategories])]
+      .filter(category => category && category.length > 0);
+    
+    console.log('Final categories list:', mergedCategories);
 
-    if (!categories || categories.length === 0) {
+    if (!mergedCategories || mergedCategories.length === 0) {
       throw new Error('No categories found');
     }
     
-    return NextResponse.json(categories);
+    return NextResponse.json(mergedCategories);
   } catch (error) {
     console.error('Error in categories API:', error);
     return NextResponse.json(["All"], { status: 500 });

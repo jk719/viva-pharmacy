@@ -4,10 +4,22 @@ import { useSession, signOut, signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { FiUser } from 'react-icons/fi';
 
 const VERIFICATION_SUCCESS = 'verification_success';
 
-export function AuthButtons() {
+// Helper function to get user initials or shortened email
+const formatEmailForDisplay = (email, isMobile) => {
+  if (!email) return 'Account';
+  if (!isMobile) return email;
+  
+  // For mobile: show first part of email before @
+  const [username] = email.split('@');
+  if (username.length <= 8) return username;
+  return username.slice(0, 6) + '...';
+};
+
+export function AuthButtons({ isMobile = false }) {
   const { data: session, status } = useSession();
   const [showLogin, setShowLogin] = useState(false);
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -60,6 +72,17 @@ export function AuthButtons() {
         sessionStorage.setItem('loginCallbackUrl', callbackUrl);
       }
       
+      // Clean up the URL
+      window.history.replaceState({}, '', '/');
+    }
+  }, []);
+
+  useEffect(() => {
+    // Check for verification success message
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('verification') === 'success') {
+      setShowLogin(true);
+      toast.success('Email verified! Please sign in to continue.');
       // Clean up the URL
       window.history.replaceState({}, '', '/');
     }
@@ -157,49 +180,62 @@ export function AuthButtons() {
     setShowLogin(false);
   };
 
+  const buttonStyles = {
+    base: `inline-flex items-center justify-center font-medium
+           rounded-full transition-all duration-200
+           shadow-lg hover:shadow-xl active:shadow-md
+           transform hover:scale-105 active:scale-95`,
+    signIn: `bg-gradient-to-r from-[#FF9F43] to-[#FFB976]
+             hover:from-[#ff9429] hover:to-[#ffa851]
+             text-white font-semibold
+             border border-[#FF9F43]/20
+             focus:ring-2 focus:ring-[#FF9F43]/50 focus:ring-offset-1`,
+    mobile: 'px-3 py-1.5 text-sm',
+    desktop: 'px-4 py-2 text-base',
+    icon: `mr-2 h-5 w-5 ${isMobile ? 'hidden' : 'inline-block'}`
+  };
+
   if (status === 'loading') {
     return (
       <div className="animate-pulse">
-        <div className="h-10 w-24 bg-white/10 rounded-full"></div>
+        <div className="h-8 w-20 bg-white/10 rounded-full"></div>
       </div>
     );
   }
 
   if (session) {
     return (
-      <div className="relative" ref={dropdownRef}>
+      <div className="relative z-50" ref={dropdownRef}>
         <button
           onClick={() => setShowLogin(!showLogin)}
           aria-expanded={showLogin}
           aria-haspopup="true"
-          className="group inline-flex items-center gap-2 px-4 py-2 rounded-full
-                   bg-gradient-to-r from-[#FF9F43] to-[#FFB976]
-                   hover:from-[#ff9429] hover:to-[#ffa851]
-                   text-white font-medium
-                   transition-all duration-200 ease-out 
-                   transform hover:scale-105
-                   focus:outline-none focus:ring-2 focus:ring-[#FF9F43]/50
-                   shadow-lg shadow-orange-200/50"
+          className={`${buttonStyles.base} ${buttonStyles.signIn} ${isMobile ? buttonStyles.mobile : buttonStyles.desktop}
+                     animate-pulse-slow whitespace-nowrap`}
         >
-          <span className="max-w-[150px] truncate text-sm">
-            {session.user.email}
+          <FiUser 
+            className={`${isMobile ? 'w-3.5 h-3.5 mr-1' : 'w-4 h-4 mr-2'}`}
+          />
+          <span className="relative truncate max-w-[150px]">
+            {formatEmailForDisplay(session.user.email, isMobile)}
+            <span className="absolute -top-1 -right-1 flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF9F43] opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#FF9F43]"></span>
+            </span>
           </span>
-          <svg 
-            className={`w-4 h-4 transition-transform duration-200 ${showLogin ? 'rotate-180' : ''}`} 
-            fill="none" 
-            viewBox="0 0 24 24" 
-            stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
         </button>
 
         {showLogin && (
           <div 
-            className="absolute right-0 mt-3 w-56 bg-white rounded-2xl shadow-2xl 
-                     border border-blue-50 overflow-hidden z-30 
+            className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-2xl 
+                     border border-gray-100 overflow-hidden z-50
                      animate-scaleSpring backdrop-blur-sm
-                     transform transition-all duration-300"
+                     transform origin-top-right transition-all duration-200"
+            style={{
+              maxWidth: 'calc(100vw - 2rem)',
+              maxHeight: 'calc(100vh - 100px)',
+              right: isMobile ? '0' : '0',
+            }}
             role="menu"
             aria-orientation="vertical"
             aria-labelledby="user-menu-button"
@@ -245,19 +281,28 @@ export function AuthButtons() {
   }
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative z-50" ref={dropdownRef}>
       <button
         onClick={() => setShowLogin(!showLogin)}
-        aria-expanded={showLogin}
-        aria-controls="login-form"
-        className="inline-flex items-center justify-center px-6 py-2.5 text-sm font-medium
-                 text-white rounded-full
-                 bg-gradient-to-r from-[#FF9F43] to-[#FFB976]
-                 hover:from-[#ff9429] hover:to-[#ffa851]
-                 transform transition-all duration-200 hover:scale-105
-                 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#FF9F43]"
+        className={`
+          ${buttonStyles.base}
+          ${buttonStyles.signIn}
+          ${isMobile ? buttonStyles.mobile : buttonStyles.desktop}
+          animate-pulse-slow whitespace-nowrap
+        `}
       >
-        Sign In
+        <FiUser 
+          className={`${isMobile ? 'w-3.5 h-3.5 mr-1' : 'w-4 h-4 mr-2'}`}
+        />
+        <span className="relative whitespace-nowrap">
+          Sign In
+          {!isMobile && (
+            <span className="absolute -top-1 -right-1 flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF9F43] opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#FF9F43]"></span>
+            </span>
+          )}
+        </span>
       </button>
 
       {showLogin && (

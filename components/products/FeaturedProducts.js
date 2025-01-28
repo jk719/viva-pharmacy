@@ -218,6 +218,28 @@ const ProductInfo = ({ product }) => (
   </div>
 );
 
+// Add the LoadingState component definition
+const LoadingState = () => (
+  <div className="py-6">
+    <div className="animate-pulse space-y-4">
+      {[1, 2].map((i) => (
+        <div key={i} className="space-y-3">
+          <div className="h-6 bg-gray-200 rounded w-1/4"></div>
+          <div className="flex gap-6 overflow-x-auto">
+            {[1, 2, 3].map((j) => (
+              <div key={j} className="min-w-[280px] space-y-3">
+                <div className="h-48 bg-gray-200 rounded-xl"></div>
+                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
 export default function FeaturedProducts() {
   const { addToCart, decrement, items = [] } = useCart();
   const { selectedCategory, setSelectedCategory } = useCategory();
@@ -342,12 +364,7 @@ export default function FeaturedProducts() {
 
   if (isLoading) {
     return (
-      <div className="py-6">
-        <LoadingState />
-        <div className="text-center text-gray-500 mt-4">
-          Loading products...
-        </div>
-      </div>
+      <LoadingState />
     );
   }
 
@@ -408,27 +425,6 @@ export default function FeaturedProducts() {
     </section>
   );
 }
-
-const LoadingState = () => (
-  <div className="py-6">
-    <div className="animate-pulse space-y-4">
-      {[1, 2].map((i) => (
-        <div key={i} className="space-y-3">
-          <div className="h-6 bg-gray-200 rounded w-1/4"></div>
-          <div className="flex gap-6 overflow-x-auto">
-            {[1, 2, 3].map((j) => (
-              <div key={j} className="min-w-[280px] space-y-3">
-                <div className="h-48 bg-gray-200 rounded-xl"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
-);
 
 const EmptyState = () => (
   <div className="py-6 text-center text-gray-500">

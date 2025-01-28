@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import dbConnect from '@/lib/dbConnect';
-import Product from '@/models/Product';
+import getProductModel from '@/models/Product';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { categories } from '@/data/categories';
 import rateLimit from '@/lib/rateLimit';
@@ -20,10 +20,9 @@ function getCategoryNames(categorySlug, subcategorySlug, itemSlug) {
 }
 
 export async function GET(request) {
-  console.log('GET /api/products: Starting request');
-  
   try {
-    // Apply rate limiting
+    const clientIp = request.headers.get('x-forwarded-for') || 'anonymous';
+    
     if (!rateLimit.check(request)) {
       return NextResponse.json({
         success: false,
@@ -31,115 +30,44 @@ export async function GET(request) {
       }, { 
         status: 429,
         headers: {
-          'Retry-After': '60',
-          'X-RateLimit-Limit': '30',
-          'X-RateLimit-Remaining': '0'
+          'Retry-After': '60'
         }
       });
     }
 
     await dbConnect();
     
-    const url = new URL(request.url);
-    const searchParams = url.searchParams;
+    // Add a small delay to ensure connection is ready
+    await new Promise(resolve => setTimeout(resolve, 100));
     
-    // Build the query object
-    const query = {};
+    const Product = getProductModel();
+    const products = await Product.find({}).sort({ createdAt: -1 });
     
-    // Get filter parameters
-    const filters = {
-      category: searchParams.get('category'),
-      search: searchParams.get('search'),
-      minPrice: searchParams.get('minPrice'),
-      maxPrice: searchParams.get('maxPrice'),
-      isNew: searchParams.get('new') === 'true',
-      isPopular: searchParams.get('popular') === 'true',
-      isFeatured: searchParams.get('featured') === 'true',
-      inStock: searchParams.get('inStock') === 'true'
-    };
-
-    console.log('Applied filters:', filters);
-
-    // Apply category filter
-    if (filters.category && filters.category !== 'All') {
-      const categoryData = categories.find(c => c.name === filters.category);
-      if (categoryData) {
-        query.categorySlug = categoryData.slug;
-      }
-    }
-
-    // Handle price range
-    if (filters.minPrice || filters.maxPrice) {
-      query.price = {};
-      if (filters.minPrice && !isNaN(parseFloat(filters.minPrice))) {
-        query.price.$gte = parseFloat(filters.minPrice);
-      }
-      if (filters.maxPrice && !isNaN(parseFloat(filters.maxPrice))) {
-        query.price.$lte = parseFloat(filters.maxPrice);
-      }
-      if (Object.keys(query.price).length === 0) {
-        delete query.price;
-      }
-    }
-
-    // Add search functionality
-    if (filters.search) {
-      query.$text = { $search: filters.search };
-    }
-
-    console.log('Executing query:', JSON.stringify(query, null, 2));
-
-    const products = await Product.find(query)
-      .select('-contraindications -sideEffects')
-      .sort({ createdAt: -1 })
-      .lean()
-      .populate('createdBy', 'name email');
-
-    // Transform products to include category names
-    const transformedProducts = products.map(product => {
-      const names = getCategoryNames(
-        product.categorySlug,
-        product.subcategorySlug,
-        product.itemSlug
-      );
-      
-      return {
-        ...product,
-        category: names.category,
-        subcategory: names.subcategory,
-        item: names.item
-      };
-    });
-
-    console.log(`Found ${transformedProducts.length} products`);
-
-    const response = NextResponse.json({
+    return NextResponse.json({
       success: true,
-      products: transformedProducts,
-      pagination: {
-        total: transformedProducts.length,
-        pages: 1,
-        currentPage: 1,
-        perPage: transformedProducts.length,
-        hasMore: false
-      }
+      products: products.map(product => ({
+        _id: product._id.toString(),
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        image: product.image,
+        category: product.category,
+        subcategory: product.subcategory,
+        item: product.item,
+        categoryPath: product.categoryPath,
+        isInStock: product.stock > 0,
+        isNew: product.isNewProduct,
+        stock: product.stock,
+        activeIngredients: product.activeIngredients,
+        dosageForm: product.dosageForm
+      }))
     });
-
-    // Add rate limit headers to successful response
-    const ip = request.headers.get('x-forwarded-for') || 'anonymous';
-    const remaining = 30 - rateLimit.getTokens(ip);
-    response.headers.set('X-RateLimit-Limit', '30');
-    response.headers.set('X-RateLimit-Remaining', remaining.toString());
-    
-    return response;
-
   } catch (error) {
-    console.error('Products fetch error:', error);
-    return NextResponse.json({ 
-      success: false, 
-      message: error.message || 'Failed to fetch products',
-      products: [] 
-    }, { status: 500 });
+    console.error('Products API Error:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch products' },
+      { status: 500 }
+    );
   }
 }
 

@@ -9,19 +9,32 @@ const nextConfig = {
   reactStrictMode: false,
   trailingSlash: false,
   serverExternalPackages: ['nodemailer'],
-  webpack: (config) => {
+  webpack: (config, { dev, isServer }) => {
     // Enable top-level await and other ES module features
     config.experiments = {
       ...config.experiments,
       topLevelAwait: true,
       layers: true
     }
-    // Simplify cache configuration
-    config.cache = {
-      type: 'filesystem'
+
+    // Only enable caching in development
+    if (dev) {
+      config.cache = {
+        type: 'filesystem',
+        version: `${isServer ? 'server' : 'client'}-1`,
+        cacheDirectory: path.resolve(__dirname, '.next/cache/webpack'),
+        store: 'pack',
+        buildDependencies: {
+          config: [__filename]
+        }
+      }
+    } else {
+      // Disable cache in production
+      config.cache = false
     }
+
     return config
-  },
+  }, 
   images: {
     domains: [
       'res.cloudinary.com',

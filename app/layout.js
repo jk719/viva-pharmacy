@@ -51,8 +51,9 @@ export default async function RootLayout({ children }) {
         <Providers session={session}>
           <ClientToaster />
           <SiteHeader />
-          <main className="min-h-screen w-full">
-            <div className="container mx-auto px-4">
+          <div className="h-[120px] md:h-[140px]" aria-hidden="true" />
+          <main className="min-h-screen w-full flex-grow">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <Suspense fallback={<LoadingSpinner />}>
                 {children}
               </Suspense>
@@ -71,12 +72,13 @@ function SiteHeader() {
   return (
     <>
       <header className="fixed top-0 left-0 right-0 w-full bg-white z-50">
-        <Navbar />
+        <div className="w-full">
+          <Navbar />
+        </div>
         <div className="bg-white border-b">
           <HeaderProgress />
         </div>
       </header>
-      <div className="h-[120px] sm:h-[140px]" aria-hidden="true" />
     </>
   );
 }

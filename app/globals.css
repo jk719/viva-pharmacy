@@ -6,8 +6,8 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
-  --primary-color: #002B49;      /* Navy blue */
-  --accent-color: #DC1F4E;
+  --primary-color: #002B49;
+  --accent-color: #ff4a4a;
   --secondary-color: #f1f5f9;
   --text-color: #003366;
   --button-blue: #003366;
@@ -283,41 +283,48 @@ body {
   z-index: 50;
 }
 
-/* Keep your existing navbar and other styles */
-
-/* Add these navbar-specific styles */
+/* Update these navbar-specific styles */
 .viva-navbar {
-  background-color: var(--primary-color); /* Changed back to navy */
+  background-color: var(--primary-color);
+  width: 100%;
   position: relative;
   z-index: 50;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 1rem 0;
 }
 
-@media (min-width: 768px) {
+/* Remove the container styles from navbar */
+.viva-navbar .container {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0;
+}
+
+/* Mobile-specific navbar styles */
+@media (max-width: 767px) {
   .viva-navbar {
-    padding: 1.25rem 0;
+    padding: 0;  /* Remove default padding */
   }
 }
 
-.viva-navbar-logo {
-  height: auto;
-  width: auto;
-  max-height: 80px;
+/* Desktop navbar styles */
+@media (min-width: 768px) {
+  .viva-navbar {
+    padding: 0;  /* Remove default padding */
+  }
 }
 
-.viva-navbar .container {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 1rem;
+/* Add to your existing animations */
+@keyframes pulse-slow {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 10px 15px -3px rgba(255, 159, 67, 0.2);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 15px 20px -3px rgba(255, 159, 67, 0.3);
+  }
 }
 
-.viva-navbar a,
-.viva-navbar button {
-  color: white;
-}
-
-.viva-navbar a:hover,
-.viva-navbar button:hover {
-  color: rgba(255, 255, 255, 0.8);
+.animate-pulse-slow {
+  animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }

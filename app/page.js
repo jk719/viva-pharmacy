@@ -6,15 +6,11 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import FeaturedProducts from '../components/products/FeaturedProducts';
 import Link from 'next/link';
 import { useCategory } from '@/context/CategoryContext';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { IoArrowForward } from 'react-icons/io5';
 import { fetchProducts } from '@/lib/api';
 import toast from 'react-hot-toast';
 import SearchBar from '@/components/SearchBar';
-import CategoryGrid from '@/components/CategoryGrid';
-import ProductTabs from '@/components/products/ProductTabs';
-import HealthBlog from '@/components/HealthBlog';
-import RewardsBanner from '@/components/RewardsBanner';
 
 export const dynamic = 'force-dynamic';
 
@@ -130,12 +126,12 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section with Search */}
-      <div className="relative bg-gradient-to-br from-blue-900 to-blue-700 py-16">
-        <div className="container mx-auto px-4">
+      <div className="relative bg-gradient-to-br from-blue-900 to-blue-700 py-12 sm:py-16">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <motion.h1 
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            className="text-4xl md:text-5xl font-bold mb-4 text-white"
+            className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4 text-white"
           >
             Your Health, Our Priority
           </motion.h1>
@@ -151,39 +147,14 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Category Grid */}
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { name: 'Photo Medications', icon: '💊' },
-            { name: 'Household & Children\'s Health', icon: '🏠' },
-            { name: 'Everyday Essentials', icon: '✨' },
-            { name: 'Health & Wellness', icon: '❤️' },
-            { name: 'Electronics & Accessories', icon: '🔌' },
-            { name: 'Beauty & Personal Care', icon: '✨' },
-            { name: 'Seasonal Items', icon: '🌞' }
-          ].map((category, index) => (
-            <Link 
-              key={category.name}
-              href={`/products?category=${encodeURIComponent(category.name)}`}
-              className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 
-                       transition-colors text-center"
-            >
-              <span className="text-2xl mb-2 block">{category.icon}</span>
-              <span className="text-sm font-medium">{category.name}</span>
-            </Link>
-          ))}
-        </div>
-      </div>
-
       {/* Product Tabs */}
-      <div className="container mx-auto px-4 py-8 border-t">
-        <div className="flex gap-4 mb-6">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <div className="flex flex-wrap gap-2 sm:gap-4 mb-4 sm:mb-6">
           {['Featured', 'New Arrivals', 'Best Sellers'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab.toLowerCase())}
-              className={`px-4 py-2 rounded-lg ${
+              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-sm sm:text-base ${
                 activeTab === tab.toLowerCase()
                   ? 'bg-primary text-white'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -197,10 +168,10 @@ export default function Home() {
       </div>
 
       {/* View All Products CTA */}
-      <div className="text-center py-8">
+      <div className="text-center py-6 sm:py-8">
         <Link 
           href="/products"
-          className="inline-flex items-center gap-2 px-6 py-2.5 
+          className="inline-flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 
                    bg-primary text-white rounded-full
                    hover:bg-primary/90 transition-all duration-300"
         >

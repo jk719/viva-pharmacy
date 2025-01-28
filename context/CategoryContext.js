@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect } from 'react';
-import { categories, getCategoryBySlug, getSubcategoryBySlug } from '@/data/categories';
+import { categories, getCategoryBySlug, getItemBySlug } from '@/data/categories';
 
 // Create a context for the category
 const CategoryContext = createContext();
@@ -18,7 +18,6 @@ export function useCategory() {
 // CategoryProvider component
 export function CategoryProvider({ children }) {
     const [selectedCategory, setSelectedCategory] = useState("All");
-    const [selectedSubcategory, setSelectedSubcategory] = useState(null);
     const [selectedItem, setSelectedItem] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -33,7 +32,6 @@ export function CategoryProvider({ children }) {
                     setSelectedCategory("All");
                 } else if (categories.some(c => c.slug === saved.category)) {
                     setSelectedCategory(saved.category);
-                    if (saved.subcategory) setSelectedSubcategory(saved.subcategory);
                     if (saved.item) setSelectedItem(saved.item);
                 } else {
                     setSelectedCategory("All"); // Fallback to "All" if invalid
@@ -54,24 +52,20 @@ export function CategoryProvider({ children }) {
         if (!loading) {
             localStorage.setItem('selectedCategories', JSON.stringify({
                 category: selectedCategory,
-                subcategory: selectedSubcategory,
                 item: selectedItem
             }));
         }
-    }, [selectedCategory, selectedSubcategory, selectedItem, loading]);
+    }, [selectedCategory, selectedItem, loading]);
 
     // Handle category selection
     const handleCategorySelect = (category) => {
         setSelectedCategory(category);
-        setSelectedSubcategory(null);
         setSelectedItem(null);
     };
 
     const value = {
         selectedCategory,
         setSelectedCategory: handleCategorySelect,
-        selectedSubcategory,
-        setSelectedSubcategory,
         selectedItem,
         setSelectedItem,
         categories: ["All", ...categories.map(c => c.name)], // Include "All" in categories
@@ -81,16 +75,28 @@ export function CategoryProvider({ children }) {
             if (selectedCategory === "All") return null;
             return getCategoryBySlug(selectedCategory);
         },
-        getCurrentSubcategory: () => {
+        getCurrentItem: () => {
             if (!selectedCategory || selectedCategory === "All") return null;
-            return selectedSubcategory ? 
-                getSubcategoryBySlug(selectedCategory, selectedSubcategory) : null;
+            return selectedItem ? 
+                getItemBySlug(selectedCategory, selectedItem) : null;
         },
         // Helper function to get category display name
         getCategoryDisplayName: (categorySlug) => {
             if (categorySlug === "All") return "All";
             const category = categories.find(c => c.slug === categorySlug);
             return category ? category.name : categorySlug;
+        },
+        // Helper function to get item display name
+        getItemDisplayName: (categorySlug, itemSlug) => {
+            if (!categorySlug || !itemSlug) return "";
+            const item = getItemBySlug(categorySlug, itemSlug);
+            return item ? item.name : itemSlug;
+        },
+        // Get all items for a category
+        getCategoryItems: (categorySlug) => {
+            if (!categorySlug || categorySlug === "All") return [];
+            const category = getCategoryBySlug(categorySlug);
+            return category ? category.items : [];
         }
     };
 
