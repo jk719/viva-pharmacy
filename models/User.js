@@ -1,8 +1,7 @@
-// src/models/User.js
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-import { REWARDS_CONFIG } from '@/lib/rewards/config';
+import { REWARDS_CONFIG } from '../lib/rewards/config.js';
 
 // Add address schema
 const addressSchema = new mongoose.Schema({

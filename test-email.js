@@ -2,7 +2,8 @@ import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import fs from 'fs';
-import { sendOrderConfirmationEmail } from './lib/email/sendEmail.mjs';
+import { sendOrderConfirmationEmail } from './lib/email/sendEmail.js';
+import { generateOrderConfirmationEmail } from './lib/email-templates/order-confirmation.js';
 
 // Get command line arguments
 const args = process.argv.slice(2);

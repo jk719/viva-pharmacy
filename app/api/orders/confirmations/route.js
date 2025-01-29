@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { generateOrderConfirmationEmail } from '@/lib/email-templates/order-confirmation.mjs';
-import { sendOrderConfirmationEmail } from '@/lib/email/sendEmail.mjs';
+import { generateOrderConfirmationEmail } from '@/lib/email-templates/order-confirmation';
+import { sendOrderConfirmationEmail } from '@/lib/email/sendEmail';
 
 export async function POST(request) {
   try {

@@ -6,60 +6,9 @@ const __dirname = path.dirname(__filename);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: false,
-  trailingSlash: false,
-  serverExternalPackages: ['nodemailer'],
-  webpack: (config, { dev, isServer }) => {
-    // Add path alias configuration
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      '@': path.resolve(__dirname),
-    };
-
-    // Enable top-level await and other ES module features
-    config.experiments = {
-      ...config.experiments,
-      topLevelAwait: true,
-      layers: true
-    }
-
-    // Only enable caching in development
-    if (dev) {
-      config.cache = {
-        type: 'filesystem',
-        version: `${isServer ? 'server' : 'client'}-1`,
-        cacheDirectory: path.resolve(__dirname, '.next/cache/webpack'),
-        store: 'pack',
-        buildDependencies: {
-          config: [__filename]
-        }
-      }
-    } else {
-      // Disable cache in production
-      config.cache = false
-    }
-
-    return config
-  }, 
+  reactStrictMode: true,
   images: {
-    domains: [
-      'res.cloudinary.com',
-      'www.gravatar.com',
-      'via.placeholder.com'
-    ],
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'res.cloudinary.com',
-        pathname: '/dv3cd1aoy/image/upload/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'via.placeholder.com',
-        pathname: '/**',
-      }
-    ],
-    unoptimized: true,
+    domains: ['res.cloudinary.com'],
   },
   env: {
     NEXTAUTH_URL: process.env.NEXT_PUBLIC_SITE_URL || 
@@ -88,6 +37,30 @@ const nextConfig = {
         ],
       },
     ];
+  },
+  webpack: (config, { isServer }) => {
+    // Add path aliases
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': path.resolve(__dirname),
+      '@/components': path.resolve(__dirname, './components'),
+      '@/context': path.resolve(__dirname, './context'),
+    };
+    
+    // Optimize module resolution
+    config.resolve.modules = [
+      path.resolve(__dirname),
+      'node_modules',
+      ...config.resolve.modules || [],
+    ];
+
+    return config;
+  },
+  experimental: {
+    serverActions: {
+      allowedOrigins: ['localhost:3000'],
+      bodySizeLimit: '2mb'
+    }
   },
 };
 

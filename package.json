@@ -13,8 +13,9 @@
     "cleanup-orders": "node -r dotenv/config scripts/cleanupDuplicateOrders.js",
     "test:email": "node test-email.mjs",
     "test:email:to": "node test-email.mjs",
-    "clean": "rm -rf .next node_modules/.cache",
-    "update-stock": "node scripts/updateProductStock.cjs"
+    "clean": "rm -rf .next node_modules/.cache && npm install",
+    "update-stock": "node scripts/updateProductStock.cjs",
+    "postinstall": "next build"
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^6.6.0",
@@ -50,17 +51,26 @@
   "devDependencies": {
     "@eslint/js": "^9.17.0",
     "@tailwindcss/forms": "^0.5.10",
+    "@types/node": "^20.0.0",
     "@types/react": "19.0.8",
+    "@types/react-dom": "^19.0.0",
     "autoprefixer": "^10.4.20",
+    "css-loader": "^7.1.2",
     "eslint": "^8.57.1",
     "eslint-config-next": "^15.0.3",
     "eslint-plugin-react": "^7.37.3",
     "globals": "^15.14.0",
     "postcss": "^8.4.47",
+    "postcss-loader": "^8.1.1",
     "prettier": "^3.4.2",
-    "tailwindcss": "^3.4.14"
+    "style-loader": "^4.0.0",
+    "tailwindcss": "^3.4.14",
+    "typescript": "^5.0.0"
   },
   "engines": {
     "node": ">=18.17.0"
+  },
+  "resolutions": {
+    "@types/react": "19.0.8"
   }
 }
