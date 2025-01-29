@@ -8,7 +8,13 @@ const __dirname = path.dirname(__filename);
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    domains: ['res.cloudinary.com'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
+        pathname: '/**',
+      },
+    ],
   },
   env: {
     NEXTAUTH_URL: process.env.NEXT_PUBLIC_SITE_URL || 
@@ -38,7 +44,12 @@ const nextConfig = {
       },
     ];
   },
-  webpack: (config, { isServer }) => {
+  webpack: (config, { dev, isServer }) => {
+    // Disable webpack caching in production
+    if (!dev) {
+      config.cache = false;
+    }
+
     // Add path aliases
     config.resolve.alias = {
       ...config.resolve.alias,

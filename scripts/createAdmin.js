@@ -3,7 +3,7 @@ import { dirname } from 'path';
 import dbConnect from '../lib/dbConnect.js';
 import User from '../models/User.js';
 import { hashPassword } from '../lib/auth/password.js';
-import { sendEmail } from '../lib/email.mjs';
+import { sendEmail } from '../lib/email.js';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
 

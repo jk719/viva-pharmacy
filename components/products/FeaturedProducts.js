@@ -446,14 +446,12 @@ const CategorySection = ({
     <div className="mb-8 sm:mb-12">
       <div className="flex flex-col mb-4 sm:mb-6 px-2">
         <h2 className="text-xl sm:text-2xl font-bold text-primary relative">
-          {category.name}
+          {categoryTagline || 'Featured Products'}
           <span className="absolute -bottom-2 left-0 w-1/3 h-1 bg-primary rounded-full"></span>
         </h2>
-        {categoryTagline && (
-          <p className="mt-2 text-sm text-gray-600 italic">
-            {categoryTagline}
-          </p>
-        )}
+        <p className="mt-2 text-sm text-gray-600 italic">
+          {category.name}
+        </p>
         <span className="text-xs sm:text-sm text-gray-500 mt-1">
           {category.count} items
         </span>
