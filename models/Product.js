@@ -44,6 +44,11 @@ const productSchema = new mongoose.Schema({
       message: props => `${props.value} is not a valid category`
     }
   },
+  categoryTagline: {
+    type: String,
+    required: false,
+    trim: true
+  },
   item: {
     type: String,
     required: [true, 'Item name is required'],
@@ -210,6 +215,12 @@ productSchema.pre('validate', async function(next) {
     this.category = category.name;
     this.item = item.name;
     this.categoryPath = `${category.name} > ${item.name}`;
+  }
+  if (this.isModified('categorySlug')) {
+    const category = categories.find(c => c.slug === this.categorySlug);
+    if (category) {
+      this.categoryTagline = category.tagline;
+    }
   }
   next();
 });
@@ -403,6 +414,12 @@ const getModel = () => {
           this.category = category.name;
           this.item = item.name;
           this.categoryPath = `${category.name} > ${item.name}`;
+        }
+        if (this.isModified('categorySlug')) {
+          const category = categories.find(c => c.slug === this.categorySlug);
+          if (category) {
+            this.categoryTagline = category.tagline;
+          }
         }
         next();
       });

@@ -31,7 +31,8 @@ export default function AddProductForm() {
                 category: category.name,
                 subcategory: category.name, // Same as category
                 item: item.name,
-                categoryPath: `${category.name} > ${item.name}`
+                categoryPath: `${category.name} > ${item.name}`,
+                categoryTagline: category.tagline,
             };
 
             const response = await fetch("/api/products", {

@@ -17,6 +17,21 @@ import { useProducts } from '@/lib/api';
 import { IoGridOutline, IoListOutline } from 'react-icons/io5';
 import RewardsBanner from '@/components/RewardsBanner';
 
+// Add this helper function at the top of the file
+const groupProductsByCategory = (products) => {
+  return products.reduce((acc, product) => {
+    const category = product.category;
+    if (!acc[category]) {
+      acc[category] = {
+        products: [],
+        tagline: product.categoryTagline
+      };
+    }
+    acc[category].products.push(product);
+    return acc;
+  }, {});
+};
+
 export default function ProductsPage() {
   const { addToCart } = useCart();
   const searchParams = useSearchParams();
@@ -51,6 +66,26 @@ export default function ProductsPage() {
     page,
     limit: 12
   });
+
+  useEffect(() => {
+    if (products && products.length > 0) {
+      // Log sample product data
+      console.log('Frontend: Sample product:', {
+        name: products[0]?.name,
+        category: products[0]?.category,
+        tagline: products[0]?.categoryTagline
+      });
+
+      // Log grouped data
+      const grouped = groupProductsByCategory(products);
+      const firstCategory = Object.keys(grouped)[0];
+      console.log('Frontend: Sample grouped category:', {
+        category: firstCategory,
+        tagline: grouped[firstCategory]?.tagline,
+        productCount: grouped[firstCategory]?.products.length
+      });
+    }
+  }, [products]);
 
   // Handle infinite scroll
   useEffect(() => {
@@ -159,32 +194,56 @@ export default function ProductsPage() {
           ) : !products || products.length === 0 ? (
             <NoProductsFound />
           ) : (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className={
-                view === 'grid'
-                  ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-                  : "flex flex-col gap-4"
-              }
-            >
-              {products.map((product) => (
-                <ProductCard 
-                  key={product._id}
-                  product={product}
-                  view={view}
-                  onAddToCart={addToCart}
-                  onQuickView={() => {
-                    setSelectedProduct(product);
-                    setShowQuickView(true);
-                  }}
-                  imgError={imgErrors[product._id]}
-                  onImageError={() => {
-                    setImgErrors(prev => ({...prev, [product._id]: true}));
-                  }}
-                />
+            <div className="space-y-8">
+              {Object.entries(groupProductsByCategory(products)).map(([category, { products: categoryProducts, tagline }]) => (
+                <div key={category} className="space-y-4">
+                  <div className="border-b pb-2">
+                    <motion.h2 
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="text-2xl font-bold text-gray-800"
+                    >
+                      {category}
+                    </motion.h2>
+                    {tagline && (
+                      <motion.p
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="text-sm text-primary mt-1 italic"
+                      >
+                        {tagline}
+                      </motion.p>
+                    )}
+                  </div>
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className={
+                      view === 'grid'
+                        ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                        : "flex flex-col gap-4"
+                    }
+                  >
+                    {categoryProducts.map((product) => (
+                      <ProductCard 
+                        key={product._id}
+                        product={product}
+                        view={view}
+                        onAddToCart={addToCart}
+                        onQuickView={() => {
+                          setSelectedProduct(product);
+                          setShowQuickView(true);
+                        }}
+                        imgError={imgErrors[product._id]}
+                        onImageError={() => {
+                          setImgErrors(prev => ({...prev, [product._id]: true}));
+                        }}
+                      />
+                    ))}
+                  </motion.div>
+                </div>
               ))}
-            </motion.div>
+            </div>
           )}
         </AnimatePresence>
 

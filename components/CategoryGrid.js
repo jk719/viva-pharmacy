@@ -32,8 +32,13 @@ export default function CategoryGrid() {
                 <h3 className="text-white text-xl font-semibold">
                   {category.name}
                 </h3>
-                <p className="text-white/80 text-sm">
-                  {category.subcategories.length} subcategories
+                {category.tagline && (
+                  <p className="text-white/90 text-sm italic">
+                    {category.tagline}
+                  </p>
+                )}
+                <p className="text-white/80 text-sm mt-1">
+                  {category.items.length} items
                 </p>
               </div>
             </div>

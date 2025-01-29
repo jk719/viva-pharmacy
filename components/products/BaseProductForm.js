@@ -210,7 +210,8 @@ export default function BaseProductForm({
         category: category.name,
         subcategory: category.name,
         item: item.name,
-        categoryPath: `${category.name} > ${item.name}`
+        categoryPath: `${category.name} > ${item.name}`,
+        categoryTagline: category.tagline
       };
       
       console.log('Submitting form data:', cleanedData);

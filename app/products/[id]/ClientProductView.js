@@ -170,6 +170,11 @@ export default function ClientProductView({ product }) {
                 <p className="text-xs md:text-sm text-gray-500">
                   {category?.name} &gt; {item?.name}
                 </p>
+                {category?.tagline && (
+                  <p className="text-primary text-xs md:text-sm italic mt-1">
+                    {category.tagline}
+                  </p>
+                )}
               </div>
 
               <p className="text-xl md:text-3xl font-bold text-primary">

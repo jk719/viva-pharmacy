@@ -438,34 +438,43 @@ const CategorySection = ({
   getItemQuantity, 
   onAddToCart, 
   onDecrement 
-}) => (
-  <div className="mb-8 sm:mb-12">
-    <div className="flex items-center justify-between mb-4 sm:mb-6 px-2">
-      <h2 className="text-xl sm:text-2xl font-bold text-primary relative">
-        {category.name}
-        <span className="absolute -bottom-2 left-0 w-1/3 h-1 
-                      bg-primary rounded-full"></span>
-      </h2>
-      <span className="text-xs sm:text-sm text-gray-500">
-        {category.count} items
-      </span>
-    </div>
+}) => {
+  // Get the tagline from the first product in the category
+  const categoryTagline = products[0]?.categoryTagline;
 
-    <div className="flex overflow-x-auto gap-4 sm:gap-6 
-                  scroll-snap-x px-2 pb-4 -mx-2
-                  scrollbar-thin scrollbar-thumb-gray-300 
-                  scrollbar-track-transparent">
-      {products
-        .filter((product) => product.category === category.name)
-        .map((product) => (
-          <ProductCard
-            key={product._id}
-            product={product}
-            quantity={getItemQuantity(product._id)}
-            onAdd={onAddToCart}
-            onDecrement={onDecrement}
-          />
-        ))}
+  return (
+    <div className="mb-8 sm:mb-12">
+      <div className="flex flex-col mb-4 sm:mb-6 px-2">
+        <h2 className="text-xl sm:text-2xl font-bold text-primary relative">
+          {category.name}
+          <span className="absolute -bottom-2 left-0 w-1/3 h-1 bg-primary rounded-full"></span>
+        </h2>
+        {categoryTagline && (
+          <p className="mt-2 text-sm text-gray-600 italic">
+            {categoryTagline}
+          </p>
+        )}
+        <span className="text-xs sm:text-sm text-gray-500 mt-1">
+          {category.count} items
+        </span>
+      </div>
+
+      <div className="flex overflow-x-auto gap-4 sm:gap-6 
+                    scroll-snap-x px-2 pb-4 -mx-2
+                    scrollbar-thin scrollbar-thumb-gray-300 
+                    scrollbar-track-transparent">
+        {products
+          .filter((product) => product.category === category.name)
+          .map((product) => (
+            <ProductCard
+              key={product._id}
+              product={product}
+              quantity={getItemQuantity(product._id)}
+              onAdd={onAddToCart}
+              onDecrement={onDecrement}
+            />
+          ))}
+      </div>
     </div>
-  </div>
-);
+  );
+};

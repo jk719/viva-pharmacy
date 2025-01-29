@@ -182,12 +182,13 @@ export default function EditProductForm({ product }) {
             const cleanedData = {
                 ...formData,
                 categorySlug: category.slug,
-                subcategorySlug: category.slug,  // Same as category
+                subcategorySlug: category.slug,
                 itemSlug: item.slug,
                 category: category.name,
-                subcategory: category.name,      // Same as category
+                subcategory: category.name,
                 item: item.name,
-                categoryPath: `${category.name} > ${item.name}`
+                categoryPath: `${category.name} > ${item.name}`,
+                categoryTagline: category.tagline,
             };
 
             console.log('Cleaned form data:', cleanedData);

@@ -11,9 +11,10 @@ import HeaderProgress from '@/components/HeaderProgress';
 import RewardAlert from '@/components/RewardAlert';
 import { headers } from 'next/headers';
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "./api/auth/[...nextauth]/route";
+import { authOptions } from '@/lib/auth';
 import { SWRConfig } from 'swr';
 import eventEmitter from '../lib/eventEmitter';
+import { CategoryProvider } from '@/context/CategoryContext';
 
 // Metadata can be exported as a constant
 const siteConfig = {
@@ -48,53 +49,55 @@ export default async function RootLayout({ children }) {
         )}
       </head>
       <body className="bg-white text-primary-color">
-        <Providers session={session}>
-          <ClientToaster />
-          <SiteHeader />
-          <div className="h-[120px] md:h-[140px]" aria-hidden="true" />
-          <main className="min-h-screen w-full flex-grow">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <Suspense fallback={<LoadingSpinner />}>
-                {children}
-              </Suspense>
-            </div>
-          </main>
-          <RewardAlert />
-          <SiteFooter />
-          <div id="modal-root" className="relative z-50" />
-          <Toaster 
-            position="top-center"
-            reverseOrder={false}
-            toastOptions={{
-              // Default options for all toasts
-              duration: 3000,
-              style: {
-                maxWidth: '90vw',
-                margin: '0 auto',
-              },
-              // Customize different types of toasts
-              success: {
+        <CategoryProvider>
+          <Providers session={session}>
+            <ClientToaster />
+            <SiteHeader />
+            <div className="h-[120px] md:h-[140px]" aria-hidden="true" />
+            <main className="min-h-screen w-full flex-grow">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <Suspense fallback={<LoadingSpinner />}>
+                  {children}
+                </Suspense>
+              </div>
+            </main>
+            <RewardAlert />
+            <SiteFooter />
+            <div id="modal-root" className="relative z-50" />
+            <Toaster 
+              position="top-center"
+              reverseOrder={false}
+              toastOptions={{
+                // Default options for all toasts
+                duration: 3000,
                 style: {
-                  background: '#10B981',
-                  color: 'white',
+                  maxWidth: '90vw',
+                  margin: '0 auto',
                 },
-              },
-              error: {
-                style: {
-                  background: '#EF4444',
-                  color: 'white',
+                // Customize different types of toasts
+                success: {
+                  style: {
+                    background: '#10B981',
+                    color: 'white',
+                  },
                 },
-                duration: 4000,
-              },
-              loading: {
-                style: {
-                  background: '#3B82F6',
-                  color: 'white',
+                error: {
+                  style: {
+                    background: '#EF4444',
+                    color: 'white',
+                  },
+                  duration: 4000,
                 },
-              },
-            }}
-          />
-        </Providers>
+                loading: {
+                  style: {
+                    background: '#3B82F6',
+                    color: 'white',
+                  },
+                },
+              }}
+            />
+          </Providers>
+        </CategoryProvider>
       </body>
     </html>
   );

@@ -29,6 +29,11 @@ export default function ProductCard({ product }) {
       )}
       <Link href={`/products/${product._id}`}>
         <div className="p-4 border rounded-lg hover:shadow-lg transition-shadow cursor-pointer">
+          {product.categoryTagline && (
+            <div className="mb-3 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-medium inline-block">
+              {product.categoryTagline}
+            </div>
+          )}
           <div className="relative w-full h-48 mb-4">
             <Image
               src={product.image}

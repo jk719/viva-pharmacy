@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import dbConnect from '@/lib/dbConnect';
 import getProductModel from '@/models/Product';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import { categories } from '@/data/categories';
 import rateLimit from '@/lib/rateLimit';
 
@@ -43,24 +43,49 @@ export async function GET(request) {
     const Product = getProductModel();
     const products = await Product.find({}).sort({ createdAt: -1 });
     
+    // Log raw product data
+    if (products[0]) {
+      console.log('API: Raw product data:', {
+        name: products[0].name,
+        category: products[0].category,
+        tagline: products[0].categoryTagline,
+        _raw: products[0].toObject()
+      });
+    }
+
+    const mappedProducts = products.map(product => {
+      const productObj = product.toObject();
+      return {
+        _id: productObj._id.toString(),
+        name: productObj.name,
+        description: productObj.description,
+        price: productObj.price,
+        image: productObj.image,
+        category: productObj.category,
+        subcategory: productObj.subcategory,
+        item: productObj.item,
+        categoryPath: productObj.categoryPath,
+        categoryTagline: productObj.categoryTagline,
+        isInStock: productObj.stock > 0,
+        isNew: productObj.isNewProduct,
+        stock: productObj.stock,
+        activeIngredients: productObj.activeIngredients,
+        dosageForm: productObj.dosageForm
+      };
+    });
+
+    // Log mapped product
+    if (mappedProducts[0]) {
+      console.log('API: Mapped product:', {
+        name: mappedProducts[0].name,
+        category: mappedProducts[0].category,
+        tagline: mappedProducts[0].categoryTagline
+      });
+    }
+
     return NextResponse.json({
       success: true,
-      products: products.map(product => ({
-        _id: product._id.toString(),
-        name: product.name,
-        description: product.description,
-        price: product.price,
-        image: product.image,
-        category: product.category,
-        subcategory: product.subcategory,
-        item: product.item,
-        categoryPath: product.categoryPath,
-        isInStock: product.stock > 0,
-        isNew: product.isNewProduct,
-        stock: product.stock,
-        activeIngredients: product.activeIngredients,
-        dosageForm: product.dosageForm
-      }))
+      products: mappedProducts
     });
   } catch (error) {
     console.error('Products API Error:', error);

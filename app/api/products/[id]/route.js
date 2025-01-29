@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import dbConnect from '@/lib/dbConnect';
 import getProductModel from '@/models/Product';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import { isValidObjectId } from 'mongoose';
 import { categories, isCategoryValid, isSubcategoryValid, isItemValid } from '@/data/categories';
 
