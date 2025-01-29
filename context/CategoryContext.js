@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect } from 'react';
-import { categories, getCategoryBySlug, getItemBySlug } from '@/data/categories';
+import { categories, getCategoryBySlug, getItemBySlug } from '../data/categories';
 
 // Create a context for the category
 const CategoryContext = createContext();

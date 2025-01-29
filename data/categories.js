@@ -141,22 +141,14 @@ export const categories = [
 ];
 
 // Updated helper functions
-export const getCategoryBySlug = (slug) => {
-  const category = categories.find(category => 
-    category.slug === slug || category.name.toLowerCase() === slug?.toLowerCase()
-  );
-  return category;
-};
+export function getCategoryBySlug(slug) {
+  return categories.find(category => category.slug === slug);
+}
 
-export const getItemBySlug = (categorySlug, itemSlug) => {
+export function getItemBySlug(categorySlug, itemSlug) {
   const category = getCategoryBySlug(categorySlug);
-  if (!category) return null;
-  
-  const item = category.items.find(item => 
-    item.slug === itemSlug || item.name.toLowerCase() === itemSlug?.toLowerCase()
-  );
-  return item;
-};
+  return category?.items?.find(item => item.slug === itemSlug);
+}
 
 export const getAllCategories = () => {
   return categories.map(category => ({

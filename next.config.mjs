@@ -10,6 +10,12 @@ const nextConfig = {
   trailingSlash: false,
   serverExternalPackages: ['nodemailer'],
   webpack: (config, { dev, isServer }) => {
+    // Add path alias configuration
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': path.resolve(__dirname),
+    };
+
     // Enable top-level await and other ES module features
     config.experiments = {
       ...config.experiments,

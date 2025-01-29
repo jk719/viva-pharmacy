@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import FeaturedProducts from '../components/products/FeaturedProducts';
 import Link from 'next/link';
-import { useCategory } from '@/context/CategoryContext';
+import { useCategory } from '../context/CategoryContext';
 import { motion } from 'framer-motion';
 import { IoArrowForward } from 'react-icons/io5';
 import { fetchProducts } from '@/lib/api';
