@@ -3,7 +3,7 @@ import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
 
-export async function PUT(req, { params }) {
+export async function PUT(req, context) {
   try {
     const session = await getServerSession(authOptions);
     
@@ -16,7 +16,7 @@ export async function PUT(req, { params }) {
     }
 
     await dbConnect();
-    const { id } = params;
+    const id = context.params.id;
     const data = await req.json();
     const { name, email, password } = data;
 
@@ -85,7 +85,7 @@ export async function PUT(req, { params }) {
   }
 }
 
-export async function DELETE(req, { params }) {
+export async function DELETE(req, context) {
   try {
     const session = await getServerSession(authOptions);
     
@@ -98,21 +98,21 @@ export async function DELETE(req, { params }) {
     }
 
     await dbConnect();
-    const { id } = params;
+    const id = context.params.id;
 
-    console.log('Attempting to delete manager:', id); // Debug log
+    console.log('Attempting to delete manager:', id);
 
     // Find and delete the manager
-    const manager = await User.findOne({ _id: id, role: 'MANAGER' });
-    if (!manager) {
+    const result = await User.deleteOne({ _id: id, role: 'MANAGER' });
+    
+    if (result.deletedCount === 0) {
       return new Response(
         JSON.stringify({ error: 'Manager not found' }), 
         { status: 404 }
       );
     }
 
-    await User.deleteOne({ _id: id });
-    console.log('Successfully deleted manager:', id); // Debug log
+    console.log('Successfully deleted manager:', id);
 
     return new Response(
       JSON.stringify({ message: 'Manager deleted successfully' }), 
@@ -122,7 +122,10 @@ export async function DELETE(req, { params }) {
   } catch (error) {
     console.error('Error deleting manager:', error);
     return new Response(
-      JSON.stringify({ error: 'Failed to delete manager' }), 
+      JSON.stringify({ 
+        error: 'Failed to delete manager',
+        details: error.message 
+      }), 
       { status: 500 }
     );
   }

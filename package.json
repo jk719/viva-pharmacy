@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:clean": "npm run clean && next dev",
     "build": "next build",
     "build:debug": "NODE_OPTIONS='--max-old-space-size=4096' next build",
     "build:trace": "NEXT_TRACE=1 next build",
@@ -13,9 +14,14 @@
     "cleanup-orders": "node -r dotenv/config scripts/cleanupDuplicateOrders.js",
     "test:email": "node test-email.mjs",
     "test:email:to": "node test-email.mjs",
-    "clean": "rm -rf .next node_modules/.cache && npm install",
+    "clean": "rm -rf .next && rm -rf node_modules/.cache && npm install",
+    "clean:hard": "rm -rf .next node_modules package-lock.json && npm cache clean --force && npm install",
     "update-stock": "node scripts/updateProductStock.cjs",
-    "postinstall": "next build"
+    "postinstall": "next build",
+    "cache:clear": "rm -rf .next/cache",
+    "dev:turbo": "NEXT_TURBO=1 next dev",
+    "analyze": "ANALYZE=true next build",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^6.6.0",

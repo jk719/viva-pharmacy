@@ -106,7 +106,13 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: [true, 'Password is required'],
+    required: function() {
+      // Password is not required during initial creation or verification
+      if (this.role === 'MANAGER' && (!this.isVerified || this.mustChangePassword)) {
+        return false;
+      }
+      return true;
+    },
     minlength: [8, 'Password must be at least 8 characters long']
   },
   role: {
@@ -143,6 +149,10 @@ const userSchema = new mongoose.Schema({
   },
   resetPasswordToken: String,
   resetPasswordExpires: Date,
+  mustChangePassword: {
+    type: Boolean,
+    default: false
+  },
   // Add addresses array
   addresses: [addressSchema],
   // Add reward history to user schema
@@ -182,11 +192,11 @@ userSchema.pre('save', function(next) {
   next();
 });
 
-// Hash password before saving - FIXED VERSION
+// Update the password hashing middleware to handle optional passwords
 userSchema.pre('save', async function(next) {
   try {
-    // Only hash if password is modified
-    if (!this.isModified('password')) {
+    // Skip if password isn't modified or doesn't exist
+    if (!this.isModified('password') || !this.password) {
       return next();
     }
 
@@ -206,9 +216,12 @@ userSchema.pre('save', async function(next) {
   }
 });
 
-// Improve comparePassword method with logging
+// Update comparePassword to handle missing passwords
 userSchema.methods.comparePassword = async function(candidatePassword) {
   try {
+    // If no password is set, comparison fails
+    if (!this.password) return false;
+
     console.log('Comparing passwords for user:', this.email);
     console.log('Stored hash length:', this.password?.length);
     console.log('Candidate password length:', candidatePassword?.length);

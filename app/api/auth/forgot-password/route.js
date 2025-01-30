@@ -1,14 +1,13 @@
+import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import User from '@/models/User';
-import { sendPasswordResetEmail } from '@/lib/email';
-import crypto from 'crypto';
-import { NextResponse } from 'next/server';
+import { generateToken } from '@/lib/tokens';
+import { sendPasswordResetEmail } from '@/lib/email/sendEmail';
 
 export async function POST(request) {
   try {
     const { email } = await request.json();
-    console.log('Received password reset request for email:', email);
-
+    
     if (!email) {
       return NextResponse.json(
         { error: 'Email is required' },
@@ -17,23 +16,21 @@ export async function POST(request) {
     }
 
     await dbConnect();
-
-    const user = await User.findOne({ email });
+    
+    const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
       return NextResponse.json(
-        { error: 'No account found with this email' },
-        { status: 400 }
+        { message: 'If an account exists, a password reset email will be sent' },
+        { status: 200 }
       );
     }
 
-    // Generate reset token
-    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetToken = generateToken();
     user.resetPasswordToken = resetToken;
-    user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+    user.resetPasswordExpires = new Date(Date.now() + 3600000); // 1 hour
     await user.save();
 
-    // Send reset email
-    await sendPasswordResetEmail(email, resetToken);
+    await sendPasswordResetEmail(email, resetToken, user.name);
 
     return NextResponse.json(
       { message: 'Password reset email sent' },
@@ -42,7 +39,7 @@ export async function POST(request) {
   } catch (error) {
     console.error('Forgot password error:', error);
     return NextResponse.json(
-      { error: 'An error occurred while processing your request' },
+      { error: 'Failed to process password reset request' },
       { status: 500 }
     );
   }

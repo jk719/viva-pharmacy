@@ -1,61 +1,70 @@
 'use client';
+import { getPasswordStrength } from '@/lib/auth/password';
 
-export function PasswordStrengthIndicator({ password }) {
-  const getStrength = () => {
-    let strength = 0;
-    if (password.length >= 8) strength++;
-    if (/[A-Z]/.test(password)) strength++;
-    if (/[a-z]/.test(password)) strength++;
-    if (/[0-9]/.test(password)) strength++;
-    if (/[^A-Za-z0-9]/.test(password)) strength++;
-    return strength;
+const PasswordStrengthIndicator = ({ password }) => {
+  const strength = getPasswordStrength(password);
+  
+  const getStrengthText = () => {
+    if (strength === 0) return '';
+    if (strength <= 20) return 'Very Weak';
+    if (strength <= 40) return 'Weak';
+    if (strength <= 60) return 'Medium';
+    if (strength <= 80) return 'Strong';
+    return 'Very Strong';
   };
 
-  const strength = getStrength();
-
-  const getColor = () => {
-    switch (strength) {
-      case 0:
-      case 1:
-        return 'bg-red-500';
-      case 2:
-      case 3:
-        return 'bg-yellow-500';
-      case 4:
-      case 5:
-        return 'bg-green-500';
-      default:
-        return 'bg-gray-200';
-    }
+  const getStrengthColor = () => {
+    if (strength <= 20) return 'bg-red-500';
+    if (strength <= 40) return 'bg-orange-500';
+    if (strength <= 60) return 'bg-yellow-500';
+    if (strength <= 80) return 'bg-lime-500';
+    return 'bg-green-500';
   };
 
-  const getMessage = () => {
-    switch (strength) {
-      case 0:
-      case 1:
-        return 'Weak';
-      case 2:
-      case 3:
-        return 'Medium';
-      case 4:
-      case 5:
-        return 'Strong';
-      default:
-        return '';
-    }
-  };
+  const strengthText = getStrengthText();
+  const strengthColor = getStrengthColor();
 
   return (
-    <div className="mt-2">
-      <div className="flex h-2 rounded-full bg-gray-200 overflow-hidden">
-        <div
-          className={`${getColor()} transition-all duration-300`}
-          style={{ width: `${(strength / 5) * 100}%` }}
-        />
-      </div>
-      <p className="text-sm mt-1 text-gray-600">
-        Password strength: {getMessage()}
-      </p>
+    <div className="mt-2 space-y-2">
+      {password && (
+        <>
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-gray-500">Password strength:</span>
+            <span className={`font-medium ${
+              strength <= 40 ? 'text-red-500' : 
+              strength <= 60 ? 'text-yellow-500' : 
+              'text-green-600'
+            }`}>
+              {strengthText}
+            </span>
+          </div>
+          <div className="h-1 w-full bg-gray-200 rounded-full overflow-hidden">
+            <div 
+              className={`h-full ${strengthColor} transition-all duration-300 ease-in-out`}
+              style={{ width: `${strength}%` }}
+            />
+          </div>
+          <ul className="text-xs text-gray-500 space-y-1 mt-2">
+            <li className={`flex items-center gap-1 ${password.length >= 8 ? 'text-green-600' : ''}`}>
+              {password.length >= 8 ? '✓' : '○'} At least 8 characters
+            </li>
+            <li className={`flex items-center gap-1 ${/[A-Z]/.test(password) ? 'text-green-600' : ''}`}>
+              {/[A-Z]/.test(password) ? '✓' : '○'} One uppercase letter
+            </li>
+            <li className={`flex items-center gap-1 ${/[a-z]/.test(password) ? 'text-green-600' : ''}`}>
+              {/[a-z]/.test(password) ? '✓' : '○'} One lowercase letter
+            </li>
+            <li className={`flex items-center gap-1 ${/\d/.test(password) ? 'text-green-600' : ''}`}>
+              {/\d/.test(password) ? '✓' : '○'} One number
+            </li>
+            <li className={`flex items-center gap-1 ${/[!@#$%^&*(),.?":{}|<>]/.test(password) ? 'text-green-600' : ''}`}>
+              {/[!@#$%^&*(),.?":{}|<>]/.test(password) ? '✓' : '○'} One special character
+            </li>
+          </ul>
+        </>
+      )}
     </div>
   );
-}
+};
+
+export default PasswordStrengthIndicator;

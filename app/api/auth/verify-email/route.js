@@ -2,46 +2,91 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import User from '@/models/User';
+import { validateToken } from '@/lib/tokens';
 
 export async function POST(request) {
   try {
     const { token } = await request.json();
-    console.log('Received token:', token);
+    console.log('Received verification token:', token?.substring(0, 10) + '...');
+
+    // Validate token format
+    if (!validateToken(token)) {
+      console.log('Invalid token format');
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Invalid verification token format' 
+      }, { status: 400 });
+    }
 
     await dbConnect();
     console.log('Database connected, searching for user...');
     
-    const user = await User.findOne({ verificationToken: token });
-    console.log('Found user:', user ? user.email : 'No user found');
+    const user = await User.findOne({
+      verificationToken: token,
+      verificationExpires: { $gt: new Date() }
+    });
+
+    console.log('User lookup result:', {
+      found: !!user,
+      email: user?.email,
+      isVerified: user?.isVerified,
+      tokenExpiry: user?.verificationExpires
+    });
 
     if (!user) {
-      console.log('Invalid token or user not found');
-      throw new Error('Invalid or expired verification token');
+      console.log('No user found with valid token');
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Invalid or expired verification token' 
+      }, { status: 400 });
     }
 
-    // Update user
-    console.log('Updating user verification status...');
-    user.isVerified = true;
-    user.verificationToken = undefined;
-    await user.save();
-    console.log('User updated successfully:', user.email);
+    if (user.isVerified) {
+      console.log('User already verified');
+      return NextResponse.json({
+        success: false,
+        message: 'Email already verified'
+      }, { status: 400 });
+    }
+
+    // Use updateOne to bypass validation
+    const result = await User.updateOne(
+      { _id: user._id },
+      {
+        $set: {
+          isVerified: true,
+          mustChangePassword: user.role === 'MANAGER' ? true : false
+        },
+        $unset: {
+          verificationToken: "",
+          verificationExpires: ""
+        }
+      }
+    );
+
+    console.log('Update result:', result);
 
     const response = {
       success: true,
-      message: 'Email verified successfully! Please sign in to continue.',
+      message: user.role === 'MANAGER' 
+        ? 'Email verified successfully! Please set your permanent password.'
+        : 'Email verified successfully! Please sign in to continue.',
       isVerified: true,
-      email: user.email
+      email: user.email,
+      userRole: user.role,
+      mustChangePassword: user.role === 'MANAGER'
     };
     console.log('Sending response:', response);
 
     return NextResponse.json(response);
 
   } catch (error) {
-    console.error('Verification error details:', error);
+    console.error('Verification error:', error);
     return NextResponse.json({ 
       success: false, 
-      message: error.message
-    }, { status: 400 });
+      message: 'Server error during verification',
+      details: error.message 
+    }, { status: 500 });
   }
 }
 
@@ -63,24 +108,26 @@ export async function GET(request) {
     await dbConnect();
     console.log('Database connected, checking token...');
     
-    const user = await User.findOne({ verificationToken: token });
+    const user = await User.findOne({
+      verificationToken: token,
+      verificationExpires: { $gt: new Date() }
+    });
     console.log('Token check result:', user ? 'Valid token' : 'Invalid token');
 
     if (!user) {
       return NextResponse.json({ 
         success: false, 
-        message: 'Invalid token' 
+        message: 'Invalid or expired token' 
       }, { status: 400 });
     }
 
-    const response = {
+    return NextResponse.json({
       success: true,
       message: 'Valid verification token',
-      isVerified: user.isVerified
-    };
-    console.log('Sending GET response:', { ...response, email: '***' });
-
-    return NextResponse.json(response);
+      isVerified: user.isVerified,
+      userRole: user.role,
+      mustChangePassword: user.role === 'MANAGER'
+    });
 
   } catch (error) {
     console.error('Token verification error:', error);

@@ -53,9 +53,14 @@ export default function Navbar() {
   const [formData, setFormData] = useState({});
   const [error, setError] = useState(null);
   const [avatarError, setAvatarError] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
 
     const verification = searchParams?.get('verification');
     const email = searchParams?.get('email');
@@ -88,7 +93,7 @@ export default function Navbar() {
     };
 
     handleVerification();
-  }, [searchParams, router]);
+  }, [mounted, searchParams, router]);
 
   return (
     <>
@@ -101,20 +106,23 @@ export default function Navbar() {
         <div className="max-w-[1400px] mx-auto">
           <div className="flex md:hidden flex-col w-full px-2">
             <div className="flex items-center justify-between py-2">
-              <Link href="/" className="flex-shrink-0 relative w-[160px] h-[40px]">
-                <Image
-                  src="/images/viva-online-logo.png"
-                  alt="VIVA Logo"
-                  fill
-                  className="object-contain object-left"
-                  sizes="160px"
-                  priority
-                />
+              <Link href="/" className="flex-shrink-0">
+                <div className="relative w-[160px] h-[40px]">
+                  <Image
+                    src="/images/viva-online-logo.png"
+                    alt="VIVA Logo"
+                    fill
+                    className="object-contain object-left"
+                    sizes="160px"
+                    priority
+                  />
+                </div>
               </Link>
               
               <div className="flex items-center gap-2">
-                {session?.user?.role && ['ADMIN', 'MANAGER'].includes(session.user.role) && (
-                  <AdminDashboardButton isMobile />
+                {mounted && session?.user?.role && 
+                  ['ADMIN', 'MANAGER'].includes(session.user.role) && (
+                    <AdminDashboardButton isMobile />
                 )}
                 <Link href="/cart" className="relative flex items-center">
                   <ClientCartIcon />
@@ -135,20 +143,23 @@ export default function Navbar() {
           </div>
 
           <div className="hidden md:flex items-center justify-between py-3 px-6">
-            <Link href="/" className="flex-shrink-0 relative w-[280px] h-[60px]">
-              <Image
-                src="/images/viva-online-logo.png"
-                alt="VIVA Logo"
-                fill
-                className="object-contain object-left"
-                sizes="280px"
-                priority
-              />
+            <Link href="/" className="flex-shrink-0">
+              <div className="relative w-[280px] h-[60px]">
+                <Image
+                  src="/images/viva-online-logo.png"
+                  alt="VIVA Logo"
+                  fill
+                  className="object-contain object-left"
+                  sizes="280px"
+                  priority
+                />
+              </div>
             </Link>
 
             <div className="flex items-center gap-6">
-              {session?.user?.role && ['ADMIN', 'MANAGER'].includes(session.user.role) && (
-                <AdminDashboardButton />
+              {mounted && session?.user?.role && 
+                ['ADMIN', 'MANAGER'].includes(session.user.role) && (
+                  <AdminDashboardButton />
               )}
               <Link href="/cart" className="relative flex items-center">
                 <ClientCartIcon />
@@ -165,7 +176,7 @@ export default function Navbar() {
           </div>
         </div>
       </motion.nav>
-      <VerificationAlert />
+      {mounted && <VerificationAlert />}
     </>
   );
 }

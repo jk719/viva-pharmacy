@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import ProductManagement from '@/components/admin/ProductManagement';
 import { motion } from "framer-motion";
 import { FiPackage, FiUsers, FiShoppingCart, FiSettings, FiMenu } from "react-icons/fi";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from 'next/image'
 import ManagerManagement from '@/components/admin/ManagerManagement';
 
@@ -30,12 +30,22 @@ export default function AdminDashboard() {
     return null;
   }
 
-  const menuItems = [
+  // Filter menu items based on role
+  const menuItems = session.user.role === 'ADMIN' ? [
     { id: 'products', icon: FiPackage, label: 'Products' },
     { id: 'orders', icon: FiShoppingCart, label: 'Orders' },
     { id: 'users', icon: FiUsers, label: 'Users' },
     { id: 'settings', icon: FiSettings, label: 'Settings' },
+  ] : [
+    { id: 'products', icon: FiPackage, label: 'Products' }
   ];
+
+  // If manager tries to access non-products tab, redirect to products
+  useEffect(() => {
+    if (session.user.role === 'MANAGER' && activeTab !== 'products') {
+      setActiveTab('products');
+    }
+  }, [activeTab, session.user.role]);
 
   return (
     <div className="min-h-screen bg-gray-50">

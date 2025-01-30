@@ -7,11 +7,23 @@ import { authOptions } from '@/lib/auth';
 import { REWARDS_CONFIG } from '@/lib/rewards/config';
 import { RewardsUtils } from '@/lib/rewards/utils';
 
+let processing = false;
+
 export async function GET(request) {
   try {
+    if (processing) {
+      return NextResponse.json(
+        { error: 'Request in progress' },
+        { status: 429 }
+      );
+    }
+    
+    processing = true;
+    
     const session = await getServerSession(authOptions);
     
     if (!session) {
+      processing = false;
       return NextResponse.json(
         { error: 'Not authenticated' },
         { status: 401 }
@@ -21,8 +33,8 @@ export async function GET(request) {
     await dbConnect();
     const userId = request.url.split('/').pop();
     
-    // Verify the user is requesting their own data
     if (userId !== session.user.id) {
+      processing = false;
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 403 }
@@ -32,16 +44,14 @@ export async function GET(request) {
     const user = await User.findById(userId);
     
     if (!user) {
+      processing = false;
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }
       );
     }
 
-    console.log('Session user ID:', session.user.id);
-    console.log('Request user ID:', userId);
-    console.log('User found:', user ? user.email : 'No user found');
-
+    processing = false;
     return NextResponse.json({
       vivaBucks: user.vivaBucks || 0,
       rewardPoints: user.rewardPoints || 0,
@@ -51,6 +61,7 @@ export async function GET(request) {
       nextRewardMilestone: user.nextRewardMilestone || 100
     });
   } catch (error) {
+    processing = false;
     console.error('Error fetching VivaBucks:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

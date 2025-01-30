@@ -19,7 +19,7 @@ const formatEmailForDisplay = (email, isMobile) => {
   return username.slice(0, 6) + '...';
 };
 
-export function AuthButtons({ isMobile = false }) {
+const AuthButtons = ({ isMobile = false }) => {
   const { data: session, status } = useSession();
   const [showLogin, setShowLogin] = useState(false);
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -474,4 +474,6 @@ export function AuthButtons({ isMobile = false }) {
       )}
     </div>
   );
-}
+};
+
+export default AuthButtons;

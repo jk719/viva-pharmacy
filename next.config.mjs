@@ -8,6 +8,9 @@ const __dirname = path.dirname(__filename);
 const nextConfig = {
   reactStrictMode: true,
   images: {
+    dangerouslyAllowSVG: true,
+    contentDispositionType: 'attachment',
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     remotePatterns: [
       {
         protocol: 'https',
@@ -45,25 +48,39 @@ const nextConfig = {
     ];
   },
   webpack: (config, { dev, isServer }) => {
-    // Disable webpack caching in production
-    if (!dev) {
-      config.cache = false;
-    }
+    // Custom webpack configurations
+    config.cache = {
+      type: 'filesystem',
+      version: `${process.env.NODE_ENV}_${new Date().getTime()}`,
+      buildDependencies: {
+        config: [__filename],
+      },
+      cacheDirectory: path.resolve(__dirname, '.next/cache/webpack'),
+    };
 
     // Add path aliases
     config.resolve.alias = {
       ...config.resolve.alias,
       '@': path.resolve(__dirname),
-      '@/components': path.resolve(__dirname, './components'),
-      '@/context': path.resolve(__dirname, './context'),
+      '@/components': path.resolve(__dirname, 'components'),
+      '@/context': path.resolve(__dirname, 'context'),
     };
     
     // Optimize module resolution
     config.resolve.modules = [
       path.resolve(__dirname),
       'node_modules',
-      ...config.resolve.modules || [],
+      ...(config.resolve.modules || []),
     ];
+
+    // Add cache busting for development
+    if (dev) {
+      config.optimization = {
+        ...config.optimization,
+        runtimeChunk: 'single',
+        moduleIds: 'deterministic',
+      };
+    }
 
     return config;
   },

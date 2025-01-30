@@ -34,6 +34,7 @@ export default function ResetPassword() {
         body: JSON.stringify({
           token: params.token,
           password,
+          action: 'complete'
         }),
       });
 
