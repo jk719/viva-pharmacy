@@ -4,6 +4,10 @@ import { categories } from '../data/categories.js';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { ScriptRunner } from './utils/scriptRunner.js';
+import { DatabaseOperationManager } from './utils/databaseOperationManager.js';
+import { DataValidationManager } from './utils/dataValidationManager.js';
+import { VerificationManager } from './utils/verificationManager.js';
 
 // Load environment variables
 const __filename = fileURLToPath(import.meta.url);
@@ -196,55 +200,50 @@ function determineCategory(product) {
 }
 
 async function migrateCategories() {
-  try {
-    console.log('Connecting to MongoDB...');
-    await dbConnect();
-    console.log('MongoDB connected successfully');
-    
-    const { default: getProductModel } = await import('../models/Product.js');
-    const Product = getProductModel();
-    console.log('Product model initialized successfully');
-    
-    const products = await Product.find({});
-    console.log(`Found ${products.length} products to migrate`);
-    let updated = 0;
-    
-    for (const product of products) {
-      const result = determineCategory(product);
-      
-      if (!result || !result.category) {
-        console.log(`No category match found for product: ${product.name} (current category: ${product.category})`);
-        continue;
-      }
+    const script = new ScriptRunner({ name: 'Migrate Categories' });
+    const dbManager = new DatabaseOperationManager();
+    const validator = new DataValidationManager();
+    const verifier = new VerificationManager();
 
-      const { category, item } = result;
+    await script.execute(async () => {
+        // Validate categories structure
+        await validator.validate('categories', categories);
 
-      const updates = {
-        category: category.name,
-        categorySlug: category.slug,
-        item: item ? item.name : category.items[0].name,
-        itemSlug: item ? item.slug : category.items[0].slug,
-        categoryPath: `${category.name} > ${item ? item.name : category.items[0].name}`,
-        subcategory: undefined,
-        subcategorySlug: undefined
-      };
+        // Verify category data integrity
+        await verifier.verify('category', { categories });
 
-      await Product.findByIdAndUpdate(product._id, updates);
-      console.log(`Updated product: ${product.name} to category: ${updates.categoryPath}`);
-      updated++;
-    }
+        return dbManager.withCursor({
+            model: Product,
+            batchSize: 50,
+            operation: async (product, session) => {
+                const result = determineCategory(product);
+                if (!result?.category) {
+                    return 'skipped';
+                }
 
-    console.log(`Migration completed successfully. Updated ${updated} products.`);
-    process.exit(0);
-  } catch (error) {
-    console.error('Migration failed:', error);
-    console.error('Error details:', {
-      name: error.name,
-      message: error.message,
-      stack: error.stack
+                const { category, item } = result;
+                if (!category.slug || !item?.slug) {
+                    throw new Error(`Invalid category/item slugs for ${product.name}`);
+                }
+
+                await Product.findByIdAndUpdate(
+                    product._id,
+                    {
+                        $set: {
+                            category: category.name,
+                            categorySlug: category.slug,
+                            item: item.name,
+                            itemSlug: item.slug,
+                            categoryPath: `${category.name} > ${item.name}`,
+                            updatedAt: new Date()
+                        }
+                    },
+                    { session, runValidators: true }
+                );
+                return 'updated';
+            }
+        });
     });
-    process.exit(1);
-  }
 }
 
 console.log('Starting category migration...');

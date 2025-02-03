@@ -10,65 +10,78 @@ console.log('Categories loaded:', { categoriesLength: categories?.length });
 
 // Helper function to find valid slugs
 const findValidSlugs = (category, subcategory, item, productName) => {
-    console.log('Finding valid slugs for:', { 
-        category, 
-        subcategory, 
-        item, 
-        productName,
-        availableCategories: categories?.map(c => c.slug)
-    });
-    
-    if (!categories || !Array.isArray(categories)) {
-        console.error('Categories not properly loaded:', categories);
-        return null;
-    }
+    try {
+        // Input validation
+        if (!category || typeof category !== 'string') {
+            throw new Error('Invalid category provided');
+        }
 
-    if (!category) {
-        console.error('No category provided');
-        return null;
-    }
-    
-    // Find the category
-    const categoryObj = categories.find(c => 
-        c.slug === category || 
-        c.name === category ||
-        c.name.toLowerCase() === category.toLowerCase()
-    );
-    
-    if (!categoryObj) {
-        console.error('Category not found:', { 
-            category, 
-            availableCategories: categories.map(c => ({name: c.name, slug: c.slug}))
+        if (!categories || !Array.isArray(categories) || categories.length === 0) {
+            throw new Error('Categories data not properly loaded');
+        }
+
+        // Normalize inputs
+        const normalizedCategory = category.trim().toLowerCase();
+        const normalizedItem = item?.trim().toLowerCase();
+
+        // Find category with defensive programming
+        const categoryObj = categories.find(c => {
+            if (!c || typeof c !== 'object') return false;
+            return (c.slug?.toLowerCase() === normalizedCategory) ||
+                   (c.name?.toLowerCase() === normalizedCategory);
         });
-        return null;
-    }
 
-    if (!item) {
-        console.error('No item provided');
-        return null;
-    }
+        if (!categoryObj) {
+            console.error('Category not found:', { 
+                category,
+                availableCategories: categories.map(c => ({
+                    name: c?.name || 'Unknown',
+                    slug: c?.slug || 'Unknown'
+                }))
+            });
+            return null;
+        }
 
-    // Find the item
-    const itemObj = categoryObj.items.find(i => 
-        i.slug === item || 
-        i.name === item ||
-        i.name.toLowerCase() === item.toLowerCase()
-    );
-    
-    if (!itemObj) {
-        console.error('Item not found:', {
-            item,
-            category: categoryObj.name,
-            availableItems: categoryObj.items.map(i => ({name: i.name, slug: i.slug}))
+        // Validate items array
+        if (!Array.isArray(categoryObj.items)) {
+            console.error('Invalid items array for category:', categoryObj.name);
+            return null;
+        }
+
+        // Find item with defensive programming
+        if (!normalizedItem) {
+            console.error('No item provided');
+            return null;
+        }
+
+        const itemObj = categoryObj.items.find(i => {
+            if (!i || typeof i !== 'object') return false;
+            return (i.slug?.toLowerCase() === normalizedItem) ||
+                   (i.name?.toLowerCase() === normalizedItem);
         });
+
+        if (!itemObj) {
+            console.error('Item not found:', {
+                item,
+                category: categoryObj.name,
+                availableItems: categoryObj.items.map(i => ({
+                    name: i?.name || 'Unknown',
+                    slug: i?.slug || 'Unknown'
+                }))
+            });
+            return null;
+        }
+
+        // Return validated slugs
+        return {
+            categorySlug: categoryObj.slug,
+            subcategorySlug: categoryObj.slug, // Assuming same as category for now
+            itemSlug: itemObj.slug
+        };
+    } catch (error) {
+        console.error('Error in findValidSlugs:', error);
         return null;
     }
-
-    return {
-        categorySlug: categoryObj.slug,
-        subcategorySlug: categoryObj.slug,
-        itemSlug: itemObj.slug
-    };
 };
 
 export default function EditProductForm({ product }) {

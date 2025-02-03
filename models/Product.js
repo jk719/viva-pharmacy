@@ -225,14 +225,48 @@ productSchema.pre('validate', async function(next) {
   next();
 });
 
-// Add post-save middleware to handle validation errors
+// Add comprehensive error handling middleware
 productSchema.post('save', function(error, doc, next) {
-  if (error.name === 'ValidationError') {
-    console.error('Validation Error:', error);
-    next(new Error('Invalid product data: ' + Object.values(error.errors).map(e => e.message).join(', ')));
-  } else {
-    next(error);
-  }
+    if (error.name === 'ValidationError') {
+        console.error('Validation Error:', error);
+        next(new Error('Invalid product data: ' + Object.values(error.errors).map(e => e.message).join(', ')));
+    } else if (error.code === 11000) {
+        console.error('Duplicate Key Error:', error);
+        next(new Error('A product with this SKU already exists'));
+    } else if (error.name === 'CastError') {
+        console.error('Cast Error:', error);
+        next(new Error('Invalid data type provided for ' + error.path));
+    } else if (error.name === 'MongoServerError') {
+        console.error('MongoDB Server Error:', error);
+        next(new Error('Database error occurred. Please try again later.'));
+    } else {
+        console.error('Unknown Error:', error);
+        next(error);
+    }
+});
+
+// Add pre-save middleware for data validation
+productSchema.pre('save', function(next) {
+    try {
+        // Ensure required fields are present
+        if (!this.name || !this.price || !this.categorySlug) {
+            throw new Error('Missing required fields');
+        }
+
+        // Validate price is positive
+        if (this.price <= 0) {
+            throw new Error('Price must be greater than 0');
+        }
+
+        // Ensure stock is non-negative
+        if (typeof this.stock !== 'undefined' && this.stock < 0) {
+            this.stock = 0;
+        }
+
+        next();
+    } catch (error) {
+        next(error);
+    }
 });
 
 // Create a helper function to check if mongoose is ready

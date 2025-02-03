@@ -1,36 +1,43 @@
-const connectDB = require('./db');
-const getProductModel = require('../models/Product').default;
-const { categories } = require('../data/categories');
-const mongoose = require('mongoose');
+import { ScriptRunner } from './utils/scriptRunner.js';
+import { DatabaseOperationManager } from './utils/databaseOperationManager.js';
+import { DataValidationManager } from './utils/dataValidationManager.js';
+import { FileOperationManager } from './utils/fileOperationManager.js';
 
 async function updateCategoryTaglines() {
-    try {
-        await connectDB();
-        const Product = getProductModel();
-        
-        const products = await Product.find({});
-        console.log(`Found ${products.length} products to update`);
-        
-        let updated = 0;
-        
-        for (const product of products) {
-            const category = categories.find(c => c.slug === product.categorySlug);
-            if (category && category.tagline !== product.categoryTagline) {
-                await Product.findByIdAndUpdate(product._id, {
-                    categoryTagline: category.tagline
-                });
-                updated++;
-                console.log(`Updated product: ${product.name}`);
+    const script = new ScriptRunner({ name: 'Update Category Taglines' });
+    const dbManager = new DatabaseOperationManager();
+    const validator = new DataValidationManager();
+    const fileManager = new FileOperationManager();
+
+    await script.execute(async () => {
+        // Load and validate categories
+        const categories = await fileManager.readJsonFile('categories.json', {
+            validate: (data) => validator.validate('categories', data)
+        });
+
+        return dbManager.withCursor({
+            model: Product,
+            batchSize: 100,
+            operation: async (product, session) => {
+                const category = categories.find(c => c.slug === product.categorySlug);
+                if (!category || category.tagline === product.categoryTagline) {
+                    return 'skipped';
+                }
+
+                await Product.findByIdAndUpdate(
+                    product._id,
+                    {
+                        $set: {
+                            categoryTagline: category.tagline,
+                            updatedAt: new Date()
+                        }
+                    },
+                    { session, runValidators: true }
+                );
+                return 'updated';
             }
-        }
-        
-        console.log(`Updated ${updated} products with category taglines`);
-    } catch (error) {
-        console.error('Error updating category taglines:', error);
-    } finally {
-        await mongoose.connection.close();
-        process.exit();
-    }
+        });
+    });
 }
 
 updateCategoryTaglines(); 

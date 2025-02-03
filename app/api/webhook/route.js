@@ -90,38 +90,52 @@ const createOrder = async (paymentIntent, retryCount = 0) => {
 };
 
 const processRewards = async (order, userId) => {
-    const session = await mongoose.startSession();
-    
+    let session;
     try {
+        session = await mongoose.startSession();
         session.startTransaction();
         
         const user = await User.findById(userId).session(session);
         if (!user) {
-            throw new Error('User not found');
+            throw new Error(`User not found: ${userId}`);
+        }
+
+        // Verify order hasn't been processed already
+        const existingOrder = await Order.findById(order._id)
+            .session(session)
+            .select('rewardsProcessed');
+            
+        if (existingOrder?.rewardsProcessed) {
+            console.log(`Order ${order._id} already processed`);
+            return null;
         }
 
         const basePoints = Math.floor(order.total * REWARDS_CONFIG.POINTS_PER_DOLLAR);
-        const result = await user.addPoints(basePoints, false);
+        const result = await user.addPoints(basePoints, session);
         
         await Order.findByIdAndUpdate(
             order._id,
             {
                 rewardsProcessed: true,
-                pointsAwarded: result.adjustedPoints
+                pointsAwarded: result.adjustedPoints,
+                rewardsProcessedAt: new Date()
             },
-            { session }
+            { session, new: true }
         );
 
         await session.commitTransaction();
         return result;
 
     } catch (error) {
-        if (session.inTransaction()) {
+        console.error('Error processing rewards:', error);
+        if (session?.inTransaction()) {
             await session.abortTransaction();
         }
         throw error;
     } finally {
-        await session.endSession();
+        if (session) {
+            await session.endSession();
+        }
     }
 };
 

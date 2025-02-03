@@ -1,6 +1,10 @@
 const mongoose = require('mongoose');
 const path = require('path');
 const dotenv = require('dotenv');
+const { ScriptRunner } = require('./utils/scriptRunner.js');
+const { DatabaseOperationManager } = require('./utils/databaseOperationManager.js');
+const { DataValidationManager } = require('./utils/dataValidationManager.js');
+const { FileOperationManager } = require('./utils/fileOperationManager.js');
 
 // Load environment variables from .env.local
 const envPath = path.resolve(__dirname, '../.env.local');
@@ -20,6 +24,7 @@ async function connectDB() {
     try {
         await mongoose.connect(MONGODB_URI);
         console.log('MongoDB connected successfully');
+        return mongoose.connection;
     } catch (error) {
         console.error('MongoDB connection error:', error);
         process.exit(1);
@@ -35,66 +40,44 @@ const ProductModule = require('../models/Product');
 const getProductModel = ProductModule.default || ProductModule;
 
 async function fixCategoryTaglines() {
-    try {
-        await connectDB();
-        const Product = getProductModel();
-        
-        const products = await Product.find({});
-        console.log(`Found ${products.length} products to check`);
-        
-        // Debug: Print first product
-        if (products[0]) {
-            console.log('\nFirst product sample:');
-            console.log(JSON.stringify(products[0], null, 2));
-        }
-        
-        // Debug: Print available categories
-        console.log('\nAvailable Categories:');
-        categories.forEach(cat => {
-            console.log(`- ${cat.name} (slug: ${cat.slug}, tagline: "${cat.tagline}")`);
+    const script = new ScriptRunner({ name: 'Fix Category Taglines' });
+    const dbManager = new DatabaseOperationManager();
+    const validator = new DataValidationManager();
+    const fileManager = new FileOperationManager();
+
+    await script.execute(async () => {
+        // Load and validate categories
+        const categories = await fileManager.readJsonFile('categories.json', {
+            validate: (data) => validator.validate('categories', data)
         });
-        
-        let updated = 0;
-        let missing = 0;
-        
-        for (const product of products) {
-            console.log(`\nChecking product: ${product.name}`);
-            console.log(`  Category Slug: ${product.categorySlug}`);
-            console.log(`  Current tagline: ${product.categoryTagline || 'none'}`);
-            
-            const category = categories.find(c => c.slug === product.categorySlug);
-            if (!category) {
-                console.log(`  Warning: No category found for product ${product.name} (slug: ${product.categorySlug})`);
-                missing++;
-                continue;
-            }
-            
-            console.log(`  Found category: ${category.name} (tagline: "${category.tagline}")`);
-            
-            if (!product.categoryTagline || product.categoryTagline !== category.tagline) {
-                console.log(`  Updating tagline:`);
-                console.log(`    From: ${product.categoryTagline || 'none'}`);
-                console.log(`    To: ${category.tagline}`);
+
+        return dbManager.withCursor({
+            model: getProductModel(),
+            batchSize: 50,
+            operation: async (product, session) => {
+                const category = categories.find(c => c.slug === product.categorySlug);
                 
-                await Product.findByIdAndUpdate(product._id, {
-                    $set: { categoryTagline: category.tagline }
-                });
-                updated++;
-            } else {
-                console.log('  Tagline is already correct');
+                if (!category) {
+                    return 'missing';
+                }
+                
+                if (!product.categoryTagline || product.categoryTagline !== category.tagline) {
+                    await getProductModel().findByIdAndUpdate(
+                        product._id,
+                        {
+                            $set: { 
+                                categoryTagline: category.tagline,
+                                updatedAt: new Date()
+                            }
+                        },
+                        { session, runValidators: true }
+                    );
+                    return 'updated';
+                }
+                return 'skipped';
             }
-        }
-        
-        console.log('\nSummary:');
-        console.log(`Total products: ${products.length}`);
-        console.log(`Updated: ${updated}`);
-        console.log(`Missing categories: ${missing}`);
-        
-    } catch (error) {
-        console.error('Error fixing category taglines:', error);
-    } finally {
-        await mongoose.connection.close();
-    }
+        });
+    });
 }
 
 fixCategoryTaglines(); 

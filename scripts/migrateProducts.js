@@ -3,8 +3,9 @@ import { dirname } from 'path';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
-import dbConnect from '../lib/dbConnect.js';
+import { createDbConnection } from './utils/dbConfig';
 import Product from '../models/Product.js';
+import mongoose from 'mongoose';
 
 // Load environment variables
 dotenv.config({ path: '.env.local' });
@@ -20,52 +21,72 @@ const cloudinaryUrls = JSON.parse(
   )
 );
 
-const migrateProducts = async () => {
-  console.log('Connecting to database...');
-  await dbConnect();
-  
-  try {
-    // Clear existing products
-    console.log('Clearing existing products...');
-    await Product.deleteMany({});
+async function migrateProducts() {
+    let connection;
+    let session;
     
-    // Log unique categories before migration
-    const uniqueCategories = [...new Set(products.map(p => p.category))];
-    console.log('Categories found:', uniqueCategories);
-    
-    // Map products with Cloudinary URLs
-    console.log('Mapping products with Cloudinary URLs...');
-    const productsWithCloudinaryUrls = products.map(product => {
-      const imageName = product.image.split('/').pop();
-      const cloudinaryUrl = cloudinaryUrls[imageName];
-      
-      if (!cloudinaryUrl) {
-        console.warn(`Warning: No Cloudinary URL found for ${imageName}`);
-      }
-      
-      // Remove the id field as MongoDB will create its own _id
-      const { id, ...productWithoutId } = product;
-      
-      return {
-        ...productWithoutId,
-        image: cloudinaryUrl || product.image
-      };
-    });
-    
-    // Insert products
-    console.log(`Inserting ${productsWithCloudinaryUrls.length} products...`);
-    await Product.insertMany(productsWithCloudinaryUrls);
-    
-    // Verify categories after migration
-    const productsInDb = await Product.find({});
-    const categoriesAfterMigration = [...new Set(productsInDb.map(p => p.category))];
-    console.log('Categories after migration:', categoriesAfterMigration);
-    
-    console.log('Products migration completed successfully');
-  } catch (error) {
-    console.error('Migration failed:', error);
-  }
-  process.exit();
-};
+    try {
+        // Validate input data
+        if (!Array.isArray(products) || products.length === 0) {
+            throw new Error('Products data is invalid or empty');
+        }
+        if (!cloudinaryUrls || typeof cloudinaryUrls !== 'object') {
+            throw new Error('Invalid Cloudinary URLs data');
+        }
+
+        connection = await createDbConnection();
+        session = await mongoose.startSession();
+        
+        await session.withTransaction(async () => {
+            const productsWithCloudinaryUrls = products.map(product => {
+                const cloudinaryUrl = findCloudinaryUrl(product.name, cloudinaryUrls);
+                if (!cloudinaryUrl) {
+                    console.warn(`No Cloudinary URL found for: ${product.name}`);
+                }
+                
+                const { id, ...productWithoutId } = product;
+                return {
+                    ...productWithoutId,
+                    image: cloudinaryUrl || product.image,
+                    updatedAt: new Date(),
+                    createdAt: new Date()
+                };
+            });
+            
+            // Insert in batches for better memory management
+            const BATCH_SIZE = 50;
+            let inserted = 0;
+            let errors = 0;
+            
+            for (let i = 0; i < productsWithCloudinaryUrls.length; i += BATCH_SIZE) {
+                const batch = productsWithCloudinaryUrls.slice(i, i + BATCH_SIZE);
+                try {
+                    const result = await Product.insertMany(batch, {
+                        ordered: false,
+                        session,
+                        timeout: 30000
+                    });
+                    inserted += result.length;
+                    console.log(`Progress: ${inserted}/${productsWithCloudinaryUrls.length} products inserted`);
+                } catch (error) {
+                    console.error(`Error inserting batch ${i/BATCH_SIZE + 1}:`, error);
+                    errors++;
+                }
+            }
+            
+            console.log('\nMigration summary:');
+            console.log(`- Inserted: ${inserted} products`);
+            console.log(`- Failed batches: ${errors}`);
+        });
+        
+    } catch (error) {
+        console.error('Migration failed:', error);
+        process.exitCode = 1;
+    } finally {
+        if (session) await session.endSession();
+        if (connection) await connection.close();
+        process.exit(process.exitCode || 0);
+    }
+}
 
 migrateProducts(); 

@@ -24,6 +24,7 @@ const OrderSchema = new mongoose.Schema({
 const Order = mongoose.models.Order || mongoose.model('Order', OrderSchema);
 
 async function cleanupDuplicateOrders() {
+    let rl;
     try {
         // Connect using your existing connection function
         console.log('Connecting to database...');
@@ -67,40 +68,42 @@ async function cleanupDuplicateOrders() {
 
         if (duplicateCount > 0) {
             console.log(`\nFound ${duplicateCount} duplicate orders`);
-            console.log('\nDo you want to delete these duplicates? (y/n)');
             
-            const rl = readline.createInterface({
+            rl = readline.createInterface({
                 input: process.stdin,
                 output: process.stdout
             });
 
-            rl.question('', async (answer) => {
-                if (answer.toLowerCase() === 'y') {
-                    const result = await Order.deleteMany({ _id: { $in: duplicateIds } });
-                    console.log(`Deleted ${result.deletedCount} orders`);
-                    
-                    const remainingOrders = await Order.countDocuments();
-                    console.log(`\nRemaining orders: ${remainingOrders}`);
-                } else {
-                    console.log('Operation cancelled');
-                }
-                
-                rl.close();
-                await mongoose.disconnect();
-                process.exit(0);
+            const answer = await new Promise(resolve => {
+                rl.question('\nDo you want to delete these duplicates? (y/n) ', resolve);
             });
-        } else {
-            console.log('\nNo duplicates found!');
-            const remainingOrders = await Order.countDocuments();
-            console.log(`\nRemaining orders: ${remainingOrders}`);
-            await mongoose.disconnect();
-            process.exit(0);
-        }
 
+            if (answer.toLowerCase() === 'y') {
+                const result = await Order.deleteMany({ _id: { $in: duplicateIds } });
+                console.log(`Deleted ${result.deletedCount} orders`);
+                
+                const remainingOrders = await Order.countDocuments();
+                console.log(`\nRemaining orders: ${remainingOrders}`);
+            } else {
+                console.log('Operation cancelled');
+            }
+        } else {
+            console.log('\nNo duplicates found');
+        }
     } catch (error) {
-        console.error('Error:', error);
-        await mongoose.disconnect();
-        process.exit(1);
+        console.error('Error during cleanup:', error);
+        process.exitCode = 1;
+    } finally {
+        if (rl) {
+            rl.close();
+        }
+        try {
+            await mongoose.disconnect();
+            console.log('Database disconnected');
+        } catch (error) {
+            console.error('Error disconnecting from database:', error);
+        }
+        process.exit(process.exitCode || 0);
     }
 }
 

@@ -321,62 +321,45 @@ userSchema.methods.calculateTier = function() {
   this.pointsMultiplier = tierInfo?.multiplier || 1.0;
 };
 
-userSchema.methods.calculateNextReward = function() {
-  try {
-    console.log('Starting calculateNextReward...');
-    console.log('REWARDS_CONFIG structure:', {
-      hasConfig: !!REWARDS_CONFIG,
-      hasRewardRate: !!REWARDS_CONFIG?.REWARD_RATE,
-      pointsNeeded: REWARDS_CONFIG?.REWARD_RATE?.POINTS_NEEDED
-    });
-    
-    // Validate config
-    if (!REWARDS_CONFIG?.REWARD_RATE?.POINTS_NEEDED) {
-      throw new Error('Invalid REWARDS_CONFIG structure');
+userSchema.methods.calculateNextReward = async function() {
+    const session = await mongoose.startSession();
+    try {
+        session.startTransaction();
+        
+        // Reload user to get latest points
+        const freshUser = await this.constructor.findById(this._id).session(session);
+        if (!freshUser) {
+            throw new Error('User not found during points calculation');
+        }
+
+        const pointsNeeded = REWARDS_CONFIG.REWARD_RATE.POINTS_NEEDED;
+        const currentPoints = freshUser.rewardPoints || 0;
+        
+        // Calculate next milestone with validation
+        const nextMilestone = Math.ceil(currentPoints / pointsNeeded) * pointsNeeded;
+        const validatedMilestone = Math.min(
+            Math.max(pointsNeeded, nextMilestone),
+            REWARDS_CONFIG.MAX_MILESTONE
+        );
+
+        // Update atomically
+        await this.constructor.findByIdAndUpdate(
+            this._id,
+            { nextRewardMilestone: validatedMilestone },
+            { session }
+        );
+
+        await session.commitTransaction();
+        return validatedMilestone;
+
+    } catch (error) {
+        if (session.inTransaction()) {
+            await session.abortTransaction();
+        }
+        throw error;
+    } finally {
+        await session.endSession();
     }
-    
-    const pointsNeeded = REWARDS_CONFIG.REWARD_RATE.POINTS_NEEDED;
-    const currentPoints = this.rewardPoints || 0;
-    
-    console.log('Current state:', {
-      currentPoints,
-      pointsNeeded,
-      rewardPoints: this.rewardPoints,
-      cumulativePoints: this.cumulativePoints
-    });
-    
-    // Calculate next milestone
-    const nextMilestone = Math.ceil(currentPoints / pointsNeeded) * pointsNeeded;
-    
-    console.log('Calculation details:', {
-      currentPoints,
-      pointsNeeded,
-      nextMilestone,
-      maxMilestone: REWARDS_CONFIG.MAX_MILESTONE,
-      formula: `ceil(${currentPoints} / ${pointsNeeded}) * ${pointsNeeded}`
-    });
-    
-    // Ensure milestone doesn't exceed MAX_MILESTONE
-    this.nextRewardMilestone = Math.min(
-      Math.max(pointsNeeded, nextMilestone),
-      REWARDS_CONFIG.MAX_MILESTONE
-    );
-    
-    console.log('Final milestone set to:', this.nextRewardMilestone);
-    return this.nextRewardMilestone;
-    
-  } catch (error) {
-    console.error('Error in calculateNextReward:', error);
-    console.error('Current state:', {
-      rewardPoints: this.rewardPoints,
-      currentTier: this.currentTier,
-      config: REWARDS_CONFIG?.REWARD_RATE
-    });
-    
-    // Set safe default
-    this.nextRewardMilestone = REWARDS_CONFIG?.REWARD_RATE?.POINTS_NEEDED || 100;
-    return this.nextRewardMilestone;
-  }
 };
 
 userSchema.methods.getRewardAmount = function() {

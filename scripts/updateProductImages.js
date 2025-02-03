@@ -3,6 +3,10 @@ import path from 'path';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
+import { ScriptRunner } from './utils/scriptRunner.js';
+import { DatabaseOperationManager } from './utils/databaseOperationManager.js';
+import { SessionManager } from './utils/sessionManager.js';
+import { FileOperationManager } from './utils/fileOperationManager.js';
 
 // Load environment variables
 dotenv.config({ path: '.env.local' });
@@ -72,49 +76,47 @@ function findMatchingUrl(productName, cloudinaryUrls) {
 }
 
 async function updateProductImages() {
-    try {
-        // Connect to database
-        await dbConnect();
+    const script = new ScriptRunner({ name: 'Update Product Images' });
+    const dbManager = new DatabaseOperationManager();
+    const sessionManager = new SessionManager();
+    const fileManager = new FileOperationManager();
 
-        // Read cloudinaryUrls.json
-        const cloudinaryUrls = JSON.parse(
-            await fs.readFile(path.join(process.cwd(), 'data/cloudinaryUrls.json'), 'utf8')
-        );
-        console.log(`Loaded ${Object.keys(cloudinaryUrls).length} Cloudinary URLs`);
-
-        // Get all products
-        const products = await Product.find({});
-        console.log(`Found ${products.length} products to update`);
-
-        let updatedCount = 0;
-        let skippedCount = 0;
-
-        // Update each product
-        for (const product of products) {
-            const cloudinaryUrl = findMatchingUrl(product.name, cloudinaryUrls);
-
-            if (cloudinaryUrl) {
-                await Product.findByIdAndUpdate(product._id, { image: cloudinaryUrl });
-                console.log(`Updated product: ${product.name}`);
-                console.log(`New URL: ${cloudinaryUrl}`);
-                updatedCount++;
-            } else {
-                console.log(`No matching URL found for: ${product.name}`);
-                console.log(`Current image: ${product.image}`);
-                skippedCount++;
+    await script.execute(async () => {
+        // Load and validate Cloudinary URLs
+        const cloudinaryUrls = await fileManager.readJsonFile('cloudinaryUrls.json', {
+            validate: (data) => {
+                if (!data || typeof data !== 'object') {
+                    throw new Error('Invalid Cloudinary URLs data structure');
+                }
             }
-        }
+        });
 
-        console.log('\nMigration complete:');
-        console.log(`- Updated: ${updatedCount} products`);
-        console.log(`- Skipped: ${skippedCount} products`);
-
-    } catch (error) {
-        console.error('Error updating product images:', error);
-    } finally {
-        await mongoose.disconnect();
-        process.exit();
-    }
+        return sessionManager.withSession(async (session) => {
+            return dbManager.withCursor({
+                model: Product,
+                session,
+                batchSize: 50,
+                select: '_id name image',
+                operation: async (product, session) => {
+                    const cloudinaryUrl = findMatchingUrl(product.name, cloudinaryUrls);
+                    if (cloudinaryUrl && cloudinaryUrl !== product.image) {
+                        await Product.findByIdAndUpdate(
+                            product._id,
+                            {
+                                $set: {
+                                    image: cloudinaryUrl,
+                                    updatedAt: new Date()
+                                }
+                            },
+                            { session, runValidators: true }
+                        );
+                        return 'updated';
+                    }
+                    return 'skipped';
+                }
+            });
+        });
+    });
 }
 
 // Run the migration

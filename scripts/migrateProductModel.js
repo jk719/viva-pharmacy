@@ -1,48 +1,56 @@
 import { connectToDatabase } from '../lib/dbConnect';
 import Product from '../models/Product';
 import { categories } from '../data/categories';
+import mongoose from 'mongoose';
+import { ScriptRunner } from './utils/scriptRunner.js';
+import { DatabaseOperationManager } from './utils/databaseOperationManager.js';
+import { DataValidationManager } from './utils/dataValidationManager.js';
+import { SessionManager } from './utils/sessionManager.js';
 
 const dosageFormMap = {
+  'tablet': 'Tablet',
+  'capsule': 'Capsule',
+  'liquid': 'Liquid',
+  'cream': 'Cream',
+  'gel': 'Gel',
+  'spray': 'Spray',
   'Other': 'Other',
-  'Cream': 'Cream',
-  'Liquid': 'Liquid',
-  'Syrup': 'Liquid',
   'Drops': 'Drops',
   'Gummies': 'Gummies',
-  'Spray': 'Spray'
+  'Syrup': 'Liquid'
 };
 
 async function migrateProducts() {
-  try {
-    await connectToDatabase();
-    const products = await Product.find({});
-    
-    for (const product of products) {
-      // Add new fields with default values
-      const updates = {
-        isPopular: product.isFeatured, // Use featured as initial popularity indicator
-        isNew: false,
-        contraindications: [],
-        sideEffects: [],
-        storage: "Store at room temperature",
-        activeIngredients: product.activeIngredients || []
-      };
+  const script = new ScriptRunner({ name: 'Migrate Product Model' });
+  const dbManager = new DatabaseOperationManager();
+  const validator = new DataValidationManager();
+  const sessionManager = new SessionManager();
 
-      // Map dosage form to new enum values
-      if (product.dosageForm) {
-        updates.dosageForm = dosageFormMap[product.dosageForm] || 'Other';
+  await script.execute(async () => {
+    // Validate dosage form mappings
+    await validator.validate('dosageFormMap', dosageFormMap);
+
+    return dbManager.withCursor({
+      model: Product,
+      batchSize: 50,
+      select: '_id isFeatured dosageForm activeIngredients',
+      operation: async (product, session) => {
+        const newDosageForm = dosageFormMap[product.dosageForm] || 'Other';
+        
+        await Product.findByIdAndUpdate(
+          product._id,
+          {
+            $set: {
+              dosageForm: newDosageForm,
+              updatedAt: new Date()
+            }
+          },
+          { session, runValidators: true }
+        );
+        return 'updated';
       }
-
-      await Product.updateOne(
-        { _id: product._id },
-        { $set: updates }
-      );
-    }
-
-    console.log('Products migrated successfully');
-  } catch (error) {
-    console.error('Migration error:', error);
-  }
+    });
+  });
 }
 
 migrateProducts(); 

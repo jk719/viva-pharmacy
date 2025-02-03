@@ -1,7 +1,7 @@
 'use client';
 
 import { useSession } from "next-auth/react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import eventEmitter, { Events } from '@/lib/eventEmitter';
 import { FaStar, FaGift, FaCoins } from 'react-icons/fa';
@@ -32,6 +32,12 @@ export default function HeaderProgress() {
   const { setActiveReward } = useRewardsStore();
   const ITEMS_PER_PAGE = 5;
 
+  // Add a mounted ref to prevent race conditions
+  const mountedRef = useRef(false);
+  const eventSourceRef = useRef(null);
+  const retryTimeoutRef = useRef(null);
+  const isConnectingRef = useRef(false);
+
   const fetchRewardsData = useCallback(async () => {
     if (!session?.user?.id) return;
     try {
@@ -53,39 +59,38 @@ export default function HeaderProgress() {
   }, [session?.user?.id]);
 
   useEffect(() => {
-    fetchRewardsData();
-  }, [fetchRewardsData]);
-
-  useEffect(() => {
+    mountedRef.current = true;
+    
     if (session?.user?.id) {
-        let eventSource = null;
         let retryCount = 0;
         const maxRetries = 5;
-        let retryTimeout = null;
-        let isConnecting = false;
         let lastEventId = null;
 
         const connectSSE = () => {
-            if (isConnecting || eventSource) {
+            if (isConnectingRef.current || eventSourceRef.current || !mountedRef.current) {
                 console.log('SSE: Already connecting or connected, skipping...');
                 return;
             }
 
             try {
-                isConnecting = true;
+                isConnectingRef.current = true;
                 console.log('SSE: Initiating connection...');
                 
-                if (eventSource) {
+                if (eventSourceRef.current) {
                     console.log('SSE: Closing existing connection');
-                    eventSource.close();
-                    eventSource = null;
+                    eventSourceRef.current.close();
+                    eventSourceRef.current = null;
                 }
 
-                eventSource = new EventSource(
+                const newEventSource = new EventSource(
                     `/api/user/vivabucks/${session.user.id}/events${lastEventId ? `?lastEventId=${lastEventId}` : ''}`
                 );
                 
-                eventSource.onmessage = (event) => {
+                eventSourceRef.current = newEventSource;
+                
+                newEventSource.onmessage = (event) => {
+                    if (!mountedRef.current) return;
+                    
                     try {
                         lastEventId = event.lastEventId;
                         const data = JSON.parse(event.data);
@@ -99,59 +104,69 @@ export default function HeaderProgress() {
                             data.type === 'REWARD_RESTORED') {
                             console.log('SSE: Fetching updated rewards data');
                             fetchRewardsData().catch(error => {
-                                console.error('SSE: Error fetching rewards data:', error);
+                                if (mountedRef.current) {
+                                    console.error('SSE: Error fetching rewards data:', error);
+                                }
                             });
                         }
                     } catch (error) {
-                        console.error('SSE: Error parsing message:', error, {
-                            data: event.data,
-                            lastEventId: event.lastEventId
-                        });
+                        if (mountedRef.current) {
+                            console.error('SSE: Error parsing message:', error, {
+                                data: event.data,
+                                lastEventId: event.lastEventId
+                            });
+                        }
                     }
                 };
 
-                eventSource.onerror = (error) => {
+                newEventSource.onerror = (error) => {
+                    if (!mountedRef.current) return;
+                    
                     console.error('SSE: Connection error:', {
                         error,
-                        readyState: eventSource?.readyState,
+                        readyState: newEventSource?.readyState,
                         retryCount,
                         timestamp: new Date().toISOString()
                     });
                     
-                    if (eventSource) {
-                        eventSource.close();
-                        eventSource = null;
+                    if (eventSourceRef.current) {
+                        eventSourceRef.current.close();
+                        eventSourceRef.current = null;
                     }
-                    isConnecting = false;
+                    isConnectingRef.current = false;
                     
-                    if (retryCount < maxRetries) {
+                    if (retryCount < maxRetries && mountedRef.current) {
                         retryCount++;
                         const delay = Math.min(1000 * Math.pow(2, retryCount), 30000);
                         console.log(`SSE: Scheduling retry in ${delay}ms (${retryCount}/${maxRetries})`);
-                        retryTimeout = setTimeout(connectSSE, delay);
+                        retryTimeoutRef.current = setTimeout(connectSSE, delay);
                     } else {
                         console.log('SSE: Max retries reached, giving up');
                     }
                 };
                 
-                eventSource.onopen = () => {
+                newEventSource.onopen = () => {
+                    if (!mountedRef.current) return;
+                    
                     console.log('SSE: Connection opened successfully', {
                         timestamp: new Date().toISOString(),
                         userId: session.user.id
                     });
                     retryCount = 0;
-                    isConnecting = false;
+                    isConnectingRef.current = false;
                 };
             } catch (error) {
+                if (!mountedRef.current) return;
+                
                 console.error('SSE: Error establishing connection:', {
                     error,
                     timestamp: new Date().toISOString(),
                     userId: session.user.id
                 });
-                isConnecting = false;
-                if (eventSource) {
-                    eventSource.close();
-                    eventSource = null;
+                isConnectingRef.current = false;
+                if (eventSourceRef.current) {
+                    eventSourceRef.current.close();
+                    eventSourceRef.current = null;
                 }
             }
         };
@@ -159,22 +174,25 @@ export default function HeaderProgress() {
         console.log('SSE: Setting up connection');
         connectSSE();
         
+        // Cleanup function
         return () => {
             console.log('SSE: Cleaning up connection', {
                 timestamp: new Date().toISOString(),
-                hadEventSource: !!eventSource,
-                hadRetryTimeout: !!retryTimeout
+                hadEventSource: !!eventSourceRef.current,
+                hadRetryTimeout: !!retryTimeoutRef.current
             });
             
-            if (retryTimeout) {
-                clearTimeout(retryTimeout);
-                retryTimeout = null;
+            mountedRef.current = false;
+            
+            if (retryTimeoutRef.current) {
+                clearTimeout(retryTimeoutRef.current);
+                retryTimeoutRef.current = null;
             }
-            if (eventSource) {
-                eventSource.close();
-                eventSource = null;
+            if (eventSourceRef.current) {
+                eventSourceRef.current.close();
+                eventSourceRef.current = null;
             }
-            isConnecting = false;
+            isConnectingRef.current = false;
         };
     }
   }, [session?.user?.id, fetchRewardsData]);

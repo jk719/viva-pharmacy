@@ -1,6 +1,8 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { ScriptRunner } from './utils/scriptRunner.js';
+import { FileOperationManager } from './utils/fileOperationManager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -58,19 +60,47 @@ async function removeDirectory(dirPath) {
 }
 
 async function cleanup() {
-    console.log('Starting cleanup...\n');
+    const script = new ScriptRunner({ name: 'Cleanup' });
+    const fileManager = new FileOperationManager();
 
-    // Remove individual files
-    for (const file of filesToRemove) {
-        await removeFile(file);
-    }
+    await script.execute(async () => {
+        const results = {
+            files: { removed: 0, skipped: 0, errors: 0 },
+            directories: { removed: 0, skipped: 0, errors: 0 }
+        };
 
-    // Remove directories
-    for (const dir of directoriesToRemove) {
-        await removeDirectory(dir);
-    }
+        // Remove files
+        for (const filePath of filesToRemove) {
+            try {
+                if (await fileManager.fileExists(filePath)) {
+                    await fileManager.removeFile(filePath);
+                    results.files.removed++;
+                } else {
+                    results.files.skipped++;
+                }
+            } catch (error) {
+                console.error(`Failed to remove file ${filePath}:`, error);
+                results.files.errors++;
+            }
+        }
 
-    console.log('\nCleanup complete!');
+        // Remove directories
+        for (const dirPath of directoriesToRemove) {
+            try {
+                if (await fileManager.fileExists(dirPath)) {
+                    await fileManager.removeDirectory(dirPath);
+                    results.directories.removed++;
+                } else {
+                    results.directories.skipped++;
+                }
+            } catch (error) {
+                console.error(`Failed to remove directory ${dirPath}:`, error);
+                results.directories.errors++;
+            }
+        }
+
+        return results;
+    });
 }
 
 // Run the cleanup
