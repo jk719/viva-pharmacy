@@ -12,8 +12,16 @@ export const categories = [
     slug: "pain-fever",
     tagline: "Pain-Free Living",
     items: [
-      { name: "Oral Pain Relief", slug: "oral-pain-relief" },
-      { name: "Topical Pain Relief", slug: "topical-pain-relief" },
+      {
+        name: "Oral Pain Relief",
+        slug: "oral-pain-relief",
+        image: "/images/categories/oral-pain-relief.jpg"
+      },
+      {
+        name: "Topical Pain Relief",
+        slug: "topical-pain-relief",
+        image: "/images/categories/topical-pain-relief.jpg"
+      },
       { name: "Fever Reducers", slug: "fever-reducers" },
       { name: "Migraine Relief", slug: "migraine-relief" },
       { name: "Arthritis Pain Relief", slug: "arthritis-pain-relief" }

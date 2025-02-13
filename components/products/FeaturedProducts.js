@@ -1,10 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCart } from '../../context/CartContext';
-import { useCategory } from '../../context/CategoryContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { IoMdAdd } from 'react-icons/io';
 import { HiMinusSm, HiPlusSm } from 'react-icons/hi';
@@ -12,6 +11,26 @@ import useSWR from 'swr';
 import { useRateLimit } from '@/lib/hooks/useRateLimit';
 import toast from 'react-hot-toast';
 import { categories } from '../../data/categories';
+import { FaPills, FaSprayCan, FaThermometerHalf, FaHeadSideCough } from 'react-icons/fa';
+
+// Add this icon mapping object at the top of your file
+const CATEGORY_ICONS = {
+  'oral-pain-relief': FaPills,
+  'topical-pain-relief': FaSprayCan,
+  'fever-reducers': FaThermometerHalf,
+  'migraine-relief': FaHeadSideCough,
+  // Add more mappings as needed
+};
+
+// Add this helper function at the top of the file, after the imports
+const normalizeString = (str) => {
+  if (!str) return '';
+  return str
+    .toLowerCase()
+    .replace(/[&]/g, 'and')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+};
 
 // Extracted components for better organization
 const ProductCard = ({ product, quantity, onAdd, onDecrement }) => {
@@ -24,10 +43,9 @@ const ProductCard = ({ product, quantity, onAdd, onDecrement }) => {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="card bg-white rounded-2xl p-3 sm:p-4
-                 min-w-[200px] max-w-[200px] 
-                 sm:min-w-[280px] sm:max-w-[280px] 
-                 scroll-snap-align-start border border-gray-100
+      className="bg-white rounded-2xl p-3 sm:p-4
+                 h-full
+                 border border-gray-100
                  shadow-sm hover:shadow-md transition-shadow duration-200
                  relative"
     >
@@ -247,19 +265,44 @@ const LoadingState = () => (
   </div>
 );
 
-export default function FeaturedProducts() {
+// Update the SubcategoryGrid component
+const SubcategoryGrid = ({ category }) => {
+  if (!category || !category.items) return null;
+  
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      {category.items.map((item) => {
+        const IconComponent = CATEGORY_ICONS[item.slug] || FaPills;
+        
+        return (
+          <Link 
+            key={item.slug} 
+            href={`/categories/${category.slug}/${item.slug}`}
+            className="flex flex-col items-center p-4 bg-white rounded-lg 
+                     border border-gray-100 hover:border-gray-200 
+                     transition-colors duration-200"
+          >
+            <div className="w-16 h-16 flex items-center justify-center 
+                          text-gray-600 mb-3">
+              <IconComponent className="w-8 h-8" />
+            </div>
+            <h3 className="text-sm font-medium text-center text-gray-900">
+              {item.name}
+            </h3>
+            <span className="mt-1 text-xs text-gray-500">
+              View Products
+            </span>
+          </Link>
+        );
+      })}
+    </div>
+  );
+};
+
+export default function FeaturedProducts({ categoryFilter }) {
   const { addToCart, decrement, items = [] } = useCart();
-  const { selectedCategory, setSelectedCategory } = useCategory();
   const { isRateLimited, handleRateLimit } = useRateLimit();
   
-  // Initialize with "All" instead of null
-  useEffect(() => {
-    if (!selectedCategory) {
-      setSelectedCategory("All");
-    }
-  }, [selectedCategory, setSelectedCategory]);
-
-  // 1. Define all hooks first
   const getItemQuantity = useCallback((productId) => {
     const item = items?.find((item) => item?.id === productId);
     return item ? item.quantity : 0;
@@ -280,7 +323,6 @@ export default function FeaturedProducts() {
     decrement(productId);
   }, [decrement]);
 
-  // Updated SWR hook with rate limit handling
   const { data, error, isLoading } = useSWR(
     '/api/products',
     async (url) => {
@@ -333,25 +375,120 @@ export default function FeaturedProducts() {
 
   const products = data?.products || [];
 
-  // Update categories effect
+  // Add this near the top of your file to see all category mappings
   useEffect(() => {
     if (products.length > 0) {
-      const availableCategories = ["All", ...new Set(products.map(p => p.category))];
-      console.log('Available categories:', availableCategories);
-      
-      // If current category is not available, reset to "All"
-      if (!availableCategories.includes(selectedCategory)) {
-        setSelectedCategory("All");
-      }
+      console.log('Category Mapping:', {
+        'Database Categories': [...new Set(products.map(p => p.category))],
+        'Frontend Categories': categories.map(c => ({
+          slug: c.slug,
+          name: c.name,
+          items: c.items?.map(i => i.name)
+        }))
+      });
     }
-  }, [products, selectedCategory, setSelectedCategory]);
+  }, [products]);
+
+  // Filter products based on categoryFilter prop
+  const filteredProducts = useMemo(() => {
+    if (!products.length) return [];
+    if (!categoryFilter || categoryFilter === 'all') return products;
+    
+    // Find the category object that matches the slug
+    const category = categories.find(cat => cat.slug === categoryFilter);
+    if (!category) {
+      console.log('Category not found:', categoryFilter);
+      return [];
+    }
+
+    // Helper function to normalize strings for comparison
+    const normalizeString = (str) => str
+      ?.toLowerCase()
+      .replace(/[&]/g, 'and')
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
+
+    console.log('Filtering Categories:', {
+      categorySlug: categoryFilter,
+      categoryName: category.name,
+      validItems: category.items.map(item => item.name),
+      productsBeforeFilter: products.length
+    });
+
+    return products.filter(product => {
+      const normalizedProductCategory = normalizeString(product.category);
+      const normalizedProductItem = normalizeString(product.item || '');
+      
+      console.log('Product Match:', {
+        name: product.name,
+        category: normalizedProductCategory,
+        item: normalizedProductItem,
+        isMatch: false,
+        validItems: category.items.map(item => item.name)
+      });
+
+      // Check for category match
+      if (normalizedProductCategory === normalizeString(category.name)) {
+        return true;
+      }
+
+      // Check for item match
+      const itemMatches = category.items.some(item => 
+        normalizedProductItem === normalizeString(item.name)
+      );
+
+      return itemMatches;
+    });
+  }, [products, categoryFilter, categories]);
+
+  // Add debug logging for initial data load
+  useEffect(() => {
+    if (products.length > 0) {
+      console.log('Available Categories:', {
+        fromProducts: [...new Set(products.map(p => p.category))],
+        fromConfig: categories.map(c => c.name)
+      });
+    }
+  }, [products]);
+
+  // Add debug logging for category data
+  useEffect(() => {
+    console.log('Category Structure:', categories.map(cat => ({
+      slug: cat.slug,
+      name: cat.name,
+      items: cat.items.map(item => item.name)
+    })));
+  }, []);
+
+  // Add more detailed debug logging
+  useEffect(() => {
+    if (products.length > 0) {
+      console.log('Category Mapping Debug:', {
+        selectedCategory: categoryFilter,
+        categoryFromData: categories.find(cat => cat.slug === categoryFilter),
+        availableProductCategories: [...new Set(products.map(p => p.category))],
+        productCount: products.length,
+        filteredCount: filteredProducts.length
+      });
+    }
+  }, [products, categoryFilter, filteredProducts]);
+
+  // Add some debug logging
+  console.log('Filtering products:', {
+    categoryFilter,
+    totalProducts: products.length,
+    filteredCount: filteredProducts.length,
+    validCategories: categoryFilter !== 'all' 
+      ? categories.find(cat => cat.slug === categoryFilter)?.items.map(item => item.name.toLowerCase())
+      : ['all']
+  });
 
   // Debug logging
   console.log('FeaturedProducts: Render State', {
     isLoading,
     hasError: !!error,
     productsCount: products.length,
-    selectedCategory,
+    selectedCategory: categoryFilter,
     categories: products.length > 0 ? [...new Set(products.map(p => p.category))] : []
   });
 
@@ -399,36 +536,97 @@ export default function FeaturedProducts() {
     return <EmptyState />;
   }
 
-  // Update the filtering logic in CategorySection
-  const filteredProducts = selectedCategory === 'All' 
-    ? products 
-    : products.filter(p => p.category === selectedCategory);
-
-  const categories = selectedCategory === 'All'
-    ? [...new Set(products.map(p => p.category))]
-        .map(cat => ({
-          name: cat,
-          count: products.filter(p => p.category === cat).length
-        }))
-    : [{
-        name: selectedCategory,
-        count: filteredProducts.length
-      }];
-
   return (
     <section className="py-4 sm:py-6">
-      {categories.map((category) => (
-        <CategorySection 
-          key={category.name}
-          category={category}
-          products={filteredProducts.filter(p => 
-            selectedCategory === 'All' ? p.category === category.name : true
-          )}
-          getItemQuantity={getItemQuantity}
-          onAddToCart={handleAddToCart}
-          onDecrement={handleDecrement}
-        />
-      ))}
+      {categoryFilter && categoryFilter !== 'all' ? (
+        // Show filtered products in grid when a specific category is selected
+        <>
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">
+              {categories.find(cat => cat.slug === categoryFilter)?.name}
+            </h2>
+            <p className="text-sm text-gray-600 mt-1">
+              {categories.find(cat => cat.slug === categoryFilter)?.tagline}
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+            {filteredProducts.map((product) => (
+              <ProductCard
+                key={product._id}
+                product={product}
+                quantity={getItemQuantity(product._id)}
+                onAdd={handleAddToCart}
+                onDecrement={handleDecrement}
+              />
+            ))}
+          </div>
+        </>
+      ) : (
+        // Show categories with horizontal product scrolling when "All" is selected
+        <div className="space-y-12">
+          {categories.map((category) => {
+            const categoryProducts = products.filter(product => {
+              const normalizedProductCategory = normalizeString(product.category);
+              const normalizedCategoryName = normalizeString(category.name);
+              
+              const hasMatchingItem = category.items.some(item => 
+                normalizeString(product.item) === normalizeString(item.name)
+              );
+
+              return normalizedProductCategory === normalizedCategoryName || hasMatchingItem;
+            });
+
+            if (categoryProducts.length === 0) return null;
+
+            return (
+              <div key={category.slug} className="relative">
+                <div className="flex justify-between items-end mb-6">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">
+                      {category.tagline}
+                    </h2>
+                    <p className="text-sm font-medium text-gray-600 mt-2">
+                      {category.name}
+                    </p>
+                    <div className="mt-1 w-20 h-1 bg-primary/20 rounded-full"></div>
+                  </div>
+                  <Link 
+                    href={`/?category=${category.slug}`}
+                    className="text-primary hover:text-primary-dark text-sm font-medium
+                             flex items-center gap-1 group mb-1"
+                  >
+                    View All 
+                    <span className="transform transition-transform group-hover:translate-x-0.5">
+                      →
+                    </span>
+                  </Link>
+                </div>
+
+                {/* Horizontal Scrollable Products */}
+                <div className="relative">
+                  <div className="absolute left-0 top-0 bottom-0 w-8 
+                                bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
+                  <div className="absolute right-0 top-0 bottom-0 w-8 
+                                bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
+                  
+                  <div className="flex overflow-x-auto gap-4 pb-4 scrollbar-hide">
+                    {categoryProducts.map((product) => (
+                      <div key={product._id} className="flex-none w-[280px]">
+                        <ProductCard
+                          product={product}
+                          quantity={getItemQuantity(product._id)}
+                          onAdd={handleAddToCart}
+                          onDecrement={handleDecrement}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </section>
   );
 }
@@ -438,51 +636,3 @@ const EmptyState = () => (
     No products found in this category.
   </div>
 );
-
-const CategorySection = ({ 
-  category, 
-  products, 
-  getItemQuantity, 
-  onAddToCart, 
-  onDecrement 
-}) => {
-  // Find the category tagline from our categories data
-  const categoryData = categories.find(cat => 
-    cat.name.toLowerCase() === category.name.toLowerCase()
-  );
-  const tagline = categoryData?.tagline || 'Featured Products';
-
-  return (
-    <div className="mb-8 sm:mb-12">
-      <div className="flex flex-col mb-4 sm:mb-6 px-2">
-        <h2 className="text-xl sm:text-2xl font-bold text-primary relative">
-          {tagline}
-          <span className="absolute -bottom-2 left-0 w-1/3 h-1 bg-primary rounded-full"></span>
-        </h2>
-        <p className="mt-2 text-sm text-gray-600 italic">
-          {category.name}
-        </p>
-        <span className="text-xs sm:text-sm text-gray-500 mt-1">
-          {category.count} items
-        </span>
-      </div>
-
-      <div className="flex overflow-x-auto gap-4 sm:gap-6 
-                    scroll-snap-x px-2 pb-4 -mx-2
-                    scrollbar-thin scrollbar-thumb-gray-300 
-                    scrollbar-track-transparent">
-        {products
-          .filter((product) => product.category === category.name)
-          .map((product) => (
-            <ProductCard
-              key={product._id}
-              product={product}
-              quantity={getItemQuantity(product._id)}
-              onAdd={onAddToCart}
-              onDecrement={onDecrement}
-            />
-          ))}
-      </div>
-    </div>
-  );
-};
