@@ -5,6 +5,7 @@ import { mutate } from 'swr';
 import toast from 'react-hot-toast';
 import BaseProductForm from './BaseProductForm';
 import { categories } from '@/data/categories';
+import { uploadToCloudinary } from '@/lib/cloudinary';
 
 export default function AddProductForm() {
     const router = useRouter();
@@ -15,6 +16,16 @@ export default function AddProductForm() {
         try {
             // Show loading toast
             const loadingToast = toast.loading('Adding product...');
+
+            // Upload image to Cloudinary if there's a file
+            let imageData = {};
+            if (formData.imageFile) {
+                const uploadResult = await uploadToCloudinary(formData.imageFile);
+                imageData = {
+                    imageUrl: uploadResult.url,
+                    cloudinaryPublicId: uploadResult.publicId
+                };
+            }
 
             // Find the category and item
             const category = categories.find(c => c.slug === formData.categorySlug);
@@ -28,6 +39,7 @@ export default function AddProductForm() {
             // Transform the data
             const transformedData = {
                 ...formData,
+                ...imageData, // Add Cloudinary image data
                 category: category.name,
                 subcategory: category.name, // Same as category
                 item: item.name,

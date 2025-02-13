@@ -11,11 +11,15 @@ import { HiMinusSm, HiPlusSm } from 'react-icons/hi';
 import useSWR from 'swr';
 import { useRateLimit } from '@/lib/hooks/useRateLimit';
 import toast from 'react-hot-toast';
+import { categories } from '../../data/categories';
 
 // Extracted components for better organization
 const ProductCard = ({ product, quantity, onAdd, onDecrement }) => {
   const [showIngredients, setShowIngredients] = useState(false);
 
+  // Add fallback image handling
+  const imageUrl = product.image || '/images/placeholder.png'; // Add a placeholder image to your public folder
+  
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -52,12 +56,15 @@ const ProductCard = ({ product, quantity, onAdd, onDecrement }) => {
         <div className="relative h-36 sm:h-48 w-full mb-3 sm:mb-4 
                       rounded-xl overflow-hidden group">
           <Image
-            src={product.image}
+            src={imageUrl}
             alt={product.name}
             fill
             priority
             className="object-contain p-2"
             sizes="(max-width: 640px) 200px, 280px"
+            onError={(e) => {
+              e.currentTarget.src = '/images/placeholder.png';
+            }}
           />
           <div className="absolute inset-0 bg-black/5 opacity-0 
                         group-hover:opacity-100 transition-opacity duration-200 
@@ -439,14 +446,17 @@ const CategorySection = ({
   onAddToCart, 
   onDecrement 
 }) => {
-  // Get the tagline from the first product in the category
-  const categoryTagline = products[0]?.categoryTagline;
+  // Find the category tagline from our categories data
+  const categoryData = categories.find(cat => 
+    cat.name.toLowerCase() === category.name.toLowerCase()
+  );
+  const tagline = categoryData?.tagline || 'Featured Products';
 
   return (
     <div className="mb-8 sm:mb-12">
       <div className="flex flex-col mb-4 sm:mb-6 px-2">
         <h2 className="text-xl sm:text-2xl font-bold text-primary relative">
-          {categoryTagline || 'Featured Products'}
+          {tagline}
           <span className="absolute -bottom-2 left-0 w-1/3 h-1 bg-primary rounded-full"></span>
         </h2>
         <p className="mt-2 text-sm text-gray-600 italic">

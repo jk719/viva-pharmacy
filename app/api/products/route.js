@@ -55,17 +55,20 @@ export async function GET(request) {
 
     const mappedProducts = products.map(product => {
       const productObj = product.toObject();
+      
+      // Find the category tagline from categories data
+      const categoryData = categories.find(cat => 
+        cat.name.toLowerCase() === productObj.category.toLowerCase()
+      );
+      
       return {
         _id: productObj._id.toString(),
         name: productObj.name,
         description: productObj.description,
         price: productObj.price,
-        image: productObj.image,
+        image: productObj.imageUrl || '/images/placeholder.png', // Use Cloudinary URL
         category: productObj.category,
-        subcategory: productObj.subcategory,
-        item: productObj.item,
-        categoryPath: productObj.categoryPath,
-        categoryTagline: productObj.categoryTagline,
+        categoryTagline: categoryData?.tagline || productObj.category, // Use category name as fallback
         isInStock: productObj.stock > 0,
         isNew: productObj.isNewProduct,
         stock: productObj.stock,

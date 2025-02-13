@@ -48,7 +48,6 @@ const nextConfig = {
     ];
   },
   webpack: (config, { dev, isServer }) => {
-    // Custom webpack configurations
     config.cache = {
       type: 'filesystem',
       version: `${process.env.NODE_ENV}_${new Date().getTime()}`,
@@ -58,7 +57,6 @@ const nextConfig = {
       cacheDirectory: path.resolve(__dirname, '.next/cache/webpack'),
     };
 
-    // Add path aliases
     config.resolve.alias = {
       ...config.resolve.alias,
       '@': path.resolve(__dirname),
@@ -66,14 +64,17 @@ const nextConfig = {
       '@/context': path.resolve(__dirname, 'context'),
     };
     
-    // Optimize module resolution
     config.resolve.modules = [
       path.resolve(__dirname),
       'node_modules',
       ...(config.resolve.modules || []),
     ];
 
-    // Add cache busting for development
+    config.experiments = {
+      ...config.experiments,
+      topLevelAwait: true,
+    };
+
     if (dev) {
       config.optimization = {
         ...config.optimization,
@@ -88,7 +89,11 @@ const nextConfig = {
     serverActions: {
       allowedOrigins: ['localhost:3000'],
       bodySizeLimit: '2mb'
-    }
+    },
+    scrollRestoration: true,
+  },
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production',
   },
 };
 

@@ -140,15 +140,12 @@ export default function ClientProductView({ product }) {
               className="relative w-full h-full flex items-center justify-center"
             >
               <Image
-                src={imgError ? fallbackImageUrl : (product.image || fallbackImageUrl)}
+                src={imgError ? fallbackImageUrl : (product.imageKey ? `https://res.cloudinary.com/your-cloud-name/image/upload/${product.imageKey}` : product.image || fallbackImageUrl)}
                 alt={product.name}
                 width={300}
                 height={300}
                 priority
-                onError={() => {
-                  console.log('Falling back to placeholder image');
-                  setImgError(true);
-                }}
+                onError={() => setImgError(true)}
                 className="object-contain w-auto h-auto max-h-[150px] md:max-h-[300px] 
                          transform group-hover:scale-105 transition-transform duration-500"
               />
@@ -173,6 +170,11 @@ export default function ClientProductView({ product }) {
                 {category?.tagline && (
                   <p className="text-primary text-xs md:text-sm italic mt-1">
                     {category.tagline}
+                  </p>
+                )}
+                {product.shortDescription && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    {product.shortDescription}
                   </p>
                 )}
               </div>

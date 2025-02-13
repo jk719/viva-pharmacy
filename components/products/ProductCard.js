@@ -8,6 +8,10 @@ import { useState } from 'react';
 export default function ProductCard({ product }) {
   const { addToCart } = useCart();
   const [isAdding, setIsAdding] = useState(false);
+  const [imageError, setImageError] = useState(false);
+
+  // Add fallback image handling
+  const imageUrl = !imageError && product.image ? product.image : '/images/placeholder.png';
 
   const handleAddToCart = async () => {
     setIsAdding(true);
@@ -36,11 +40,12 @@ export default function ProductCard({ product }) {
           )}
           <div className="relative w-full h-48 mb-4">
             <Image
-              src={product.image}
+              src={imageUrl}
               alt={product.name}
               fill
               className="object-contain"
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              onError={() => setImageError(true)}
             />
           </div>
           <h3 className="text-lg font-semibold line-clamp-2">{product.name}</h3>

@@ -9,6 +9,50 @@ import { categories, isCategoryValid, isSubcategoryValid, isItemValid } from '@/
 // Add the fallback image URL as a constant
 const FALLBACK_IMAGE = 'https://res.cloudinary.com/dv3cd1aoy/image/upload/v1737391942/viva-pharmacy/products/placeholder.svg';
 
+const generateSEOData = (product, category, item) => ({
+    metaTitle: `${product.name} | ${category?.name || 'Medicine'} | GoVivanova Pharmacy`,
+    metaDescription: `${product.shortDescription || product.description?.substring(0, 150)}. Available at GoVivanova Pharmacy. Fast delivery!`,
+    metaKeywords: [
+        product.name,
+        category?.name,
+        item?.name,
+        product.dosageForm,
+        'pharmacy',
+        'medicine',
+        'online pharmacy'
+    ].filter(Boolean),
+    canonical: `/${category?.slug || 'medicine'}/${item?.slug || 'general'}/${product.itemSlug}`,
+    breadcrumbs: [
+        { name: 'Home', url: '/' },
+        { name: category?.name || 'Medicine', url: `/${category?.slug || 'medicine'}` },
+        { name: item?.name || 'General', url: `/${category?.slug || 'medicine'}/${item?.slug || 'general'}` },
+        { name: product.name, url: `/${category?.slug || 'medicine'}/${item?.slug || 'general'}/${product.itemSlug}` }
+    ],
+    structuredData: {
+        "@context": "https://schema.org/",
+        "@type": "Product",
+        name: product.name,
+        description: product.description,
+        brand: {
+            "@type": "Brand",
+            name: product.item
+        },
+        category: category?.name,
+        sku: product.sku,
+        image: product.image || FALLBACK_IMAGE,
+        offers: {
+            "@type": "Offer",
+            price: product.price,
+            priceCurrency: "USD",
+            availability: product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+            seller: {
+                "@type": "Organization",
+                name: "GoVivanova Pharmacy"
+            }
+        }
+    }
+});
+
 export async function GET(request, context) {
     try {
         await dbConnect();
@@ -17,19 +61,10 @@ export async function GET(request, context) {
         const id = await Promise.resolve(context.params).then(p => p.id);
         console.log('GET request for product:', id);
         
-        if (!id) {
-            console.error('No product ID provided');
+        if (!id || !isValidObjectId(id)) {
+            console.error('Invalid product ID');
             return NextResponse.json(
-                { success: false, message: 'Product ID is required' },
-                { status: 400 }
-            );
-        }
-
-        // Validate MongoDB ObjectId
-        if (!isValidObjectId(id)) {
-            console.error('Invalid product ID format');
-            return NextResponse.json(
-                { success: false, message: 'Invalid product ID format' },
+                { success: false, message: 'Invalid product ID' },
                 { status: 400 }
             );
         }
@@ -43,22 +78,19 @@ export async function GET(request, context) {
             );
         }
 
-        // Use Cloudinary URL if available, otherwise use fallback
-        const imageUrl = product.image?.startsWith('https://res.cloudinary.com/') 
+        // Get category and item information
+        const category = categories.find(c => c.slug === product.categorySlug);
+        const item = category?.items?.find(i => i.slug === product.itemSlug);
+
+        // Generate or use existing SEO data
+        const seoData = product.seo || generateSEOData(product, category, item);
+
+        // Prepare the response data
+        const productData = product.toObject();
+        productData.image = product.image?.startsWith('https://res.cloudinary.com/') 
             ? product.image 
             : FALLBACK_IMAGE;
-
-        // Add image URL logging
-        console.log('Product lookup result:', {
-            id,
-            found: true,
-            name: product.name,
-            imageUrl
-        });
-
-        // Return the product with the validated image URL
-        const productData = product.toObject();
-        productData.image = imageUrl;
+        productData.seo = seoData;
 
         return NextResponse.json({ 
             success: true, 
@@ -68,11 +100,7 @@ export async function GET(request, context) {
     } catch (error) {
         console.error('Error fetching product:', error);
         return NextResponse.json(
-            { 
-                success: false, 
-                message: 'Failed to fetch product',
-                error: error.message 
-            }, 
+            { success: false, message: 'Failed to fetch product', error: error.message }, 
             { status: 500 }
         );
     }
@@ -95,9 +123,8 @@ export async function PUT(request, context) {
         console.log('Received update data:', data);
 
         await dbConnect();
-
-        // First find the existing product
         const Product = getProductModel();
+        
         const existingProduct = await Product.findById(id);
         if (!existingProduct) {
             return NextResponse.json(
@@ -108,34 +135,31 @@ export async function PUT(request, context) {
 
         // Validate category hierarchy
         const category = categories.find(c => c.slug === data.categorySlug);
-        if (!category) {
+        const item = category?.items?.find(i => i.slug === data.itemSlug);
+
+        if (!category || !item) {
             return NextResponse.json(
-                { success: false, message: `Category not found: ${data.categorySlug}` },
+                { success: false, message: 'Invalid category or item' },
                 { status: 400 }
             );
         }
 
-        const item = category.items.find(i => i.slug === data.itemSlug);
-        if (!item) {
-            return NextResponse.json(
-                { success: false, message: `Item not found: ${data.itemSlug}` },
-                { status: 400 }
-            );
-        }
+        // Generate SEO data for the update
+        const seoData = generateSEOData(data, category, item);
 
-        // Create update data with correct category names
+        // Create update data
         const updateData = {
             ...data,
             createdBy: existingProduct.createdBy,
             _id: existingProduct._id,
             createdAt: existingProduct.createdAt,
             category: category.name,
-            subcategory: category.name, // Same as category name
+            subcategory: category.name,
             item: item.name,
-            categoryPath: `${category.name} > ${item.name}`
+            categoryPath: `${category.name} > ${item.name}`,
+            seo: seoData
         };
 
-        // Use replaceOne instead of findOneAndUpdate
         const result = await Product.replaceOne(
             { _id: id },
             updateData,
@@ -149,9 +173,7 @@ export async function PUT(request, context) {
             );
         }
 
-        // Fetch the updated document
         const updatedProduct = await Product.findById(id);
-
         return NextResponse.json({
             success: true,
             product: updatedProduct,
@@ -161,10 +183,7 @@ export async function PUT(request, context) {
     } catch (error) {
         console.error('Database error:', error);
         return NextResponse.json(
-            { 
-                success: false, 
-                message: error.message || 'Failed to update product'
-            }, 
+            { success: false, message: error.message || 'Failed to update product' },
             { status: 500 }
         );
     }

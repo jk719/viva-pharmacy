@@ -3,6 +3,7 @@
 import { Suspense } from 'react';
 import ClientProductView from './ClientProductView';
 import { notFound } from 'next/navigation';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 // Metadata generator
 export async function generateMetadata({ params }) {
@@ -23,11 +24,24 @@ export async function generateMetadata({ params }) {
     const { product } = await response.json();
     
     return {
-      title: `${product.name} - Viva Pharmacy`,
-      description: product.description || `Buy ${product.name} at Viva Pharmacy`,
+      title: product.seo?.metaTitle || `${product.name} - Viva Pharmacy`,
+      description: product.seo?.metaDescription || product.description,
+      keywords: product.seo?.metaKeywords,
       openGraph: {
-        images: [{ url: product.imageUrl }],
+        title: product.seo?.metaTitle || product.name,
+        description: product.seo?.metaDescription || product.description,
+        type: 'product',
+        url: product.seo?.canonical || `/products/${product._id}`,
+        images: [{ 
+          url: product.image,
+          width: 800,
+          height: 600,
+          alt: product.name
+        }]
       },
+      alternates: {
+        canonical: product.seo?.canonical || `/products/${product._id}`
+      }
     };
   } catch (error) {
     console.error('Error generating metadata:', error);
@@ -64,6 +78,21 @@ export default async function ProductPage({ params }) {
 
     return (
       <div className="container mx-auto px-4 py-8">
+        {/* Add structured data */}
+        {product.seo?.structuredData && (
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify(product.seo.structuredData)
+            }}
+          />
+        )}
+        
+        {/* Add breadcrumbs */}
+        {product.seo?.breadcrumbs && (
+          <Breadcrumbs items={product.seo.breadcrumbs} />
+        )}
+
         <Suspense fallback={
           <div className="animate-pulse">
             <div className="h-64 bg-gray-200 rounded-lg mb-4"></div>
