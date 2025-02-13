@@ -2,10 +2,15 @@ import { v2 as cloudinary } from 'cloudinary';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 import dotenv from 'dotenv';
+import chokidar from 'chokidar';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Load environment variables
-dotenv.config({ path: '.env.local' });
+dotenv.config({ path: path.join(__dirname, '..', '.env.local') });
 
 // Log Cloudinary config for verification
 console.log('Starting upload with Cloudinary config:', {
@@ -32,6 +37,12 @@ const placeholderSvg = `
   </text>
 </svg>`;
 
+// Create images directory if it doesn't exist
+const imagesDir = path.join(__dirname, '..', 'images-to-upload');
+if (!fs.existsSync(imagesDir)) {
+  fs.mkdirSync(imagesDir);
+}
+
 const uploadPlaceholder = async () => {
   try {
     console.log('Uploading placeholder image...');
@@ -51,57 +62,74 @@ const uploadPlaceholder = async () => {
   }
 };
 
-const uploadImage = async (imagePath) => {
+const uploadImage = async (filepath) => {
   try {
-    console.log(`Uploading: ${imagePath}`);
-    const result = await cloudinary.uploader.upload(imagePath, {
-      folder: 'viva-pharmacy/products'
+    const filename = path.basename(filepath);
+    
+    // Skip if not an image
+    if (!['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(path.extname(filename).toLowerCase())) {
+      return null;
+    }
+    
+    console.log(`Uploading ${filename}...`);
+    
+    const result = await cloudinary.uploader.upload(filepath, {
+      folder: 'viva-pharmacy/products',
+      public_id: filename.replace(/\.[^/.]+$/, ''), // Remove extension
+      overwrite: true
     });
-    console.log(`Successfully uploaded: ${imagePath}`);
+    
+    console.log(`✅ Uploaded ${filename}`);
+    console.log(`URL: ${result.secure_url}`);
+    
+    // Update mapping file
+    const mappingPath = path.join(__dirname, '..', 'data', 'cloudinaryUrlsClean.json');
+    const mapping = JSON.parse(fs.readFileSync(mappingPath, 'utf8'));
+    mapping[filename] = result.secure_url;
+    fs.writeFileSync(mappingPath, JSON.stringify(mapping, null, 2));
+    
+    // Move uploaded file to processed folder
+    const processedDir = path.join(__dirname, '..', 'images-processed');
+    if (!fs.existsSync(processedDir)) {
+      fs.mkdirSync(processedDir);
+    }
+    fs.renameSync(filepath, path.join(processedDir, filename));
+    
     return result.secure_url;
   } catch (error) {
-    console.error(`Error uploading ${imagePath}:`, error);
+    console.error(`Error uploading ${path.basename(filepath)}:`, error);
     return null;
   }
 };
 
-const migrateImagesToCloudinary = async () => {
-  console.log('Starting image migration...');
-  
-  // First upload the placeholder
-  const placeholderUrl = await uploadPlaceholder();
-  if (!placeholderUrl) {
-    console.error('Failed to upload placeholder image');
-    return;
-  }
-  
-  const productsDir = path.join(process.cwd(), 'public/images/products');
-  console.log('Reading from directory:', productsDir);
-  
-  const files = fs.readdirSync(productsDir);
-  console.log(`Found ${files.length} files to process`);
-  
-  const imageUrls = {
-    'placeholder.svg': placeholderUrl // Add placeholder to URLs
-  };
-  
-  for (const file of files) {
-    const imagePath = path.join(productsDir, file);
-    const cloudinaryUrl = await uploadImage(imagePath);
-    if (cloudinaryUrl) {
-      imageUrls[file] = cloudinaryUrl;
-    }
-  }
-  
-  // Save URLs to a JSON file
-  const outputPath = path.join(process.cwd(), 'data/cloudinaryUrls.json');
-  fs.writeFileSync(outputPath, JSON.stringify(imageUrls, null, 2));
-  console.log(`Migration complete. URLs saved to ${outputPath}`);
-  
-  // Log the placeholder URL for use in ClientProductView
-  console.log('\nPlaceholder image URL (use this in ClientProductView.js):');
-  console.log(placeholderUrl);
-};
+// Watch for new files
+console.log(`\nWatching ${imagesDir} for new images...`);
+console.log('Drop your images into this folder to upload them to Cloudinary\n');
 
-// Run the migration
-migrateImagesToCloudinary().catch(console.error); 
+const watcher = chokidar.watch(imagesDir, {
+  ignored: /(^|[\/\\])\../, // Ignore hidden files
+  persistent: true
+});
+
+watcher
+  .on('add', async filepath => {
+    // First ensure placeholder exists
+    const placeholderUrl = await uploadPlaceholder();
+    if (!placeholderUrl) {
+      console.error('Failed to upload placeholder image');
+      return;
+    }
+    
+    // Then upload the new image
+    await uploadImage(filepath);
+  });
+
+// Print the list of needed images
+const neededImagesPath = path.join(__dirname, '..', 'data', 'productsNeedingUpload.json');
+if (fs.existsSync(neededImagesPath)) {
+  const neededImages = JSON.parse(fs.readFileSync(neededImagesPath, 'utf8'));
+  console.log('Images needed:');
+  neededImages.forEach((image, index) => {
+    console.log(`${index + 1}. ${image}`);
+  });
+} 

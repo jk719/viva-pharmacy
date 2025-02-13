@@ -1,12 +1,14 @@
+// Add server-side check at the top
+if (typeof window !== 'undefined') {
+  throw new Error('This module can only be used on the server side');
+}
+
 import { promises as fs } from 'fs';
 import path from 'path';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
-import { ScriptRunner } from './utils/scriptRunner.js';
-import { DatabaseOperationManager } from './utils/databaseOperationManager.js';
-import { SessionManager } from './utils/sessionManager.js';
-import { FileOperationManager } from './utils/fileOperationManager.js';
+import getProductModel from '../models/Product.js';
 
 // Load environment variables
 dotenv.config({ path: '.env.local' });
@@ -29,28 +31,6 @@ async function dbConnect() {
     }
 }
 
-// Product Schema
-const productSchema = new mongoose.Schema({
-    name: String,
-    description: String,
-    price: Number,
-    image: String,
-    category: String,
-    isFeatured: Boolean,
-    stock: Number,
-    sku: String,
-    dosageForm: String,
-    activeIngredients: [{ name: String, amount: String }],
-    warnings: [String],
-    directions: String,
-    createdBy: mongoose.Schema.Types.ObjectId
-}, {
-    timestamps: true
-});
-
-// Create Product model
-const Product = mongoose.models.Product || mongoose.model('Product', productSchema);
-
 // Helper function to normalize product names for comparison
 function normalizeProductName(name) {
     return name.toLowerCase()
@@ -58,66 +38,105 @@ function normalizeProductName(name) {
         .trim();
 }
 
-// Helper function to find matching Cloudinary URL
-function findMatchingUrl(productName, cloudinaryUrls) {
-    const normalizedProductName = normalizeProductName(productName);
-    
-    // Create a map of normalized names to original filenames
-    const normalizedMap = Object.keys(cloudinaryUrls).reduce((acc, filename) => {
-        const nameWithoutExtension = filename.replace(/\.(png|jpg|jpeg|svg)$/, '');
-        const normalized = normalizeProductName(nameWithoutExtension);
-        acc[normalized] = filename;
-        return acc;
-    }, {});
-
-    // Find matching filename
-    const matchingFilename = normalizedMap[normalizedProductName];
-    return matchingFilename ? cloudinaryUrls[matchingFilename] : null;
-}
-
 async function updateProductImages() {
-    const script = new ScriptRunner({ name: 'Update Product Images' });
-    const dbManager = new DatabaseOperationManager();
-    const sessionManager = new SessionManager();
-    const fileManager = new FileOperationManager();
+    try {
+        // Read the Cloudinary matches
+        const matchesPath = path.join(__dirname, '..', 'data', 'cloudinaryMatches.json');
+        const matches = JSON.parse(await fs.readFile(matchesPath, 'utf8'));
 
-    await script.execute(async () => {
-        // Load and validate Cloudinary URLs
-        const cloudinaryUrls = await fileManager.readJsonFile('cloudinaryUrls.json', {
-            validate: (data) => {
-                if (!data || typeof data !== 'object') {
-                    throw new Error('Invalid Cloudinary URLs data structure');
-                }
-            }
-        });
+        // Track updates
+        let updatedCount = 0;
+        let skippedCount = 0;
+        const skippedProducts = [];
+        const updatedProducts = [];
 
-        return sessionManager.withSession(async (session) => {
-            return dbManager.withCursor({
-                model: Product,
-                session,
-                batchSize: 50,
-                select: '_id name image',
-                operation: async (product, session) => {
-                    const cloudinaryUrl = findMatchingUrl(product.name, cloudinaryUrls);
-                    if (cloudinaryUrl && cloudinaryUrl !== product.image) {
+        // Connect to MongoDB and get Product model
+        await dbConnect();
+        const Product = getProductModel();
+
+        console.log('Updating MongoDB products...');
+
+        const dbProducts = await Product.find({});
+        for (const product of dbProducts) {
+            const normalizedName = normalizeProductName(product.name);
+            
+            // Find matching Cloudinary URL
+            const matchingEntry = Object.entries(matches).find(([filename]) => 
+                normalizeProductName(filename.replace(/\.(png|jpg|jpeg)$/, ''))
+                === normalizedName
+            );
+
+            if (matchingEntry) {
+                const [, match] = matchingEntry;
+                // Extract the image key from the Cloudinary URL
+                const imageKey = match.originalName.split('/').pop(); // Gets the last part of the path
+                
+                if (product.imageKey !== imageKey) {
+                    try {
                         await Product.findByIdAndUpdate(
                             product._id,
                             {
                                 $set: {
-                                    image: cloudinaryUrl,
-                                    updatedAt: new Date()
+                                    imageKey: imageKey
                                 }
                             },
-                            { session, runValidators: true }
+                            { runValidators: true }
                         );
-                        return 'updated';
+                        updatedCount++;
+                        updatedProducts.push({
+                            name: product.name,
+                            oldImageKey: product.imageKey,
+                            newImageKey: imageKey
+                        });
+                    } catch (error) {
+                        console.error(`Error updating product ${product.name}:`, error);
+                        skippedCount++;
+                        skippedProducts.push({
+                            name: product.name,
+                            error: error.message
+                        });
                     }
-                    return 'skipped';
                 }
+            } else {
+                skippedCount++;
+                skippedProducts.push({
+                    name: product.name,
+                    reason: 'No matching Cloudinary image found'
+                });
+            }
+        }
+
+        // Print summary
+        console.log('\nUpdate Summary:');
+        console.log(`Updated: ${updatedCount} products`);
+        console.log(`Skipped: ${skippedCount} products`);
+        
+        if (updatedProducts.length > 0) {
+            console.log('\nUpdated Products:');
+            updatedProducts.forEach(({ name, oldImageKey, newImageKey }) => {
+                console.log(`- ${name}`);
+                console.log(`  Old imageKey: ${oldImageKey}`);
+                console.log(`  New imageKey: ${newImageKey}`);
             });
-        });
-    });
+        }
+        
+        if (skippedProducts.length > 0) {
+            console.log('\nSkipped Products:');
+            skippedProducts.forEach(({ name, reason, error }) => {
+                console.log(`- ${name}`);
+                console.log(`  Reason: ${reason || error}`);
+            });
+        }
+
+        await mongoose.disconnect();
+        console.log('MongoDB disconnected');
+
+    } catch (error) {
+        console.error('Error:', error);
+        if (mongoose.connection.readyState === 1) {
+            await mongoose.disconnect();
+        }
+    }
 }
 
-// Run the migration
 updateProductImages(); 

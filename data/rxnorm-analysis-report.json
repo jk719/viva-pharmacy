@@ -1,0 +1,3937 @@
+{
+  "summary": {
+    "totalProducts": 62,
+    "analyzed": 62,
+    "matchesFound": 62,
+    "noMatches": 0,
+    "errors": 0
+  },
+  "productDetails": [
+    {
+      "productId": "67acda2e326ea7f99523f965",
+      "name": "Monistat 3 Vaginal Antifungal Prefilled Cream 3x5gm",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1ab",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Cream",
+        "keywords": [
+          "Feminine Care",
+          "Monistat",
+          "3",
+          "Vaginal",
+          "Antifungal",
+          "Prefilled",
+          "Cream",
+          "3x5gm"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "998546",
+          "ingredients": [
+            {
+              "name": "miconazole",
+              "rxcui": "6932"
+            }
+          ],
+          "details": {
+            "rxcui": "998546",
+            "name": "miconazole nitrate 40 MG/ML Vaginal Cream [Monistat]",
+            "synonym": "Monistat 4 % Vaginal Cream",
+            "tty": "SBD",
+            "language": "ENG",
+            "suppress": "N",
+            "umlscui": ""
+          }
+        },
+        "activeIngredients": [
+          {
+            "name": "miconazole",
+            "amount": "See package for details"
+          }
+        ],
+        "keywords": [
+          "Feminine Care",
+          "Monistat",
+          "3",
+          "Vaginal",
+          "Antifungal",
+          "Prefilled",
+          "Cream",
+          "3x5gm",
+          "miconazole"
+        ]
+      },
+      "differences": {
+        "activeIngredients": {
+          "added": [
+            "miconazole"
+          ],
+          "removed": [
+            "Active Ingredient"
+          ]
+        },
+        "keywords": {
+          "added": [
+            "miconazole"
+          ],
+          "removed": []
+        }
+      }
+    },
+    {
+      "productId": "67acda2e326ea7f99523f966",
+      "name": "Monistat 7 Vaginal Antifungal Cream Combination Pack",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1ad",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Cream",
+        "keywords": [
+          "Feminine Care",
+          "Monistat",
+          "7",
+          "Vaginal",
+          "Antifungal",
+          "Cream",
+          "Combination",
+          "Pack"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "992784",
+          "name": "Monistat 7 Vaginal Cream Combination Pack",
+          "ingredients": [
+            {
+              "name": "miconazole",
+              "rxcui": "6932"
+            }
+          ],
+          "details": {
+            "rxcui": "992784",
+            "name": "{1 (9000 MG) (miconazole nitrate 20 MG/ML Vaginal Cream [Monistat]) / 1 (45000 MG) (miconazole nitrate 20 MG/ML Vaginal Cream [Monistat]) } Pack [Monistat 7 Vaginal Cream Combination Pack]",
+            "synonym": "Monistat 7 Vaginal Cream Combination Pack",
+            "tty": "BPCK",
+            "language": "ENG",
+            "suppress": "N",
+            "umlscui": ""
+          }
+        },
+        "activeIngredients": [
+          {
+            "name": "miconazole",
+            "amount": "See package for details"
+          }
+        ],
+        "keywords": [
+          "Feminine Care",
+          "Monistat",
+          "7",
+          "Vaginal",
+          "Antifungal",
+          "Cream",
+          "Combination",
+          "Pack",
+          "miconazole"
+        ]
+      },
+      "differences": {
+        "activeIngredients": {
+          "added": [
+            "miconazole"
+          ],
+          "removed": [
+            "Active Ingredient"
+          ]
+        },
+        "keywords": {
+          "added": [
+            "miconazole"
+          ],
+          "removed": []
+        }
+      }
+    },
+    {
+      "productId": "67acda2e326ea7f99523f969",
+      "name": "RICOLA BAG S/F SWISS HERB DRP 19CT",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1af",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Other",
+        "keywords": [
+          "Pain & Fever",
+          "RICOLA",
+          "BAG",
+          "S/F",
+          "SWISS",
+          "HERB",
+          "DRP",
+          "19CT"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "2610949",
+          "ingredients": []
+        },
+        "keywords": [
+          "Pain & Fever",
+          "RICOLA",
+          "BAG",
+          "S/F",
+          "SWISS",
+          "HERB",
+          "DRP",
+          "19CT"
+        ]
+      },
+      "differences": null
+    },
+    {
+      "productId": "67acda2e326ea7f99523f96a",
+      "name": "Mucinex InstaSoothe Honey Echinacea Throat Drop 20ct",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1b1",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Drops",
+        "keywords": [
+          "Pain & Fever",
+          "Mucinex",
+          "InstaSoothe",
+          "Honey",
+          "Echinacea",
+          "Throat",
+          "Drop",
+          "20ct"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "2569198",
+          "ingredients": []
+        },
+        "keywords": [
+          "Pain & Fever",
+          "Mucinex",
+          "InstaSoothe",
+          "Honey",
+          "Echinacea",
+          "Throat",
+          "Drop",
+          "20ct"
+        ]
+      },
+      "differences": null
+    },
+    {
+      "productId": "67acda2e326ea7f99523f96b",
+      "name": "PediaSure Grow & Gain Kids Nutritional Shake Vanilla",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1b3",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Other",
+        "keywords": [
+          "Pain & Fever",
+          "PediaSure",
+          "Grow",
+          "&",
+          "Gain",
+          "Kids",
+          "Nutritional",
+          "Shake",
+          "Vanilla"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "2692471",
+          "ingredients": []
+        },
+        "keywords": [
+          "Pain & Fever",
+          "PediaSure",
+          "Grow",
+          "&",
+          "Gain",
+          "Kids",
+          "Nutritional",
+          "Shake",
+          "Vanilla"
+        ]
+      },
+      "differences": null
+    },
+    {
+      "productId": "67acda2e326ea7f99523f96c",
+      "name": "PediaSure Grow & Gain Kids Nutritional Shake Chocolate",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1b5",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Other",
+        "keywords": [
+          "Pain & Fever",
+          "PediaSure",
+          "Grow",
+          "&",
+          "Gain",
+          "Kids",
+          "Nutritional",
+          "Shake",
+          "Chocolate"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "2174822",
+          "ingredients": []
+        },
+        "keywords": [
+          "Pain & Fever",
+          "PediaSure",
+          "Grow",
+          "&",
+          "Gain",
+          "Kids",
+          "Nutritional",
+          "Shake",
+          "Chocolate"
+        ]
+      },
+      "differences": null
+    },
+    {
+      "productId": "67acda2e326ea7f99523f96d",
+      "name": "Natrol Kids Melatonin Berry Gummies 90ct",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1b7",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Gummies",
+        "keywords": [
+          "First Aid",
+          "Natrol",
+          "Kids",
+          "Melatonin",
+          "Berry",
+          "Gummies",
+          "90ct"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "2477637",
+          "ingredients": [
+            {
+              "name": "melatonin",
+              "rxcui": "6711"
+            }
+          ],
+          "details": {
+            "rxcui": "2477637",
+            "name": "melatonin 1 MG Chewable Tablet",
+            "synonym": "",
+            "tty": "SCD",
+            "language": "ENG",
+            "suppress": "N",
+            "umlscui": ""
+          }
+        },
+        "activeIngredients": [
+          {
+            "name": "melatonin",
+            "amount": "See package for details"
+          }
+        ],
+        "keywords": [
+          "First Aid",
+          "Natrol",
+          "Kids",
+          "Melatonin",
+          "Berry",
+          "Gummies",
+          "90ct",
+          "melatonin"
+        ]
+      },
+      "differences": {
+        "activeIngredients": {
+          "added": [
+            "melatonin"
+          ],
+          "removed": [
+            "Active Ingredient"
+          ]
+        },
+        "keywords": {
+          "added": [
+            "melatonin"
+          ],
+          "removed": []
+        }
+      }
+    },
+    {
+      "productId": "67acda2e326ea7f99523f96e",
+      "name": "Florastor Kids Probiotic Packets, 20 CT",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1b9",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Other",
+        "keywords": [
+          "Children's Medicine & Wellness",
+          "Florastor",
+          "Kids",
+          "Probiotic",
+          "Packets,",
+          "20",
+          "CT"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "1246667",
+          "ingredients": []
+        },
+        "keywords": [
+          "Children's Medicine & Wellness",
+          "Florastor",
+          "Kids",
+          "Probiotic",
+          "Packets,",
+          "20",
+          "CT"
+        ]
+      },
+      "differences": null
+    },
+    {
+      "productId": "67acda2e326ea7f99523f967",
+      "name": "NeilMed Sinus Rinse Complete Kit 1ct",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1bb",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Other",
+        "keywords": [
+          "Allergy Care",
+          "NeilMed",
+          "Sinus",
+          "Rinse",
+          "Complete",
+          "Kit",
+          "1ct"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "1490395",
+          "ingredients": []
+        },
+        "keywords": [
+          "Allergy Care",
+          "NeilMed",
+          "Sinus",
+          "Rinse",
+          "Complete",
+          "Kit",
+          "1ct"
+        ]
+      },
+      "differences": null
+    },
+    {
+      "productId": "67acda2e326ea7f99523f968",
+      "name": "BAND-AID BANDAGES KIDS HELLO KITTY ASSORTED 20CT",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1bd",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Other",
+        "keywords": [
+          "First Aid",
+          "BAND-AID",
+          "BANDAGES",
+          "KIDS",
+          "HELLO",
+          "KITTY",
+          "ASSORTED",
+          "20CT"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "2591071",
+          "ingredients": []
+        },
+        "keywords": [
+          "First Aid",
+          "BAND-AID",
+          "BANDAGES",
+          "KIDS",
+          "HELLO",
+          "KITTY",
+          "ASSORTED",
+          "20CT"
+        ]
+      },
+      "differences": null
+    },
+    {
+      "productId": "67acda2e326ea7f99523f979",
+      "name": "Flonase Sensimist 24HR Allergy Relief Scent Free Nasal Spray 0.34oz",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1bf",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Spray",
+        "keywords": [
+          "Allergy Care",
+          "Flonase",
+          "Sensimist",
+          "24HR",
+          "Allergy",
+          "Relief",
+          "Scent",
+          "Free",
+          "Nasal",
+          "Spray",
+          "0.34oz"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "1869712",
+          "ingredients": [
+            {
+              "name": "fluticasone",
+              "rxcui": "41126"
+            }
+          ],
+          "details": {
+            "rxcui": "1869712",
+            "name": "fluticasone furoate 0.0275 MG/ACTUAT Metered Dose Nasal Spray [Flonase Sensimist]",
+            "synonym": "Flonase Sensimist 27.5 MCG/ACTUAT Metered Dose Nasal Spray",
+            "tty": "SBD",
+            "language": "ENG",
+            "suppress": "N",
+            "umlscui": ""
+          }
+        },
+        "activeIngredients": [
+          {
+            "name": "fluticasone",
+            "amount": "See package for details"
+          }
+        ],
+        "keywords": [
+          "Allergy Care",
+          "Flonase",
+          "Sensimist",
+          "24HR",
+          "Allergy",
+          "Relief",
+          "Scent",
+          "Free",
+          "Nasal",
+          "Spray",
+          "0.34oz",
+          "fluticasone"
+        ]
+      },
+      "differences": {
+        "activeIngredients": {
+          "added": [
+            "fluticasone"
+          ],
+          "removed": [
+            "Active Ingredient"
+          ]
+        },
+        "keywords": {
+          "added": [
+            "fluticasone"
+          ],
+          "removed": []
+        }
+      }
+    },
+    {
+      "productId": "67acda2e326ea7f99523f97a",
+      "name": "Children\\'s Flonase Sensimist 60 Sprays",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1c1",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Spray",
+        "keywords": [
+          "Allergy Care",
+          "Children\\'s",
+          "Flonase",
+          "Sensimist",
+          "60",
+          "Sprays"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "1869707",
+          "name": "Flonase Sensimist",
+          "ingredients": [
+            {
+              "name": "fluticasone",
+              "rxcui": "41126"
+            }
+          ],
+          "details": {
+            "rxcui": "1869707",
+            "name": "Flonase Sensimist",
+            "synonym": "",
+            "tty": "BN",
+            "language": "ENG",
+            "suppress": "N",
+            "umlscui": ""
+          }
+        },
+        "activeIngredients": [
+          {
+            "name": "fluticasone",
+            "amount": "See package for details"
+          }
+        ],
+        "keywords": [
+          "Allergy Care",
+          "Children\\'s",
+          "Flonase",
+          "Sensimist",
+          "60",
+          "Sprays",
+          "fluticasone"
+        ]
+      },
+      "differences": {
+        "activeIngredients": {
+          "added": [
+            "fluticasone"
+          ],
+          "removed": [
+            "Active Ingredient"
+          ]
+        },
+        "keywords": {
+          "added": [
+            "fluticasone"
+          ],
+          "removed": []
+        }
+      }
+    },
+    {
+      "productId": "67acda2e326ea7f99523f97c",
+      "name": "Zarbee\\'s Children\\'s Cough & Mucus Night Syrup",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1c3",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Liquid",
+        "keywords": [
+          "Pain & Fever",
+          "Zarbee\\'s",
+          "Children\\'s",
+          "Cough",
+          "&",
+          "Mucus",
+          "Night",
+          "Syrup"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "2530753",
+          "ingredients": []
+        },
+        "keywords": [
+          "Pain & Fever",
+          "Zarbee\\'s",
+          "Children\\'s",
+          "Cough",
+          "&",
+          "Mucus",
+          "Night",
+          "Syrup"
+        ]
+      },
+      "differences": null
+    },
+    {
+      "productId": "67acda2e326ea7f99523f97b",
+      "name": "Dr. Teal's Cooling Peppermint Pure Epsom Salt Foot Soak",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1c5",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Other",
+        "keywords": [
+          "Foot Care",
+          "Dr.",
+          "Teal's",
+          "Cooling",
+          "Peppermint",
+          "Pure",
+          "Epsom",
+          "Salt",
+          "Foot",
+          "Soak"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "2633191",
+          "ingredients": []
+        },
+        "keywords": [
+          "Foot Care",
+          "Dr.",
+          "Teal's",
+          "Cooling",
+          "Peppermint",
+          "Pure",
+          "Epsom",
+          "Salt",
+          "Foot",
+          "Soak"
+        ]
+      },
+      "differences": null
+    },
+    {
+      "productId": "67acda2e326ea7f99523f97f",
+      "name": "Hyland\\'s Kids Cough & Mucus Daytime Grape Liquid 4o",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1c7",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Liquid",
+        "keywords": [
+          "Pain & Fever",
+          "Hyland\\'s",
+          "Kids",
+          "Cough",
+          "&",
+          "Mucus",
+          "Daytime",
+          "Grape",
+          "Liquid",
+          "4o"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "2638259",
+          "ingredients": []
+        },
+        "keywords": [
+          "Pain & Fever",
+          "Hyland\\'s",
+          "Kids",
+          "Cough",
+          "&",
+          "Mucus",
+          "Daytime",
+          "Grape",
+          "Liquid",
+          "4o"
+        ]
+      },
+      "differences": null
+    },
+    {
+      "productId": "67acda2e326ea7f99523f980",
+      "name": "Alka-Seltzer Plus Day & Night Multi-Symptom Cold & Flu Liquid Gels 20ct",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1c9",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Liquid",
+        "keywords": [
+          "Pain & Fever",
+          "Alka-Seltzer",
+          "Plus",
+          "Day",
+          "&",
+          "Night",
+          "Multi-Symptom",
+          "Cold",
+          "&",
+          "Flu",
+          "Liquid",
+          "Gels",
+          "20ct"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "2634363",
+          "name": "Alka-Seltzer Plus Multi-Symptom Cold and Flu Day and Night Liquid Gels KIT",
+          "ingredients": [
+            {
+              "name": "acetaminophen",
+              "rxcui": "161"
+            },
+            {
+              "name": "dextromethorphan",
+              "rxcui": "3289"
+            },
+            {
+              "name": "doxylamine",
+              "rxcui": "3642"
+            },
+            {
+              "name": "phenylephrine",
+              "rxcui": "8163"
+            }
+          ],
+          "details": {
+            "rxcui": "2634363",
+            "name": "{1 (acetaminophen 325 MG / dextromethorphan hydrobromide 10 MG / doxylamine succinate 6.25 MG / phenylephrine hydrochloride 5 MG Oral Capsule) / 1 (acetaminophen 325 MG / dextromethorphan hydrobromide 10 MG / phenylephrine hydrochloride 5 MG Oral Capsule) } Pack",
+            "synonym": "1 daytime (acetaminophen 325 MG / dextromethorphan Hbr 10 MG / phenylephrine HCl 5 MG Oral Capsule) / 1 nighttime (acetaminophen 325 MG / dextromethorphan HBr 10 MG / doxylamine succinate 6.25 MG / phenylephrine HCl 5 MG Oral Capsule) Pack",
+            "tty": "GPCK",
+            "language": "ENG",
+            "suppress": "N",
+            "umlscui": ""
+          }
+        },
+        "activeIngredients": [
+          {
+            "name": "acetaminophen",
+            "amount": "See package for details"
+          },
+          {
+            "name": "dextromethorphan",
+            "amount": "See package for details"
+          },
+          {
+            "name": "doxylamine",
+            "amount": "See package for details"
+          },
+          {
+            "name": "phenylephrine",
+            "amount": "See package for details"
+          }
+        ],
+        "keywords": [
+          "Pain & Fever",
+          "Alka-Seltzer",
+          "Plus",
+          "Day",
+          "&",
+          "Night",
+          "Multi-Symptom",
+          "Cold",
+          "Flu",
+          "Liquid",
+          "Gels",
+          "20ct",
+          "and",
+          "KIT",
+          "acetaminophen",
+          "dextromethorphan",
+          "doxylamine",
+          "phenylephrine"
+        ]
+      },
+      "differences": {
+        "activeIngredients": {
+          "added": [
+            "acetaminophen",
+            "dextromethorphan",
+            "doxylamine",
+            "phenylephrine"
+          ],
+          "removed": [
+            "Active Ingredient"
+          ]
+        },
+        "keywords": {
+          "added": [
+            "and",
+            "KIT",
+            "acetaminophen",
+            "dextromethorphan",
+            "doxylamine",
+            "phenylephrine"
+          ],
+          "removed": []
+        }
+      }
+    },
+    {
+      "productId": "67acda2e326ea7f99523f981",
+      "name": "MYLANTA ANTACID CLASSIC LIQ 12OZ",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1cb",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Other",
+        "keywords": [
+          "Digestive Health",
+          "MYLANTA",
+          "ANTACID",
+          "CLASSIC",
+          "LIQ",
+          "12OZ"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "2281844",
+          "ingredients": [
+            {
+              "name": "calcium carbonate",
+              "rxcui": "1897"
+            },
+            {
+              "name": "magnesium hydroxide",
+              "rxcui": "6581"
+            },
+            {
+              "name": "simethicone",
+              "rxcui": "9796"
+            }
+          ],
+          "details": {
+            "rxcui": "2281844",
+            "name": "calcium carbonate 120 MG/ML / magnesium hydroxide 27 MG/ML / simethicone 8 MG/ML Oral Suspension",
+            "synonym": "calcium carbonate 1200 MG / magnesium hydroxide 270 MG / simethicone 80 MG per 10 ML Oral Suspension",
+            "tty": "SCD",
+            "language": "ENG",
+            "suppress": "N",
+            "umlscui": ""
+          }
+        },
+        "activeIngredients": [
+          {
+            "name": "calcium carbonate",
+            "amount": "See package for details"
+          },
+          {
+            "name": "magnesium hydroxide",
+            "amount": "See package for details"
+          },
+          {
+            "name": "simethicone",
+            "amount": "See package for details"
+          }
+        ],
+        "keywords": [
+          "Digestive Health",
+          "MYLANTA",
+          "ANTACID",
+          "CLASSIC",
+          "LIQ",
+          "12OZ",
+          "calcium",
+          "carbonate",
+          "magnesium",
+          "hydroxide",
+          "simethicone"
+        ]
+      },
+      "differences": {
+        "activeIngredients": {
+          "added": [
+            "calcium carbonate",
+            "magnesium hydroxide",
+            "simethicone"
+          ],
+          "removed": [
+            "Active Ingredient"
+          ]
+        },
+        "keywords": {
+          "added": [
+            "calcium",
+            "carbonate",
+            "magnesium",
+            "hydroxide",
+            "simethicone"
+          ],
+          "removed": []
+        }
+      }
+    },
+    {
+      "productId": "67acda2e326ea7f99523f982",
+      "name": "Phillips Milk of Magnesia Original Liquid 12oz",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1cd",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Liquid",
+        "keywords": [
+          "Digestive Health",
+          "Phillips",
+          "Milk",
+          "of",
+          "Magnesia",
+          "Original",
+          "Liquid",
+          "12oz"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "219233",
+          "ingredients": [
+            {
+              "name": "magnesium hydroxide",
+              "rxcui": "6581"
+            }
+          ],
+          "details": {
+            "rxcui": "219233",
+            "name": "Phillips Milk of Magnesia",
+            "synonym": "",
+            "tty": "BN",
+            "language": "ENG",
+            "suppress": "N",
+            "umlscui": ""
+          }
+        },
+        "activeIngredients": [
+          {
+            "name": "magnesium hydroxide",
+            "amount": "See package for details"
+          }
+        ],
+        "keywords": [
+          "Digestive Health",
+          "Phillips",
+          "Milk",
+          "of",
+          "Magnesia",
+          "Original",
+          "Liquid",
+          "12oz",
+          "magnesium",
+          "hydroxide"
+        ]
+      },
+      "differences": {
+        "activeIngredients": {
+          "added": [
+            "magnesium hydroxide"
+          ],
+          "removed": [
+            "Active Ingredient"
+          ]
+        },
+        "keywords": {
+          "added": [
+            "magnesium",
+            "hydroxide"
+          ],
+          "removed": []
+        }
+      }
+    },
+    {
+      "productId": "67acda2e326ea7f99523f97e",
+      "name": "HYLAND\\'S KIDS Mucus Cough NT GRP LIQ 4OZ",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1cf",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Other",
+        "keywords": [
+          "Pain & Fever",
+          "HYLAND\\'S",
+          "KIDS",
+          "Mucus",
+          "Cough",
+          "NT",
+          "GRP",
+          "LIQ",
+          "4OZ"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "2638259",
+          "ingredients": []
+        },
+        "keywords": [
+          "Pain & Fever",
+          "HYLAND\\'S",
+          "KIDS",
+          "Mucus",
+          "Cough",
+          "NT",
+          "GRP",
+          "LIQ",
+          "4OZ"
+        ]
+      },
+      "differences": null
+    },
+    {
+      "productId": "67acda2e326ea7f99523f97d",
+      "name": "Zarbee\\'s Children\\'s Cough & Mucus Day Syrup",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1d1",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Liquid",
+        "keywords": [
+          "Pain & Fever",
+          "Zarbee\\'s",
+          "Children\\'s",
+          "Cough",
+          "&",
+          "Mucus",
+          "Day",
+          "Syrup"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "2530753",
+          "ingredients": []
+        },
+        "keywords": [
+          "Pain & Fever",
+          "Zarbee\\'s",
+          "Children\\'s",
+          "Cough",
+          "&",
+          "Mucus",
+          "Day",
+          "Syrup"
+        ]
+      },
+      "differences": null
+    },
+    {
+      "productId": "67acda2e326ea7f99523f98e",
+      "name": "Alka-Seltzer Extra Strength Effervescent Tablets 24ct",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1d3",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Tablet",
+        "keywords": [
+          "Digestive Health",
+          "Alka-Seltzer",
+          "Extra",
+          "Strength",
+          "Effervescent",
+          "Tablets",
+          "24ct"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "1536835",
+          "ingredients": [
+            {
+              "name": "aspirin",
+              "rxcui": "1191"
+            },
+            {
+              "name": "citric acid",
+              "rxcui": "21183"
+            },
+            {
+              "name": "sodium bicarbonate",
+              "rxcui": "36676"
+            }
+          ],
+          "details": {
+            "rxcui": "1536835",
+            "name": "aspirin 500 MG / citric acid 1000 MG / sodium bicarbonate 1985 MG Effervescent Oral Tablet [Alka-Seltzer]",
+            "synonym": "ASA 500 MG / Citric Acid 1000 MG / NaHCO3 1985 MG Effervescent Oral Tablet [Alka-Seltzer]",
+            "tty": "SBD",
+            "language": "ENG",
+            "suppress": "N",
+            "umlscui": ""
+          }
+        },
+        "activeIngredients": [
+          {
+            "name": "aspirin",
+            "amount": "See package for details"
+          },
+          {
+            "name": "citric acid",
+            "amount": "See package for details"
+          },
+          {
+            "name": "sodium bicarbonate",
+            "amount": "See package for details"
+          }
+        ],
+        "keywords": [
+          "Digestive Health",
+          "Alka-Seltzer",
+          "Extra",
+          "Strength",
+          "Effervescent",
+          "Tablets",
+          "24ct",
+          "aspirin",
+          "citric",
+          "acid",
+          "sodium",
+          "bicarbonate"
+        ]
+      },
+      "differences": {
+        "activeIngredients": {
+          "added": [
+            "aspirin",
+            "citric acid",
+            "sodium bicarbonate"
+          ],
+          "removed": [
+            "Active Ingredient"
+          ]
+        },
+        "keywords": {
+          "added": [
+            "aspirin",
+            "citric",
+            "acid",
+            "sodium",
+            "bicarbonate"
+          ],
+          "removed": []
+        }
+      }
+    },
+    {
+      "productId": "67acda2e326ea7f99523f992",
+      "name": "Coricidin HBP Maximum Strength Flu Tablets 24ct",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1d5",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Tablet",
+        "keywords": [
+          "Pain & Fever",
+          "Coricidin",
+          "HBP",
+          "Maximum",
+          "Strength",
+          "Flu",
+          "Tablets",
+          "24ct"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "701343",
+          "ingredients": []
+        },
+        "keywords": [
+          "Pain & Fever",
+          "Coricidin",
+          "HBP",
+          "Maximum",
+          "Strength",
+          "Flu",
+          "Tablets",
+          "24ct"
+        ]
+      },
+      "differences": null
+    },
+    {
+      "productId": "67acda2e326ea7f99523f98f",
+      "name": "Bayer Low Dose Aspirin 81mg Enteric Coated Tablets 32ct",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1d7",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Tablet",
+        "keywords": [
+          "Pain & Fever",
+          "Bayer",
+          "Low",
+          "Dose",
+          "Aspirin",
+          "81mg",
+          "Enteric",
+          "Coated",
+          "Tablets",
+          "32ct"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "794229",
+          "ingredients": [
+            {
+              "name": "aspirin",
+              "rxcui": "1191"
+            }
+          ],
+          "details": {
+            "rxcui": "794229",
+            "name": "aspirin 81 MG Delayed Release Oral Tablet [Bayer Aspirin]",
+            "synonym": "Bayer Aspirin 81 MG Delayed Release Oral Tablet",
+            "tty": "SBD",
+            "language": "ENG",
+            "suppress": "N",
+            "umlscui": ""
+          }
+        },
+        "activeIngredients": [
+          {
+            "name": "aspirin",
+            "amount": "See package for details"
+          }
+        ],
+        "keywords": [
+          "Pain & Fever",
+          "Bayer",
+          "Low",
+          "Dose",
+          "Aspirin",
+          "81mg",
+          "Enteric",
+          "Coated",
+          "Tablets",
+          "32ct",
+          "aspirin"
+        ]
+      },
+      "differences": {
+        "activeIngredients": {
+          "added": [
+            "aspirin"
+          ],
+          "removed": [
+            "Active Ingredient"
+          ]
+        },
+        "keywords": {
+          "added": [
+            "aspirin"
+          ],
+          "removed": []
+        }
+      }
+    },
+    {
+      "productId": "67acda2e326ea7f99523f98d",
+      "name": "Coricidin HBP Chest Congestion & Cough Liquid Gels 20ct",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1d9",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Liquid",
+        "keywords": [
+          "Pain & Fever",
+          "Coricidin",
+          "HBP",
+          "Chest",
+          "Congestion",
+          "&",
+          "Cough",
+          "Liquid",
+          "Gels",
+          "20ct"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "1989286",
+          "ingredients": []
+        },
+        "keywords": [
+          "Pain & Fever",
+          "Coricidin",
+          "HBP",
+          "Chest",
+          "Congestion",
+          "&",
+          "Cough",
+          "Liquid",
+          "Gels",
+          "20ct"
+        ]
+      },
+      "differences": null
+    },
+    {
+      "productId": "67acda2e326ea7f99523f991",
+      "name": "AFRIN ORIGINAL SPRAY 30ML",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1db",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Spray",
+        "keywords": [
+          "Children's Medicine & Wellness",
+          "AFRIN",
+          "ORIGINAL",
+          "SPRAY",
+          "30ML"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "1000992",
+          "ingredients": [
+            {
+              "name": "oxymetazoline",
+              "rxcui": "7812"
+            }
+          ],
+          "details": {
+            "rxcui": "1000992",
+            "name": "oxymetazoline hydrochloride 0.5 MG/ML Nasal Spray [Afrin]",
+            "synonym": "Afrin 0.05 % Nasal Spray",
+            "tty": "SBD",
+            "language": "ENG",
+            "suppress": "N",
+            "umlscui": ""
+          }
+        },
+        "activeIngredients": [
+          {
+            "name": "oxymetazoline",
+            "amount": "See package for details"
+          }
+        ],
+        "keywords": [
+          "Children's Medicine & Wellness",
+          "AFRIN",
+          "ORIGINAL",
+          "SPRAY",
+          "30ML",
+          "oxymetazoline"
+        ]
+      },
+      "differences": {
+        "activeIngredients": {
+          "added": [
+            "oxymetazoline"
+          ],
+          "removed": [
+            "Active Ingredient"
+          ]
+        },
+        "keywords": {
+          "added": [
+            "oxymetazoline"
+          ],
+          "removed": []
+        }
+      }
+    },
+    {
+      "productId": "67acda2e326ea7f99523f990",
+      "name": "MUCINEX FAST-MAX NT SHFT CLD&FLU 6OZ",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1dd",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Other",
+        "keywords": [
+          "Pain & Fever",
+          "MUCINEX",
+          "FAST-MAX",
+          "NT",
+          "SHFT",
+          "CLD&FLU",
+          "6OZ"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "2058400",
+          "ingredients": []
+        },
+        "keywords": [
+          "Pain & Fever",
+          "MUCINEX",
+          "FAST-MAX",
+          "NT",
+          "SHFT",
+          "CLD&FLU",
+          "6OZ"
+        ]
+      },
+      "differences": null
+    },
+    {
+      "productId": "67acda2e326ea7f99523f995",
+      "name": "Children\\'s Tylenol Pain & Fever 160mg Acetaminophen Bubblegum Chewable Tablets 24ct",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1df",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Tablet",
+        "keywords": [
+          "Pain & Fever",
+          "Children\\'s",
+          "Tylenol",
+          "Pain",
+          "&",
+          "Fever",
+          "160mg",
+          "Acetaminophen",
+          "Bubblegum",
+          "Chewable",
+          "Tablets",
+          "24ct"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "828557",
+          "ingredients": [
+            {
+              "name": "acetaminophen",
+              "rxcui": "161"
+            }
+          ],
+          "details": {
+            "rxcui": "828557",
+            "name": "acetaminophen 160 MG Chewable Tablet [Tylenol]",
+            "synonym": "Tylenol 160 MG Chewable Tablet",
+            "tty": "SBD",
+            "language": "ENG",
+            "suppress": "N",
+            "umlscui": ""
+          }
+        },
+        "activeIngredients": [
+          {
+            "name": "acetaminophen",
+            "amount": "See package for details"
+          }
+        ],
+        "keywords": [
+          "Pain & Fever",
+          "Children\\'s",
+          "Tylenol",
+          "Pain",
+          "&",
+          "Fever",
+          "160mg",
+          "Acetaminophen",
+          "Bubblegum",
+          "Chewable",
+          "Tablets",
+          "24ct",
+          "acetaminophen"
+        ]
+      },
+      "differences": {
+        "activeIngredients": {
+          "added": [
+            "acetaminophen"
+          ],
+          "removed": [
+            "Active Ingredient"
+          ]
+        },
+        "keywords": {
+          "added": [
+            "acetaminophen"
+          ],
+          "removed": []
+        }
+      }
+    },
+    {
+      "productId": "67acda2e326ea7f99523f996",
+      "name": "Children\\'s Tylenol Cold & Cough Runny Nose Oral Suspension Grape 4oz",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1e1",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Other",
+        "keywords": [
+          "Pain & Fever",
+          "Children\\'s",
+          "Tylenol",
+          "Cold",
+          "&",
+          "Cough",
+          "Runny",
+          "Nose",
+          "Oral",
+          "Suspension",
+          "Grape",
+          "4oz"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "1989329",
+          "ingredients": []
+        },
+        "keywords": [
+          "Pain & Fever",
+          "Children\\'s",
+          "Tylenol",
+          "Cold",
+          "&",
+          "Cough",
+          "Runny",
+          "Nose",
+          "Oral",
+          "Suspension",
+          "Grape",
+          "4oz"
+        ]
+      },
+      "differences": null
+    },
+    {
+      "productId": "67acda2e326ea7f99523f993",
+      "name": "Dramamine All Day Less Drowsy Motion Sickness Relief 8ct",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1e3",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Other",
+        "keywords": [
+          "Children's Medicine & Wellness",
+          "Dramamine",
+          "All",
+          "Day",
+          "Less",
+          "Drowsy",
+          "Motion",
+          "Sickness",
+          "Relief",
+          "8ct"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "2468242",
+          "ingredients": []
+        },
+        "keywords": [
+          "Children's Medicine & Wellness",
+          "Dramamine",
+          "All",
+          "Day",
+          "Less",
+          "Drowsy",
+          "Motion",
+          "Sickness",
+          "Relief",
+          "8ct"
+        ]
+      },
+      "differences": null
+    },
+    {
+      "productId": "67acda2e326ea7f99523f994",
+      "name": "Coricidin HBP Chest Cold & Flu Tablets 10ct",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1e5",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Tablet",
+        "keywords": [
+          "Pain & Fever",
+          "Coricidin",
+          "HBP",
+          "Chest",
+          "Cold",
+          "&",
+          "Flu",
+          "Tablets",
+          "10ct"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "1112864",
+          "ingredients": [
+            {
+              "name": "acetaminophen",
+              "rxcui": "161"
+            },
+            {
+              "name": "chlorpheniramine",
+              "rxcui": "2400"
+            }
+          ],
+          "details": {
+            "rxcui": "1112864",
+            "name": "acetaminophen 325 MG / chlorpheniramine maleate 2 MG Oral Tablet",
+            "synonym": "APAP 325 MG / chlorpheniramine maleate 2 MG Oral Tablet",
+            "tty": "SCD",
+            "language": "ENG",
+            "suppress": "N",
+            "umlscui": ""
+          }
+        },
+        "activeIngredients": [
+          {
+            "name": "acetaminophen",
+            "amount": "See package for details"
+          },
+          {
+            "name": "chlorpheniramine",
+            "amount": "See package for details"
+          }
+        ],
+        "keywords": [
+          "Pain & Fever",
+          "Coricidin",
+          "HBP",
+          "Chest",
+          "Cold",
+          "&",
+          "Flu",
+          "Tablets",
+          "10ct",
+          "acetaminophen",
+          "chlorpheniramine"
+        ]
+      },
+      "differences": {
+        "activeIngredients": {
+          "added": [
+            "acetaminophen",
+            "chlorpheniramine"
+          ],
+          "removed": [
+            "Active Ingredient"
+          ]
+        },
+        "keywords": {
+          "added": [
+            "acetaminophen",
+            "chlorpheniramine"
+          ],
+          "removed": []
+        }
+      }
+    },
+    {
+      "productId": "67acda2e326ea7f99523f9a3",
+      "name": "Pepto Bismol Kids Gummies 24ct",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1e7",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Gummies",
+        "keywords": [
+          "Digestive Health",
+          "Pepto",
+          "Bismol",
+          "Kids",
+          "Gummies",
+          "24ct"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "54536",
+          "name": "Pepto-bismol",
+          "ingredients": [
+            {
+              "name": "bismuth subsalicylate",
+              "rxcui": "19478"
+            }
+          ],
+          "details": {
+            "rxcui": "54536",
+            "name": "Pepto-bismol",
+            "synonym": "",
+            "tty": "BN",
+            "language": "ENG",
+            "suppress": "N",
+            "umlscui": ""
+          }
+        },
+        "activeIngredients": [
+          {
+            "name": "bismuth subsalicylate",
+            "amount": "See package for details"
+          }
+        ],
+        "keywords": [
+          "Digestive Health",
+          "Pepto",
+          "Bismol",
+          "Kids",
+          "Gummies",
+          "24ct",
+          "Pepto-bismol",
+          "bismuth",
+          "subsalicylate"
+        ]
+      },
+      "differences": {
+        "activeIngredients": {
+          "added": [
+            "bismuth subsalicylate"
+          ],
+          "removed": [
+            "Active Ingredient"
+          ]
+        },
+        "keywords": {
+          "added": [
+            "Pepto-bismol",
+            "bismuth",
+            "subsalicylate"
+          ],
+          "removed": []
+        }
+      }
+    },
+    {
+      "productId": "67acda2e326ea7f99523f9a2",
+      "name": "Voltaren Topical Gel 1% 50g",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1e9",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Gel",
+        "keywords": [
+          "Pain & Fever",
+          "Voltaren",
+          "Topical",
+          "Gel",
+          "1%",
+          "50g"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "855635",
+          "ingredients": [
+            {
+              "name": "diclofenac",
+              "rxcui": "3355"
+            }
+          ],
+          "details": {
+            "rxcui": "855635",
+            "name": "diclofenac sodium 0.01 MG/MG Topical Gel [Voltaren]",
+            "synonym": "Voltaren 1 % Topical Gel",
+            "tty": "SBD",
+            "language": "ENG",
+            "suppress": "N",
+            "umlscui": ""
+          }
+        },
+        "activeIngredients": [
+          {
+            "name": "diclofenac",
+            "amount": "See package for details"
+          }
+        ],
+        "keywords": [
+          "Pain & Fever",
+          "Voltaren",
+          "Topical",
+          "Gel",
+          "1%",
+          "50g",
+          "diclofenac"
+        ]
+      },
+      "differences": {
+        "activeIngredients": {
+          "added": [
+            "diclofenac"
+          ],
+          "removed": [
+            "Active Ingredient"
+          ]
+        },
+        "keywords": {
+          "added": [
+            "diclofenac"
+          ],
+          "removed": []
+        }
+      }
+    },
+    {
+      "productId": "67acda2e326ea7f99523f9a5",
+      "name": "Xyzal 24HR Allergy 5mg Tablet 10ct",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1eb",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Tablet",
+        "keywords": [
+          "Allergy Care",
+          "Xyzal",
+          "24HR",
+          "Allergy",
+          "5mg",
+          "Tablet",
+          "10ct"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "855174",
+          "name": "LEVOCETIRIZINE DIHYDROCHLORIDE 5 mg ORAL TABLET [Xyzal Allergy 24HR]",
+          "ingredients": [
+            {
+              "name": "levocetirizine",
+              "rxcui": "356887"
+            }
+          ],
+          "details": {
+            "rxcui": "855174",
+            "name": "levocetirizine dihydrochloride 5 MG Oral Tablet [Xyzal]",
+            "synonym": "Xyzal 5 MG 24 HR Oral Tablet",
+            "tty": "SBD",
+            "language": "ENG",
+            "suppress": "N",
+            "umlscui": ""
+          }
+        },
+        "activeIngredients": [
+          {
+            "name": "levocetirizine",
+            "amount": "See package for details"
+          }
+        ],
+        "keywords": [
+          "Allergy Care",
+          "Xyzal",
+          "24HR",
+          "Allergy",
+          "5mg",
+          "Tablet",
+          "10ct",
+          "LEVOCETIRIZINE",
+          "DIHYDROCHLORIDE",
+          "5",
+          "mg",
+          "ORAL",
+          "TABLET",
+          "[Xyzal",
+          "24HR]",
+          "levocetirizine"
+        ]
+      },
+      "differences": {
+        "activeIngredients": {
+          "added": [
+            "levocetirizine"
+          ],
+          "removed": [
+            "Active Ingredient"
+          ]
+        },
+        "keywords": {
+          "added": [
+            "LEVOCETIRIZINE",
+            "DIHYDROCHLORIDE",
+            "5",
+            "mg",
+            "ORAL",
+            "TABLET",
+            "[Xyzal",
+            "24HR]",
+            "levocetirizine"
+          ],
+          "removed": []
+        }
+      }
+    },
+    {
+      "productId": "67acda2e326ea7f99523f9a4",
+      "name": "PEPCID MAX TABLET ORIGINAL 8CT",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1ed",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Tablet",
+        "keywords": [
+          "Digestive Health",
+          "PEPCID",
+          "MAX",
+          "TABLET",
+          "ORIGINAL",
+          "8CT"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "212072",
+          "name": "Pepcid AC Original 10 MG Oral Tablet",
+          "ingredients": [
+            {
+              "name": "famotidine",
+              "rxcui": "4278"
+            }
+          ],
+          "details": {
+            "rxcui": "212072",
+            "name": "famotidine 10 MG Oral Tablet [Pepcid]",
+            "synonym": "Pepcid 10 MG Oral Tablet",
+            "tty": "SBD",
+            "language": "ENG",
+            "suppress": "N",
+            "umlscui": ""
+          }
+        },
+        "activeIngredients": [
+          {
+            "name": "famotidine",
+            "amount": "See package for details"
+          }
+        ],
+        "keywords": [
+          "Digestive Health",
+          "PEPCID",
+          "MAX",
+          "TABLET",
+          "ORIGINAL",
+          "8CT",
+          "Pepcid",
+          "AC",
+          "Original",
+          "10",
+          "MG",
+          "Oral",
+          "Tablet",
+          "famotidine"
+        ]
+      },
+      "differences": {
+        "activeIngredients": {
+          "added": [
+            "famotidine"
+          ],
+          "removed": [
+            "Active Ingredient"
+          ]
+        },
+        "keywords": {
+          "added": [
+            "Pepcid",
+            "AC",
+            "Original",
+            "10",
+            "MG",
+            "Oral",
+            "Tablet",
+            "famotidine"
+          ],
+          "removed": []
+        }
+      }
+    },
+    {
+      "productId": "67acda2e326ea7f99523f9a1",
+      "name": "Pepto Bismol Maximum Strength Liquid 8oz",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1ef",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Liquid",
+        "keywords": [
+          "Digestive Health",
+          "Pepto",
+          "Bismol",
+          "Maximum",
+          "Strength",
+          "Liquid",
+          "8oz"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "219156",
+          "ingredients": []
+        },
+        "keywords": [
+          "Digestive Health",
+          "Pepto",
+          "Bismol",
+          "Maximum",
+          "Strength",
+          "Liquid",
+          "8oz"
+        ]
+      },
+      "differences": null
+    },
+    {
+      "productId": "67acda2e326ea7f99523f9a6",
+      "name": "Bengay Ultra Strength Cream 2oz",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1f1",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Cream",
+        "keywords": [
+          "Pain & Fever",
+          "Bengay",
+          "Ultra",
+          "Strength",
+          "Cream",
+          "2oz"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "1923293",
+          "ingredients": []
+        },
+        "keywords": [
+          "Pain & Fever",
+          "Bengay",
+          "Ultra",
+          "Strength",
+          "Cream",
+          "2oz"
+        ]
+      },
+      "differences": null
+    },
+    {
+      "productId": "67acda2e326ea7f99523f9a7",
+      "name": "Cepacol Extra Strength Sore Throat Honey Lemon Lozenges 16ct",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1f3",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Other",
+        "keywords": [
+          "Children's Medicine & Wellness",
+          "Cepacol",
+          "Extra",
+          "Strength",
+          "Sore",
+          "Throat",
+          "Honey",
+          "Lemon",
+          "Lozenges",
+          "16ct"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "1494658",
+          "ingredients": []
+        },
+        "keywords": [
+          "Children's Medicine & Wellness",
+          "Cepacol",
+          "Extra",
+          "Strength",
+          "Sore",
+          "Throat",
+          "Honey",
+          "Lemon",
+          "Lozenges",
+          "16ct"
+        ]
+      },
+      "differences": null
+    },
+    {
+      "productId": "67acda2e326ea7f99523f9a8",
+      "name": "Prilosec OTC Heartburn Relief and Acid Reducer Tablets 14ct",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1f5",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Tablet",
+        "keywords": [
+          "Digestive Health",
+          "Prilosec",
+          "OTC",
+          "Heartburn",
+          "Relief",
+          "and",
+          "Acid",
+          "Reducer",
+          "Tablets",
+          "14ct"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "1538289",
+          "name": "Fast Heartburn Relief OTC",
+          "ingredients": []
+        },
+        "keywords": [
+          "Digestive Health",
+          "Prilosec",
+          "OTC",
+          "Heartburn",
+          "Relief",
+          "and",
+          "Acid",
+          "Reducer",
+          "Tablets",
+          "14ct",
+          "Fast"
+        ]
+      },
+      "differences": {
+        "keywords": {
+          "added": [
+            "Fast"
+          ],
+          "removed": []
+        }
+      }
+    },
+    {
+      "productId": "67acda2e326ea7f99523f9a9",
+      "name": "Unisom SleepTabs Doxylamine Succinate Tablets 16ct",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1f7",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Tablet",
+        "keywords": [
+          "Sleep Aids",
+          "Unisom",
+          "SleepTabs",
+          "Doxylamine",
+          "Succinate",
+          "Tablets",
+          "16ct"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "1101448",
+          "ingredients": [
+            {
+              "name": "doxylamine",
+              "rxcui": "3642"
+            }
+          ],
+          "details": {
+            "rxcui": "1101448",
+            "name": "doxylamine succinate 25 MG Oral Tablet [Unisom]",
+            "synonym": "Unisom 25 MG Oral Tablet",
+            "tty": "SBD",
+            "language": "ENG",
+            "suppress": "N",
+            "umlscui": ""
+          }
+        },
+        "activeIngredients": [
+          {
+            "name": "doxylamine",
+            "amount": "See package for details"
+          }
+        ],
+        "keywords": [
+          "Sleep Aids",
+          "Unisom",
+          "SleepTabs",
+          "Doxylamine",
+          "Succinate",
+          "Tablets",
+          "16ct",
+          "doxylamine"
+        ]
+      },
+      "differences": {
+        "activeIngredients": {
+          "added": [
+            "doxylamine"
+          ],
+          "removed": [
+            "Active Ingredient"
+          ]
+        },
+        "keywords": {
+          "added": [
+            "doxylamine"
+          ],
+          "removed": []
+        }
+      }
+    },
+    {
+      "productId": "67acda2e326ea7f99523f9aa",
+      "name": "Benadryl Allergy Dye-Free Liquigels 24ct",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1f9",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Gel",
+        "keywords": [
+          "Allergy Care",
+          "Benadryl",
+          "Allergy",
+          "Dye-Free",
+          "Liquigels",
+          "24ct"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "215623",
+          "ingredients": []
+        },
+        "keywords": [
+          "Allergy Care",
+          "Benadryl",
+          "Allergy",
+          "Dye-Free",
+          "Liquigels",
+          "24ct"
+        ]
+      },
+      "differences": null
+    },
+    {
+      "productId": "67acda2e326ea7f99523f9b5",
+      "name": "Children\\'s Mucinex Stuffy Nose Chest Congestion Very Berry Flavor 4oz",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1fb",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Other",
+        "keywords": [
+          "Pain & Fever",
+          "Children\\'s",
+          "Mucinex",
+          "Stuffy",
+          "Nose",
+          "Chest",
+          "Congestion",
+          "Very",
+          "Berry",
+          "Flavor",
+          "4oz"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "2276865",
+          "ingredients": []
+        },
+        "keywords": [
+          "Pain & Fever",
+          "Children\\'s",
+          "Mucinex",
+          "Stuffy",
+          "Nose",
+          "Chest",
+          "Congestion",
+          "Very",
+          "Berry",
+          "Flavor",
+          "4oz"
+        ]
+      },
+      "differences": null
+    },
+    {
+      "productId": "67acda2e326ea7f99523f9b7",
+      "name": "Nature Made Multi Complete w/Iron Tablets 130ct",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1fd",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Tablet",
+        "keywords": [
+          "Vitamins & Supplements",
+          "Nature",
+          "Made",
+          "Multi",
+          "Complete",
+          "w/Iron",
+          "Tablets",
+          "130ct"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "2681549",
+          "ingredients": []
+        },
+        "keywords": [
+          "Vitamins & Supplements",
+          "Nature",
+          "Made",
+          "Multi",
+          "Complete",
+          "w/Iron",
+          "Tablets",
+          "130ct"
+        ]
+      },
+      "differences": null
+    },
+    {
+      "productId": "67acda2e326ea7f99523f9b6",
+      "name": "Vicks Vaporub Cough Suppressant Topical Ointment 50g",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce1ff",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Other",
+        "keywords": [
+          "Children's Medicine & Wellness",
+          "Vicks",
+          "Vaporub",
+          "Cough",
+          "Suppressant",
+          "Topical",
+          "Ointment",
+          "50g"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "727137",
+          "ingredients": [
+            {
+              "name": "camphor",
+              "rxcui": "1952"
+            },
+            {
+              "name": "Eucalyptus oil",
+              "rxcui": "59087"
+            },
+            {
+              "name": "menthol",
+              "rxcui": "6750"
+            }
+          ],
+          "details": {
+            "rxcui": "727137",
+            "name": "camphor 0.048 MG/MG / Eucalyptus oil 0.012 MG/MG / menthol 0.026 MG/MG Topical Ointment",
+            "synonym": "camphor 4.8 % / eucalyptus oil 1.2 % / menthol 2.6 % Chest Rub",
+            "tty": "SCD",
+            "language": "ENG",
+            "suppress": "N",
+            "umlscui": ""
+          }
+        },
+        "activeIngredients": [
+          {
+            "name": "camphor",
+            "amount": "See package for details"
+          },
+          {
+            "name": "Eucalyptus oil",
+            "amount": "See package for details"
+          },
+          {
+            "name": "menthol",
+            "amount": "See package for details"
+          }
+        ],
+        "keywords": [
+          "Children's Medicine & Wellness",
+          "Vicks",
+          "Vaporub",
+          "Cough",
+          "Suppressant",
+          "Topical",
+          "Ointment",
+          "50g",
+          "camphor",
+          "Eucalyptus",
+          "oil",
+          "menthol"
+        ]
+      },
+      "differences": {
+        "activeIngredients": {
+          "added": [
+            "camphor",
+            "Eucalyptus oil",
+            "menthol"
+          ],
+          "removed": [
+            "Active Ingredient"
+          ]
+        },
+        "keywords": {
+          "added": [
+            "camphor",
+            "Eucalyptus",
+            "oil",
+            "menthol"
+          ],
+          "removed": []
+        }
+      }
+    },
+    {
+      "productId": "67acda2e326ea7f99523f9b9",
+      "name": "MegaRed Omega-3 350mg Krill Oil Softgels 60ct",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce201",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Capsule",
+        "keywords": [
+          "Vitamins & Supplements",
+          "MegaRed",
+          "Omega-3",
+          "350mg",
+          "Krill",
+          "Oil",
+          "Softgels",
+          "60ct"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "2535988",
+          "ingredients": []
+        },
+        "keywords": [
+          "Vitamins & Supplements",
+          "MegaRed",
+          "Omega-3",
+          "350mg",
+          "Krill",
+          "Oil",
+          "Softgels",
+          "60ct"
+        ]
+      },
+      "differences": null
+    },
+    {
+      "productId": "67acda2e326ea7f99523f9b8",
+      "name": "Zicam Cold Remedy Rapidmelt Cherry Flavor Tablets 25ct",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce203",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Tablet",
+        "keywords": [
+          "Children's Medicine & Wellness",
+          "Zicam",
+          "Cold",
+          "Remedy",
+          "Rapidmelt",
+          "Cherry",
+          "Flavor",
+          "Tablets",
+          "25ct"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "1238053",
+          "ingredients": []
+        },
+        "keywords": [
+          "Children's Medicine & Wellness",
+          "Zicam",
+          "Cold",
+          "Remedy",
+          "Rapidmelt",
+          "Cherry",
+          "Flavor",
+          "Tablets",
+          "25ct"
+        ]
+      },
+      "differences": null
+    },
+    {
+      "productId": "67acda2e326ea7f99523f9ba",
+      "name": "Move Free Advanced Plus Joint Health with MSM Tablets 120ct",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce205",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Tablet",
+        "keywords": [
+          "Digestive Health",
+          "Move",
+          "Free",
+          "Advanced",
+          "Plus",
+          "Joint",
+          "Health",
+          "with",
+          "MSM",
+          "Tablets",
+          "120ct"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "2684148",
+          "ingredients": []
+        },
+        "keywords": [
+          "Digestive Health",
+          "Move",
+          "Free",
+          "Advanced",
+          "Plus",
+          "Joint",
+          "Health",
+          "with",
+          "MSM",
+          "Tablets",
+          "120ct"
+        ]
+      },
+      "differences": null
+    },
+    {
+      "productId": "67acda2e326ea7f99523f9bc",
+      "name": "Vicks DayQuil Cold & flu Multi-Symptom Relief, 24 CT",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce207",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Other",
+        "keywords": [
+          "Pain & Fever",
+          "Vicks",
+          "DayQuil",
+          "Cold",
+          "&",
+          "flu",
+          "Multi-Symptom",
+          "Relief,",
+          "24",
+          "CT"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "1086997",
+          "ingredients": [
+            {
+              "name": "acetaminophen",
+              "rxcui": "161"
+            },
+            {
+              "name": "dextromethorphan",
+              "rxcui": "3289"
+            },
+            {
+              "name": "phenylephrine",
+              "rxcui": "8163"
+            }
+          ],
+          "details": {
+            "rxcui": "1086997",
+            "name": "acetaminophen 325 MG / dextromethorphan hydrobromide 10 MG / phenylephrine hydrochloride 5 MG Oral Capsule",
+            "synonym": "APAP 325 MG / dextromethorphan hydrobromide 10 MG / phenylephrine hydrochloride 5 MG Oral Capsule",
+            "tty": "SCD",
+            "language": "ENG",
+            "suppress": "N",
+            "umlscui": ""
+          }
+        },
+        "activeIngredients": [
+          {
+            "name": "acetaminophen",
+            "amount": "See package for details"
+          },
+          {
+            "name": "dextromethorphan",
+            "amount": "See package for details"
+          },
+          {
+            "name": "phenylephrine",
+            "amount": "See package for details"
+          }
+        ],
+        "keywords": [
+          "Pain & Fever",
+          "Vicks",
+          "DayQuil",
+          "Cold",
+          "&",
+          "flu",
+          "Multi-Symptom",
+          "Relief,",
+          "24",
+          "CT",
+          "acetaminophen",
+          "dextromethorphan",
+          "phenylephrine"
+        ]
+      },
+      "differences": {
+        "activeIngredients": {
+          "added": [
+            "acetaminophen",
+            "dextromethorphan",
+            "phenylephrine"
+          ],
+          "removed": [
+            "Active Ingredient"
+          ]
+        },
+        "keywords": {
+          "added": [
+            "acetaminophen",
+            "dextromethorphan",
+            "phenylephrine"
+          ],
+          "removed": []
+        }
+      }
+    },
+    {
+      "productId": "67acda2e326ea7f99523f9bb",
+      "name": "Sudafed PE Pressure & Pain Max Strength Caplets 24ct",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce209",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Caplet",
+        "keywords": [
+          "Pain & Fever",
+          "Sudafed",
+          "PE",
+          "Pressure",
+          "&",
+          "Pain",
+          "Max",
+          "Strength",
+          "Caplets",
+          "24ct"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "1098435",
+          "ingredients": [
+            {
+              "name": "acetaminophen",
+              "rxcui": "161"
+            },
+            {
+              "name": "dextromethorphan",
+              "rxcui": "3289"
+            },
+            {
+              "name": "guaifenesin",
+              "rxcui": "5032"
+            },
+            {
+              "name": "phenylephrine",
+              "rxcui": "8163"
+            }
+          ],
+          "details": {
+            "rxcui": "1098435",
+            "name": "acetaminophen 325 MG / dextromethorphan hydrobromide 10 MG / guaifenesin 100 MG / phenylephrine hydrochloride 5 MG Oral Tablet",
+            "synonym": "APAP 325 MG / Dextromethorphan Hydrobromide 10 MG / Guaifenesin 100 MG / Phenylephrine Hydrochloride 5 MG Oral Tablet",
+            "tty": "SCD",
+            "language": "ENG",
+            "suppress": "N",
+            "umlscui": ""
+          }
+        },
+        "activeIngredients": [
+          {
+            "name": "acetaminophen",
+            "amount": "See package for details"
+          },
+          {
+            "name": "dextromethorphan",
+            "amount": "See package for details"
+          },
+          {
+            "name": "guaifenesin",
+            "amount": "See package for details"
+          },
+          {
+            "name": "phenylephrine",
+            "amount": "See package for details"
+          }
+        ],
+        "keywords": [
+          "Pain & Fever",
+          "Sudafed",
+          "PE",
+          "Pressure",
+          "&",
+          "Pain",
+          "Max",
+          "Strength",
+          "Caplets",
+          "24ct",
+          "acetaminophen",
+          "dextromethorphan",
+          "guaifenesin",
+          "phenylephrine"
+        ]
+      },
+      "differences": {
+        "activeIngredients": {
+          "added": [
+            "acetaminophen",
+            "dextromethorphan",
+            "guaifenesin",
+            "phenylephrine"
+          ],
+          "removed": [
+            "Active Ingredient"
+          ]
+        },
+        "keywords": {
+          "added": [
+            "acetaminophen",
+            "dextromethorphan",
+            "guaifenesin",
+            "phenylephrine"
+          ],
+          "removed": []
+        }
+      }
+    },
+    {
+      "productId": "67acda2e326ea7f99523f9bd",
+      "name": "HALLS RELIEF HONEY LEMON COUGH DROPS",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce20b",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Drops",
+        "keywords": [
+          "Pain & Fever",
+          "HALLS",
+          "RELIEF",
+          "HONEY",
+          "LEMON",
+          "COUGH",
+          "DROPS"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "2634142",
+          "ingredients": []
+        },
+        "keywords": [
+          "Pain & Fever",
+          "HALLS",
+          "RELIEF",
+          "HONEY",
+          "LEMON",
+          "COUGH",
+          "DROPS"
+        ]
+      },
+      "differences": null
+    },
+    {
+      "productId": "67acda2e326ea7f99523f9be",
+      "name": "Zyrtec 24-Hour Allergy Relief",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce20d",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Other",
+        "keywords": [
+          "Allergy Care",
+          "Zyrtec",
+          "24-Hour",
+          "Allergy",
+          "Relief"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "2607206",
+          "ingredients": []
+        },
+        "keywords": [
+          "Allergy Care",
+          "Zyrtec",
+          "24-Hour",
+          "Allergy",
+          "Relief"
+        ]
+      },
+      "differences": null
+    },
+    {
+      "productId": "67acda2e326ea7f99523f9ca",
+      "name": "Tums Chewy Bites Extra Strength Assorted Berry Tablets 32ct",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce20f",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Tablet",
+        "keywords": [
+          "Digestive Health",
+          "Tums",
+          "Chewy",
+          "Bites",
+          "Extra",
+          "Strength",
+          "Assorted",
+          "Berry",
+          "Tablets",
+          "32ct"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "1044532",
+          "ingredients": [
+            {
+              "name": "calcium carbonate",
+              "rxcui": "1897"
+            }
+          ],
+          "details": {
+            "rxcui": "1044532",
+            "name": "calcium carbonate 750 MG Chewable Tablet [Tums]",
+            "synonym": "Tums Kids 750 MG Chewable Tablet",
+            "tty": "SBD",
+            "language": "ENG",
+            "suppress": "N",
+            "umlscui": ""
+          }
+        },
+        "activeIngredients": [
+          {
+            "name": "calcium carbonate",
+            "amount": "See package for details"
+          }
+        ],
+        "keywords": [
+          "Digestive Health",
+          "Tums",
+          "Chewy",
+          "Bites",
+          "Extra",
+          "Strength",
+          "Assorted",
+          "Berry",
+          "Tablets",
+          "32ct",
+          "calcium",
+          "carbonate"
+        ]
+      },
+      "differences": {
+        "activeIngredients": {
+          "added": [
+            "calcium carbonate"
+          ],
+          "removed": [
+            "Active Ingredient"
+          ]
+        },
+        "keywords": {
+          "added": [
+            "calcium",
+            "carbonate"
+          ],
+          "removed": []
+        }
+      }
+    },
+    {
+      "productId": "67acda2e326ea7f99523f9d1",
+      "name": "Claritin 24HR 10mg Tablets 30ct",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce211",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Tablet",
+        "keywords": [
+          "Allergy Care",
+          "Claritin",
+          "24HR",
+          "10mg",
+          "Tablets",
+          "30ct"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "206805",
+          "ingredients": [
+            {
+              "name": "loratadine",
+              "rxcui": "28889"
+            }
+          ],
+          "details": {
+            "rxcui": "206805",
+            "name": "loratadine 10 MG Oral Tablet [Claritin]",
+            "synonym": "Claritin 10 MG Oral Tablet",
+            "tty": "SBD",
+            "language": "ENG",
+            "suppress": "N",
+            "umlscui": ""
+          }
+        },
+        "activeIngredients": [
+          {
+            "name": "loratadine",
+            "amount": "See package for details"
+          }
+        ],
+        "keywords": [
+          "Allergy Care",
+          "Claritin",
+          "24HR",
+          "10mg",
+          "Tablets",
+          "30ct",
+          "loratadine"
+        ]
+      },
+      "differences": {
+        "activeIngredients": {
+          "added": [
+            "loratadine"
+          ],
+          "removed": [
+            "Active Ingredient"
+          ]
+        },
+        "keywords": {
+          "added": [
+            "loratadine"
+          ],
+          "removed": []
+        }
+      }
+    },
+    {
+      "productId": "67acda2e326ea7f99523f9c9",
+      "name": "Imodium Anti-Diarrheal Multi-Symptom Relief Caplets 18ct",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce213",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Caplet",
+        "keywords": [
+          "Digestive Health",
+          "Imodium",
+          "Anti-Diarrheal",
+          "Multi-Symptom",
+          "Relief",
+          "Caplets",
+          "18ct"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "1426822",
+          "ingredients": [
+            {
+              "name": "loperamide",
+              "rxcui": "6468"
+            },
+            {
+              "name": "simethicone",
+              "rxcui": "9796"
+            }
+          ],
+          "details": {
+            "rxcui": "1426822",
+            "name": "Imodium Multi-Symptom Relief",
+            "synonym": "",
+            "tty": "BN",
+            "language": "ENG",
+            "suppress": "N",
+            "umlscui": ""
+          }
+        },
+        "activeIngredients": [
+          {
+            "name": "loperamide",
+            "amount": "See package for details"
+          },
+          {
+            "name": "simethicone",
+            "amount": "See package for details"
+          }
+        ],
+        "keywords": [
+          "Digestive Health",
+          "Imodium",
+          "Anti-Diarrheal",
+          "Multi-Symptom",
+          "Relief",
+          "Caplets",
+          "18ct",
+          "loperamide",
+          "simethicone"
+        ]
+      },
+      "differences": {
+        "activeIngredients": {
+          "added": [
+            "loperamide",
+            "simethicone"
+          ],
+          "removed": [
+            "Active Ingredient"
+          ]
+        },
+        "keywords": {
+          "added": [
+            "loperamide",
+            "simethicone"
+          ],
+          "removed": []
+        }
+      }
+    },
+    {
+      "productId": "67acda2e326ea7f99523f9d2",
+      "name": "Tylenol Extra Strength 500mg Caplets 24ct",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce215",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Caplet",
+        "keywords": [
+          "Children's Medicine & Wellness",
+          "Tylenol",
+          "Extra",
+          "Strength",
+          "500mg",
+          "Caplets",
+          "24ct"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "209459",
+          "ingredients": [
+            {
+              "name": "acetaminophen",
+              "rxcui": "161"
+            }
+          ],
+          "details": {
+            "rxcui": "209459",
+            "name": "acetaminophen 500 MG Oral Tablet [Tylenol]",
+            "synonym": "Tylenol 500 MG Oral Tablet",
+            "tty": "SBD",
+            "language": "ENG",
+            "suppress": "N",
+            "umlscui": ""
+          }
+        },
+        "activeIngredients": [
+          {
+            "name": "acetaminophen",
+            "amount": "See package for details"
+          }
+        ],
+        "keywords": [
+          "Children's Medicine & Wellness",
+          "Tylenol",
+          "Extra",
+          "Strength",
+          "500mg",
+          "Caplets",
+          "24ct",
+          "acetaminophen"
+        ]
+      },
+      "differences": {
+        "activeIngredients": {
+          "added": [
+            "acetaminophen"
+          ],
+          "removed": [
+            "Active Ingredient"
+          ]
+        },
+        "keywords": {
+          "added": [
+            "acetaminophen"
+          ],
+          "removed": []
+        }
+      }
+    },
+    {
+      "productId": "67acda2e326ea7f99523f9cb",
+      "name": "Theraflu Flu Relief Max Strength Daytime Packets 6ct",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce217",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Other",
+        "keywords": [
+          "Children's Medicine & Wellness",
+          "Theraflu",
+          "Flu",
+          "Relief",
+          "Max",
+          "Strength",
+          "Daytime",
+          "Packets",
+          "6ct"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "2623412",
+          "ingredients": []
+        },
+        "keywords": [
+          "Children's Medicine & Wellness",
+          "Theraflu",
+          "Flu",
+          "Relief",
+          "Max",
+          "Strength",
+          "Daytime",
+          "Packets",
+          "6ct"
+        ]
+      },
+      "differences": null
+    },
+    {
+      "productId": "67acda2e326ea7f99523f9cc",
+      "name": "Aleve Naproxen Sodium Tablets 220mg Pain Reliever/Fever Reducer Caplets 90ct",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce219",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Tablet",
+        "keywords": [
+          "Pain & Fever",
+          "Aleve",
+          "Naproxen",
+          "Sodium",
+          "Tablets",
+          "220mg",
+          "Pain",
+          "Reliever/Fever",
+          "Reducer",
+          "Caplets",
+          "90ct"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "849574",
+          "name": "NAPROXEN SODIUM 220 mg ORAL TABLET [Flanax Pain Reliever/Fever Reducer]",
+          "ingredients": [
+            {
+              "name": "naproxen",
+              "rxcui": "7258"
+            }
+          ],
+          "details": {
+            "rxcui": "849574",
+            "name": "naproxen sodium 220 MG Oral Tablet",
+            "synonym": "naproxen sodium 220 MG (as naproxen 200 MG) Oral Tablet",
+            "tty": "SCD",
+            "language": "ENG",
+            "suppress": "N",
+            "umlscui": ""
+          }
+        },
+        "activeIngredients": [
+          {
+            "name": "naproxen",
+            "amount": "See package for details"
+          }
+        ],
+        "keywords": [
+          "Pain & Fever",
+          "Aleve",
+          "Naproxen",
+          "Sodium",
+          "Tablets",
+          "220mg",
+          "Pain",
+          "Reliever/Fever",
+          "Reducer",
+          "Caplets",
+          "90ct",
+          "NAPROXEN",
+          "SODIUM",
+          "220",
+          "mg",
+          "ORAL",
+          "TABLET",
+          "[Flanax",
+          "Reducer]",
+          "naproxen"
+        ]
+      },
+      "differences": {
+        "activeIngredients": {
+          "added": [
+            "naproxen"
+          ],
+          "removed": [
+            "Active Ingredient"
+          ]
+        },
+        "keywords": {
+          "added": [
+            "NAPROXEN",
+            "SODIUM",
+            "220",
+            "mg",
+            "ORAL",
+            "TABLET",
+            "[Flanax",
+            "Reducer]",
+            "naproxen"
+          ],
+          "removed": []
+        }
+      }
+    },
+    {
+      "productId": "67acda2e326ea7f99523f9cd",
+      "name": "Advil Ibuprofen Pain Reliever/Fever Reducer Liqui-Gels 160ct",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce21b",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Gel",
+        "keywords": [
+          "Pain & Fever",
+          "Advil",
+          "Ibuprofen",
+          "Pain",
+          "Reliever/Fever",
+          "Reducer",
+          "Liqui-Gels",
+          "160ct"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "2388167",
+          "ingredients": []
+        },
+        "keywords": [
+          "Pain & Fever",
+          "Advil",
+          "Ibuprofen",
+          "Pain",
+          "Reliever/Fever",
+          "Reducer",
+          "Liqui-Gels",
+          "160ct"
+        ]
+      },
+      "differences": null
+    },
+    {
+      "productId": "67acda2e326ea7f99523f9cf",
+      "name": "Pepto Bismol 5 Symptoms Digestive Relief Liquid, Original, 16 Ounces",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce21d",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Liquid",
+        "keywords": [
+          "Digestive Health",
+          "Pepto",
+          "Bismol",
+          "5",
+          "Symptoms",
+          "Digestive",
+          "Relief",
+          "Liquid,",
+          "Original,",
+          "16",
+          "Ounces"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "54536",
+          "name": "Pepto-bismol",
+          "ingredients": [
+            {
+              "name": "bismuth subsalicylate",
+              "rxcui": "19478"
+            }
+          ],
+          "details": {
+            "rxcui": "54536",
+            "name": "Pepto-bismol",
+            "synonym": "",
+            "tty": "BN",
+            "language": "ENG",
+            "suppress": "N",
+            "umlscui": ""
+          }
+        },
+        "activeIngredients": [
+          {
+            "name": "bismuth subsalicylate",
+            "amount": "See package for details"
+          }
+        ],
+        "keywords": [
+          "Digestive Health",
+          "Pepto",
+          "Bismol",
+          "5",
+          "Symptoms",
+          "Digestive",
+          "Relief",
+          "Liquid,",
+          "Original,",
+          "16",
+          "Ounces",
+          "Pepto-bismol",
+          "bismuth",
+          "subsalicylate"
+        ]
+      },
+      "differences": {
+        "activeIngredients": {
+          "added": [
+            "bismuth subsalicylate"
+          ],
+          "removed": [
+            "Active Ingredient"
+          ]
+        },
+        "keywords": {
+          "added": [
+            "Pepto-bismol",
+            "bismuth",
+            "subsalicylate"
+          ],
+          "removed": []
+        }
+      }
+    },
+    {
+      "productId": "67acda2e326ea7f99523f9d0",
+      "name": "Nature Made Vitamin C 500mg Liquigel 60ct",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce21f",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Gel",
+        "keywords": [
+          "Vitamins & Supplements",
+          "Nature",
+          "Made",
+          "Vitamin",
+          "C",
+          "500mg",
+          "Liquigel",
+          "60ct"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "282402",
+          "ingredients": [
+            {
+              "name": "ascorbic acid",
+              "rxcui": "1151"
+            }
+          ],
+          "details": {
+            "rxcui": "282402",
+            "name": "ascorbic acid 500 MG Oral Tablet",
+            "synonym": "vit-C 500 MG Oral Tablet",
+            "tty": "SCD",
+            "language": "ENG",
+            "suppress": "N",
+            "umlscui": ""
+          }
+        },
+        "activeIngredients": [
+          {
+            "name": "ascorbic acid",
+            "amount": "See package for details"
+          }
+        ],
+        "keywords": [
+          "Vitamins & Supplements",
+          "Nature",
+          "Made",
+          "Vitamin",
+          "C",
+          "500mg",
+          "Liquigel",
+          "60ct",
+          "ascorbic",
+          "acid"
+        ]
+      },
+      "differences": {
+        "activeIngredients": {
+          "added": [
+            "ascorbic acid"
+          ],
+          "removed": [
+            "Active Ingredient"
+          ]
+        },
+        "keywords": {
+          "added": [
+            "ascorbic",
+            "acid"
+          ],
+          "removed": []
+        }
+      }
+    },
+    {
+      "productId": "67acda2e326ea7f99523f9ce",
+      "name": "Band-Aid Brand Flexible Fabric Adhesive Bandages, 30 Count",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce221",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Other",
+        "keywords": [
+          "First Aid",
+          "Band-Aid",
+          "Brand",
+          "Flexible",
+          "Fabric",
+          "Adhesive",
+          "Bandages,",
+          "30",
+          "Count"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "703194",
+          "ingredients": []
+        },
+        "keywords": [
+          "First Aid",
+          "Band-Aid",
+          "Brand",
+          "Flexible",
+          "Fabric",
+          "Adhesive",
+          "Bandages,",
+          "30",
+          "Count"
+        ]
+      },
+      "differences": null
+    },
+    {
+      "productId": "67acda2e326ea7f99523f9de",
+      "name": "Robitussin Maximum Strength Cough+Chest Congestion DM 8oz",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce223",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Other",
+        "keywords": [
+          "Pain & Fever",
+          "Robitussin",
+          "Maximum",
+          "Strength",
+          "Cough+Chest",
+          "Congestion",
+          "DM",
+          "8oz"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "2375557",
+          "ingredients": []
+        },
+        "keywords": [
+          "Pain & Fever",
+          "Robitussin",
+          "Maximum",
+          "Strength",
+          "Cough+Chest",
+          "Congestion",
+          "DM",
+          "8oz"
+        ]
+      },
+      "differences": null
+    },
+    {
+      "productId": "67acda2e326ea7f99523f9dd",
+      "name": "MUCINEX FAST MAX CLD FLU SR THR CPL 20CT",
+      "status": "match_found",
+      "currentData": {
+        "activeIngredients": [
+          {
+            "_id": "67ace99a78f04229f3cce225",
+            "name": "Active Ingredient",
+            "amount": "See package for details"
+          }
+        ],
+        "dosageForm": "Other",
+        "keywords": [
+          "Pain & Fever",
+          "MUCINEX",
+          "FAST",
+          "MAX",
+          "CLD",
+          "FLU",
+          "SR",
+          "THR",
+          "CPL",
+          "20CT"
+        ]
+      },
+      "proposedChanges": {
+        "rxnorm": {
+          "rxcui": "2058400",
+          "ingredients": []
+        },
+        "keywords": [
+          "Pain & Fever",
+          "MUCINEX",
+          "FAST",
+          "MAX",
+          "CLD",
+          "FLU",
+          "SR",
+          "THR",
+          "CPL",
+          "20CT"
+        ]
+      },
+      "differences": null
+    }
+  ]
+}
