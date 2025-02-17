@@ -122,7 +122,6 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    // Get category from URL on initial load
     const categoryFromUrl = searchParams.get('category') || 'all';
     setSelectedCategory(categoryFromUrl);
   }, [searchParams]);
@@ -216,52 +215,6 @@ export default function Home() {
 
       {/* Featured Products */}
       <FeaturedProducts categoryFilter={selectedCategory} />
-
-      {/* Product Categories - Only show when 'all' is selected */}
-      {selectedCategory === 'all' && (
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-          {categoryData.map((category) => (
-            <section key={category.slug} className="py-4 sm:py-6">
-              <div className="mb-8 sm:mb-12">
-                <div className="flex flex-col mb-4 sm:mb-6 px-2">
-                  <h2 className="text-xl sm:text-2xl font-bold text-primary relative">
-                    {category.name}
-                    <span className="absolute -bottom-2 left-0 w-1/3 h-1 bg-primary rounded-full"></span>
-                  </h2>
-                  <p className="mt-2 text-sm text-gray-600 italic">{category.tagline}</p>
-                  <span className="text-xs sm:text-sm text-gray-500 mt-1">
-                    {category.items.length} items
-                  </span>
-                </div>
-                
-                <div className="flex overflow-x-auto gap-4 sm:gap-6 scroll-snap-x px-2 pb-4 -mx-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
-                  {category.items.map((item) => (
-                    <div
-                      key={item.slug}
-                      className="card bg-white rounded-2xl p-3 sm:p-4 min-w-[200px] max-w-[200px] sm:min-w-[280px] sm:max-w-[280px] scroll-snap-align-start border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200 relative"
-                    >
-                      <a href={`/categories/${category.slug}/${item.slug}`}>
-                        <div className="relative h-36 sm:h-48 w-full mb-3 sm:mb-4 rounded-xl overflow-hidden group">
-                          <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-                            <span className="px-3 py-1.5 sm:px-4 sm:py-2 bg-white/90 rounded-full text-xs sm:text-sm font-medium text-gray-700 shadow-sm transform translate-y-2 group-hover:translate-y-0 transition-transform duration-200">
-                              View Products
-                            </span>
-                          </div>
-                        </div>
-                        <div className="space-y-2 sm:space-y-3">
-                          <h3 className="text-sm sm:text-base font-medium line-clamp-2 leading-snug text-gray-800 hover:text-primary transition-colors duration-200">
-                            {item.name}
-                          </h3>
-                        </div>
-                      </a>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </section>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
