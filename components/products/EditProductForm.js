@@ -6,81 +6,143 @@ import { mutate } from 'swr';
 import toast from 'react-hot-toast';
 import BaseProductForm from './BaseProductForm';
 import { categories } from '@/data/categories';
-console.log('Categories loaded:', { categoriesLength: categories?.length });
 
-// Helper function to find valid slugs
-const findValidSlugs = (category, subcategory, item, productName) => {
+// Debug logging for categories
+console.log('Available Categories:', categories.map(c => ({
+    name: c.name,
+    slug: c.slug,
+    items: c.items?.map(i => ({ name: i.name, slug: i.slug }))
+})));
+
+// Helper function to convert string to slug with debug logging
+const toSlug = (str) => {
+    if (!str) {
+        console.log('toSlug received empty string');
+        return '';
+    }
+    const slug = str.toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+    console.log('toSlug conversion:', { original: str, slug });
+    return slug;
+};
+
+// Helper function to find the most appropriate category for a product
+const findBestMatchingCategory = (productCategory) => {
+    console.log('Finding best match for:', productCategory);
+
+    // If the product is a cough medicine, map it to Children's Medicine
+    if (productCategory?.toLowerCase().includes('cough')) {
+        const childrensMedicine = categories.find(c => c.slug === 'childrens-medicine-wellness');
+        if (childrensMedicine) {
+            return {
+                category: childrensMedicine,
+                item: childrensMedicine.items.find(i => i.slug === 'cough-cold-remedies')
+            };
+        }
+    }
+
+    // Add more mappings as needed
+    return null;
+};
+
+// Updated findValidSlugs function
+const findValidSlugs = (category, item) => {
     try {
-        // Input validation
+        console.log('Finding slugs for:', { 
+            category, 
+            item,
+            categoryType: typeof category,
+            itemType: typeof item 
+        });
+
+        // Early validation
         if (!category || typeof category !== 'string') {
-            throw new Error('Invalid category provided');
+            console.error('Invalid category:', { category, type: typeof category });
+            return {
+                categorySlug: 'uncategorized',
+                subcategorySlug: 'uncategorized',
+                itemSlug: 'uncategorized',
+                suggestedCategory: 'Uncategorized',
+                suggestedItem: 'Uncategorized',
+                originalCategory: category || 'None',
+                originalItem: item || 'None'
+            };
         }
 
-        if (!categories || !Array.isArray(categories) || categories.length === 0) {
-            throw new Error('Categories data not properly loaded');
-        }
+        // Try to find exact match first
+        const categorySlug = toSlug(category);
+        let categoryObj = categories.find(c => 
+            c.name === category || 
+            c.slug === categorySlug || 
+            toSlug(c.name) === categorySlug
+        );
 
-        // Normalize inputs
-        const normalizedCategory = category.trim().toLowerCase();
-        const normalizedItem = item?.trim().toLowerCase();
+        let matchedItem = null;
 
-        // Find category with defensive programming
-        const categoryObj = categories.find(c => {
-            if (!c || typeof c !== 'object') return false;
-            return (c.slug?.toLowerCase() === normalizedCategory) ||
-                   (c.name?.toLowerCase() === normalizedCategory);
-        });
-
+        // If no exact match, try category mappings
         if (!categoryObj) {
-            console.error('Category not found:', { 
-                category,
-                availableCategories: categories.map(c => ({
-                    name: c?.name || 'Unknown',
-                    slug: c?.slug || 'Unknown'
-                }))
-            });
-            return null;
+            console.log('No exact category match, checking mappings...');
+            
+            // Map cough medicines to Children's Medicine
+            if (category.toLowerCase().includes('cough')) {
+                categoryObj = categories.find(c => c.slug === 'childrens-medicine-wellness');
+                if (categoryObj) {
+                    matchedItem = categoryObj.items.find(i => i.slug === 'cough-cold-remedies');
+                    console.log('Mapped cough medicine to:', categoryObj.name);
+                }
+            }
+            
+            // Add more category mappings here
+            // Example: Pain relief mapping
+            else if (category.toLowerCase().includes('pain')) {
+                categoryObj = categories.find(c => c.slug === 'pain-fever-relief');
+            }
         }
 
-        // Validate items array
-        if (!Array.isArray(categoryObj.items)) {
-            console.error('Invalid items array for category:', categoryObj.name);
-            return null;
+        // If still no match, use default category
+        if (!categoryObj) {
+            console.warn('No category match found for:', category);
+            categoryObj = categories.find(c => c.slug === 'general-health') || categories[0];
         }
 
-        // Find item with defensive programming
-        if (!normalizedItem) {
-            console.error('No item provided');
-            return null;
+        // Find or suggest appropriate item
+        if (!matchedItem && item) {
+            const itemSlug = toSlug(item);
+            matchedItem = categoryObj.items.find(i => 
+                i.name === item || 
+                i.slug === itemSlug || 
+                toSlug(i.name) === itemSlug
+            );
         }
 
-        const itemObj = categoryObj.items.find(i => {
-            if (!i || typeof i !== 'object') return false;
-            return (i.slug?.toLowerCase() === normalizedItem) ||
-                   (i.name?.toLowerCase() === normalizedItem);
-        });
-
-        if (!itemObj) {
-            console.error('Item not found:', {
-                item,
-                category: categoryObj.name,
-                availableItems: categoryObj.items.map(i => ({
-                    name: i?.name || 'Unknown',
-                    slug: i?.slug || 'Unknown'
-                }))
-            });
-            return null;
+        // If no matching item found, use first item in category
+        if (!matchedItem) {
+            matchedItem = categoryObj.items[0];
+            console.log('Using default item:', matchedItem.name);
         }
 
-        // Return validated slugs
         return {
             categorySlug: categoryObj.slug,
-            subcategorySlug: categoryObj.slug, // Assuming same as category for now
-            itemSlug: itemObj.slug
+            subcategorySlug: categoryObj.slug,
+            itemSlug: matchedItem.slug,
+            suggestedCategory: categoryObj.name,
+            suggestedItem: matchedItem.name,
+            originalCategory: category,
+            originalItem: item || matchedItem.name
         };
     } catch (error) {
         console.error('Error in findValidSlugs:', error);
-        return null;
+        // Return a default mapping instead of null
+        return {
+            categorySlug: 'general-health',
+            subcategorySlug: 'general-health',
+            itemSlug: 'general-health',
+            suggestedCategory: 'General Health',
+            suggestedItem: 'General Health',
+            originalCategory: category || 'Unknown',
+            originalItem: item || 'Unknown'
+        };
     }
 };
 
@@ -91,42 +153,39 @@ export default function EditProductForm({ product }) {
     const [errorMessage, setErrorMessage] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
     const [initialData, setInitialData] = useState(null);
+    const [hasProcessedCategory, setHasProcessedCategory] = useState(false);
 
     useEffect(() => {
-        if (!product) {
-            console.log('No product data available yet');
-            return;
-        }
-
-        if (!categories || !Array.isArray(categories)) {
-            console.error('Categories not loaded properly');
-            return;
-        }
+        if (!product || hasProcessedCategory) return;
 
         try {
-            console.log('Processing product:', {
-                category: product.category || product.categorySlug,
-                item: product.item || product.itemSlug,
-            });
+            console.log('Processing product:', product);
 
-            // Get valid slugs based on the product's categories
             const validSlugs = findValidSlugs(
                 product.category || product.categorySlug,
-                product.item || product.itemSlug, // Use item for subcategory
-                product.item || product.itemSlug,
-                product.name
+                product.item || product.itemSlug
             );
 
             if (!validSlugs) {
-                console.error('Could not determine valid category slugs');
+                setIsError(true);
+                setErrorMessage('Could not determine valid category. Please select a category manually.');
                 return;
             }
 
-            // Transform the product data to match the form structure
+            // If category was mapped to a different one, show a notification
+            if (validSlugs.originalCategory !== validSlugs.suggestedCategory) {
+                toast.success(
+                    `Category "${validSlugs.originalCategory}" was mapped to "${validSlugs.suggestedCategory}"`,
+                    {
+                        id: `category-mapping-${product._id}`, // Prevent duplicate toasts
+                        duration: 3000
+                    }
+                );
+            }
+
             const transformedData = {
                 ...product,
-                ...validSlugs, // Spread the valid slugs
-                // Ensure other required fields are present
+                ...validSlugs,
                 activeIngredients: product.activeIngredients || [],
                 warnings: product.warnings || [],
                 contraindications: product.contraindications || [],
@@ -137,14 +196,14 @@ export default function EditProductForm({ product }) {
                 isFeatured: product.isFeatured || false,
             };
             
-            console.log('Setting initial data:', transformedData);
             setInitialData(transformedData);
+            setHasProcessedCategory(true);
         } catch (error) {
             console.error('Error in EditProductForm useEffect:', error);
             setIsError(true);
             setErrorMessage('Error loading product data: ' + error.message);
         }
-    }, [product]);
+    }, [product, hasProcessedCategory]);
 
     const handleSubmit = async (formData) => {
         try {
@@ -152,21 +211,14 @@ export default function EditProductForm({ product }) {
             setIsError(false);
             setErrorMessage("");
             
-            // Show loading toast
             const loadingToast = toast.loading('Updating product...');
             
-            console.log('Form data before validation:', {
-                category: formData.category || formData.categorySlug,
-                item: formData.item || formData.itemSlug,
-                formData
-            });
+            console.log('Form data before validation:', formData);
             
             // Get valid slugs for the submission
             const validSlugs = findValidSlugs(
-                formData.categorySlug || formData.category, // Use categorySlug first
-                formData.categorySlug || formData.category, // Same for subcategory
-                formData.itemSlug || formData.item,        // Use itemSlug first
-                formData.name
+                formData.categorySlug || formData.category,
+                formData.itemSlug || formData.item
             );
 
             console.log('Generated valid slugs:', validSlugs);

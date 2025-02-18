@@ -36,13 +36,38 @@ export default function BaseProductForm({
     directions: ''
   });
 
+  const [imagePreview, setImagePreview] = useState(initialData.imageUrl || initialData.image || null);
+
   useEffect(() => {
     if (initialData && Object.keys(initialData).length > 0) {
-      const category = categories.find(c => c.slug === initialData.categorySlug);
+      console.log('Initializing form with data:', initialData);
+      
+      // Update image preview when initialData changes
+      setImagePreview(initialData.imageUrl || initialData.image || null);
+      
+      // Find the matching category
+      const categorySlug = initialData.categorySlug || 
+                          initialData.category?.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      
+      const category = categories.find(c => c.slug === categorySlug);
+      
       if (category) {
+        console.log('Found matching category:', category.name);
         setAvailableItems(category.items || []);
+        
+        // Set the form data with validated category information
+        setFormData({
+          ...initialData,
+          categorySlug: category.slug,
+          subcategorySlug: category.slug,
+          itemSlug: initialData.itemSlug || 
+                    initialData.item?.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+        });
+      } else {
+        console.error('Could not find matching category for:', categorySlug);
+        // Set form data without category information
+        setFormData(initialData);
       }
-      setFormData(initialData);
     }
   }, [initialData]);
 
@@ -54,7 +79,6 @@ export default function BaseProductForm({
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [imagePreview, setImagePreview] = useState(initialData.image || null);
   const [imageFile, setImageFile] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
 
@@ -251,13 +275,26 @@ export default function BaseProductForm({
                   <p className="text-sm text-gray-500">Uploading...</p>
                 </div>
               ) : imagePreview ? (
-                <div className="relative w-40 h-40 mx-auto">
-                  <Image
-                    src={imagePreview}
-                    alt="Preview"
-                    fill
-                    className="object-contain"
-                  />
+                <div className="flex flex-col items-center">
+                  <div className="relative w-40 h-40 mx-auto mb-4">
+                    <Image
+                      src={imagePreview}
+                      alt="Preview"
+                      fill
+                      className="object-contain"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setImagePreview(null);
+                      setImageFile(null);
+                    }}
+                    className="px-3 py-1 text-sm text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    Change Image
+                  </button>
                 </div>
               ) : (
                 <>

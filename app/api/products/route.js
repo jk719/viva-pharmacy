@@ -6,6 +6,8 @@ import { authOptions } from '@/lib/auth';
 import { categories } from '@/data/categories';
 import rateLimit from '@/lib/rateLimit';
 
+const FALLBACK_IMAGE = '/images/placeholder.png';
+
 // Helper function to get category names
 function getCategoryNames(categorySlug, subcategorySlug, itemSlug) {
   const category = categories.find(c => c.slug === categorySlug);
@@ -209,7 +211,7 @@ export async function POST(request) {
 
 export async function PUT(request) {
   try {
-    if (!rateLimit.check(request, 15)) { // Moderate limit for PUT
+    if (!rateLimit.check(request, 15)) {
       return NextResponse.json({
         success: false,
         message: 'Too many requests. Please try again later.'
@@ -224,7 +226,6 @@ export async function PUT(request) {
     }
 
     const session = await getServerSession(authOptions);
-    
     if (!session?.user?.role || !['ADMIN', 'MANAGER'].includes(session.user.role)) {
       return NextResponse.json({ 
         success: false, 
@@ -233,49 +234,78 @@ export async function PUT(request) {
     }
 
     await dbConnect();
+    const Product = getProductModel();
     const { searchParams } = new URL(request.url);
-    const productId = searchParams.get('id');
+    const id = searchParams.get('id');
     
-    if (!productId) {
+    if (!id) {
       return NextResponse.json({ 
         success: false, 
         message: 'Product ID is required' 
       }, { status: 400 });
     }
 
-    const updates = await request.json();
+    const data = await request.json();
     
-    // Clean updates
-    if (updates.activeIngredients) {
-      updates.activeIngredients = updates.activeIngredients.filter(i => i.name && i.amount);
-    }
-    if (updates.warnings) {
-      updates.warnings = updates.warnings.filter(w => w.trim());
-    }
-    if (updates.price) {
-      updates.price = parseFloat(updates.price);
-    }
-    if (updates.stock) {
-      updates.stock = parseInt(updates.stock);
+    // Find existing product first
+    const existingProduct = await Product.findById(id);
+    if (!existingProduct) {
+      return NextResponse.json(
+        { success: false, message: 'Product not found' },
+        { status: 404 }
+      );
     }
 
-    const product = await Product.findByIdAndUpdate(
-      productId,
-      { $set: updates },
-      { new: true, runValidators: true }
+    // Validate category hierarchy
+    const category = categories.find(c => c.slug === data.categorySlug);
+    const item = category?.items?.find(i => i.slug === data.itemSlug);
+
+    if (!category || !item) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid category or item' },
+        { status: 400 }
+      );
+    }
+
+    // Generate SEO data for the update
+    const seoData = generateSEOData(data, category, item);
+
+    // Create update data
+    const updateData = {
+      ...data,
+      createdBy: existingProduct.createdBy,
+      _id: existingProduct._id,
+      createdAt: existingProduct.createdAt,
+      category: category.name,
+      subcategory: category.name,
+      item: item.name,
+      categoryPath: `${category.name} > ${item.name}`,
+      seo: seoData,
+      // Clean specific fields
+      activeIngredients: (data.activeIngredients || []).filter(i => i.name && i.amount),
+      warnings: (data.warnings || []).filter(w => w.trim()),
+      price: parseFloat(data.price),
+      stock: parseInt(data.stock)
+    };
+
+    const result = await Product.replaceOne(
+      { _id: id },
+      updateData,
+      { upsert: false }
     );
 
-    if (!product) {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Product not found' 
-      }, { status: 404 });
+    if (result.modifiedCount !== 1) {
+      return NextResponse.json(
+        { success: false, message: 'Failed to update product' },
+        { status: 400 }
+      );
     }
 
+    const updatedProduct = await Product.findById(id);
     return NextResponse.json({
       success: true,
-      message: 'Product updated successfully',
-      product
+      product: updatedProduct,
+      message: 'Product updated successfully'
     });
 
   } catch (error) {
@@ -295,6 +325,53 @@ export async function PUT(request) {
       message: 'Failed to update product' 
     }, { status: 500 });
   }
+}
+
+// Add the generateSEOData helper function at the top of the file with other helpers
+function generateSEOData(product, category, item) {
+  return {
+    metaTitle: `${product.name} | ${category?.name || 'Medicine'} | GoVivanova Pharmacy`,
+    metaDescription: `${product.shortDescription || product.description?.substring(0, 150)}. Available at GoVivanova Pharmacy. Fast delivery!`,
+    metaKeywords: [
+      product.name,
+      category?.name,
+      item?.name,
+      product.dosageForm,
+      'pharmacy',
+      'medicine',
+      'online pharmacy'
+    ].filter(Boolean),
+    canonical: `/${category?.slug || 'medicine'}/${item?.slug || 'general'}/${product.itemSlug}`,
+    breadcrumbs: [
+      { name: 'Home', url: '/' },
+      { name: category?.name || 'Medicine', url: `/${category?.slug || 'medicine'}` },
+      { name: item?.name || 'General', url: `/${category?.slug || 'medicine'}/${item?.slug || 'general'}` },
+      { name: product.name, url: `/${category?.slug || 'medicine'}/${item?.slug || 'general'}/${product.itemSlug}` }
+    ],
+    structuredData: {
+      "@context": "https://schema.org/",
+      "@type": "Product",
+      name: product.name,
+      description: product.description,
+      brand: {
+        "@type": "Brand",
+        name: product.item
+      },
+      category: category?.name,
+      sku: product.sku,
+      image: product.image || FALLBACK_IMAGE,
+      offers: {
+        "@type": "Offer",
+        price: product.price,
+        priceCurrency: "USD",
+        availability: product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+        seller: {
+          "@type": "Organization",
+          name: "GoVivanova Pharmacy"
+        }
+      }
+    }
+  };
 }
 
 export async function DELETE(request) {
