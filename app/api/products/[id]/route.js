@@ -5,9 +5,7 @@ import getProductModel from '@/models/Product';
 import { authOptions } from '@/lib/auth';
 import { isValidObjectId } from 'mongoose';
 import { categories, isCategoryValid, isSubcategoryValid, isItemValid } from '@/data/categories';
-
-// Add the fallback image URL as a constant
-const FALLBACK_IMAGE = 'https://res.cloudinary.com/dv3cd1aoy/image/upload/v1737391942/viva-pharmacy/products/placeholder.svg';
+import { getCloudinaryUrl, FALLBACK_IMAGE } from '@/lib/cloudinary';
 
 const generateSEOData = (product, category, item) => ({
     metaTitle: `${product.name} | ${category?.name || 'Medicine'} | GoVivanova Pharmacy`,
@@ -59,10 +57,9 @@ export async function GET(request, context) {
         const Product = getProductModel();
         
         const id = await Promise.resolve(context.params).then(p => p.id);
-        console.log('GET request for product:', id);
         
         if (!id || !isValidObjectId(id)) {
-            console.error('Invalid product ID');
+            console.error('Invalid product ID:', id);
             return NextResponse.json(
                 { success: false, message: 'Invalid product ID' },
                 { status: 400 }
@@ -72,6 +69,7 @@ export async function GET(request, context) {
         const product = await Product.findById(id);
         
         if (!product) {
+            console.warn('Product not found:', id);
             return NextResponse.json(
                 { success: false, message: 'Product not found' },
                 { status: 404 }
@@ -82,15 +80,36 @@ export async function GET(request, context) {
         const category = categories.find(c => c.slug === product.categorySlug);
         const item = category?.items?.find(i => i.slug === product.itemSlug);
 
+        // Convert to plain object and handle image URL
+        const productData = product.toObject();
+        
+        // Handle image URL
+        let imageUrl;
+        if (productData.cloudinaryPublicId) {
+            imageUrl = getCloudinaryUrl(productData.cloudinaryPublicId);
+        } else if (productData.imageKey) {
+            imageUrl = getCloudinaryUrl(productData.imageKey);
+        } else if (productData.imageUrl?.includes('res.cloudinary.com')) {
+            imageUrl = productData.imageUrl;
+        } else {
+            imageUrl = FALLBACK_IMAGE;
+        }
+
+        // Update the product data with the resolved image URL
+        productData.imageUrl = imageUrl;
+
         // Generate or use existing SEO data
         const seoData = product.seo || generateSEOData(product, category, item);
 
-        // Prepare the response data
-        const productData = product.toObject();
-        productData.image = product.image?.startsWith('https://res.cloudinary.com/') 
-            ? product.image 
-            : FALLBACK_IMAGE;
+        // Update image in SEO data
+        if (seoData.structuredData) {
+            seoData.structuredData.image = imageUrl;
+        }
+
         productData.seo = seoData;
+
+        // Log only essential information
+        console.log(`Product fetched successfully: ${id} - ${product.name}`);
 
         return NextResponse.json({ 
             success: true, 

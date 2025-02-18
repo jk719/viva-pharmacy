@@ -9,6 +9,8 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import getProductModel from '../models/Product.js';
+import dbConnect from '../lib/dbConnect';
+import { getCloudinaryUrl } from '../lib/cloudinary';
 
 // Load environment variables
 dotenv.config({ path: '.env.local' });
@@ -40,102 +42,30 @@ function normalizeProductName(name) {
 
 async function updateProductImages() {
     try {
-        // Read the Cloudinary matches
-        const matchesPath = path.join(__dirname, '..', 'data', 'cloudinaryMatches.json');
-        const matches = JSON.parse(await fs.readFile(matchesPath, 'utf8'));
-
-        // Track updates
-        let updatedCount = 0;
-        let skippedCount = 0;
-        const skippedProducts = [];
-        const updatedProducts = [];
-
-        // Connect to MongoDB and get Product model
         await dbConnect();
         const Product = getProductModel();
-
-        console.log('Updating MongoDB products...');
-
-        const dbProducts = await Product.find({});
-        for (const product of dbProducts) {
-            const normalizedName = normalizeProductName(product.name);
-            
-            // Find matching Cloudinary URL
-            const matchingEntry = Object.entries(matches).find(([filename]) => 
-                normalizeProductName(filename.replace(/\.(png|jpg|jpeg)$/, ''))
-                === normalizedName
-            );
-
-            if (matchingEntry) {
-                const [, match] = matchingEntry;
-                // Extract the image key from the Cloudinary URL
-                const imageKey = match.originalName.split('/').pop(); // Gets the last part of the path
-                
-                if (product.imageKey !== imageKey) {
-                    try {
-                        await Product.findByIdAndUpdate(
-                            product._id,
-                            {
-                                $set: {
-                                    imageKey: imageKey
-                                }
-                            },
-                            { runValidators: true }
-                        );
-                        updatedCount++;
-                        updatedProducts.push({
-                            name: product.name,
-                            oldImageKey: product.imageKey,
-                            newImageKey: imageKey
-                        });
-                    } catch (error) {
-                        console.error(`Error updating product ${product.name}:`, error);
-                        skippedCount++;
-                        skippedProducts.push({
-                            name: product.name,
-                            error: error.message
-                        });
+        const products = await Product.find({});
+        
+        for (const product of products) {
+            if (product.cloudinaryPublicId) {
+                const imageUrl = getCloudinaryUrl(product.cloudinaryPublicId);
+                await Product.updateOne(
+                    { _id: product._id },
+                    { 
+                        $set: { 
+                            imageUrl: imageUrl,
+                            'seo.structuredData.image': imageUrl
+                        }
                     }
-                }
-            } else {
-                skippedCount++;
-                skippedProducts.push({
-                    name: product.name,
-                    reason: 'No matching Cloudinary image found'
-                });
+                );
             }
         }
-
-        // Print summary
-        console.log('\nUpdate Summary:');
-        console.log(`Updated: ${updatedCount} products`);
-        console.log(`Skipped: ${skippedCount} products`);
         
-        if (updatedProducts.length > 0) {
-            console.log('\nUpdated Products:');
-            updatedProducts.forEach(({ name, oldImageKey, newImageKey }) => {
-                console.log(`- ${name}`);
-                console.log(`  Old imageKey: ${oldImageKey}`);
-                console.log(`  New imageKey: ${newImageKey}`);
-            });
-        }
-        
-        if (skippedProducts.length > 0) {
-            console.log('\nSkipped Products:');
-            skippedProducts.forEach(({ name, reason, error }) => {
-                console.log(`- ${name}`);
-                console.log(`  Reason: ${reason || error}`);
-            });
-        }
-
-        await mongoose.disconnect();
-        console.log('MongoDB disconnected');
-
+        console.log('Product images updated successfully');
+        process.exit(0);
     } catch (error) {
-        console.error('Error:', error);
-        if (mongoose.connection.readyState === 1) {
-            await mongoose.disconnect();
-        }
+        console.error('Error updating product images:', error);
+        process.exit(1);
     }
 }
 

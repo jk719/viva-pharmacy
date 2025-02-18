@@ -1,10 +1,19 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { categories, getCategoryBySlug, getItemBySlug } from '../data/categories';
 
 // Create a context for the category
 const CategoryContext = createContext();
+
+// Add debounce utility
+const debounce = (fn, ms) => {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), ms);
+  };
+};
 
 // Custom hook to use the category context
 export function useCategory() {
@@ -17,88 +26,118 @@ export function useCategory() {
 
 // CategoryProvider component
 export function CategoryProvider({ children }) {
-    const [selectedCategory, setSelectedCategory] = useState("All");
-    const [selectedItem, setSelectedItem] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [state, setState] = useState({
+        selectedCategory: "All",
+        selectedItem: null,
+        loading: true,
+        error: null
+    });
 
-    // Load selected categories from localStorage
+    // Load categories from localStorage only once on mount
     useEffect(() => {
         try {
             const saved = JSON.parse(localStorage.getItem('selectedCategories')) || {};
-            if (saved.category) {
-                // Handle both "All" and category slugs
-                if (saved.category === "All") {
-                    setSelectedCategory("All");
-                } else if (categories.some(c => c.slug === saved.category)) {
-                    setSelectedCategory(saved.category);
-                    if (saved.item) setSelectedItem(saved.item);
-                } else {
-                    setSelectedCategory("All"); // Fallback to "All" if invalid
-                }
-            } else {
-                setSelectedCategory("All"); // Default to "All"
-            }
+            setState(prev => ({
+                ...prev,
+                selectedCategory: saved.category || "All",
+                selectedItem: saved.item || null,
+                loading: false
+            }));
         } catch (error) {
             console.error('Error loading categories:', error);
-            setSelectedCategory("All"); // Fallback to "All" on error
-        } finally {
-            setLoading(false);
+            setState(prev => ({
+                ...prev,
+                selectedCategory: "All",
+                loading: false,
+                error: error.message
+            }));
         }
     }, []);
 
-    // Save selections to localStorage
+    // Debounced localStorage update
+    const updateLocalStorage = useCallback(
+        debounce((category, item) => {
+            try {
+                localStorage.setItem('selectedCategories', JSON.stringify({
+                    category,
+                    item
+                }));
+            } catch (error) {
+                console.error('Error saving categories:', error);
+            }
+        }, 1000),
+        []
+    );
+
+    // Update localStorage when selections change
     useEffect(() => {
-        if (!loading) {
-            localStorage.setItem('selectedCategories', JSON.stringify({
-                category: selectedCategory,
-                item: selectedItem
-            }));
+        if (!state.loading) {
+            updateLocalStorage(state.selectedCategory, state.selectedItem);
         }
-    }, [selectedCategory, selectedItem, loading]);
+    }, [state.selectedCategory, state.selectedItem, state.loading, updateLocalStorage]);
 
-    // Handle category selection
-    const handleCategorySelect = (category) => {
-        setSelectedCategory(category);
-        setSelectedItem(null);
-    };
+    // Memoized category selection handler
+    const handleCategorySelect = useCallback((category) => {
+        setState(prev => ({
+            ...prev,
+            selectedCategory: category,
+            selectedItem: null
+        }));
+    }, []);
 
-    const value = {
-        selectedCategory,
+    // Memoized helper functions
+    const getCurrentCategory = useCallback(() => {
+        if (state.selectedCategory === "All") return null;
+        return getCategoryBySlug(state.selectedCategory);
+    }, [state.selectedCategory]);
+
+    const getCurrentItem = useCallback(() => {
+        if (!state.selectedCategory || state.selectedCategory === "All") return null;
+        return state.selectedItem ? getItemBySlug(state.selectedCategory, state.selectedItem) : null;
+    }, [state.selectedCategory, state.selectedItem]);
+
+    // Memoized category list
+    const categoryList = useMemo(() => 
+        ["All", ...categories.map(c => c.name)],
+        []
+    );
+
+    // Memoized context value
+    const value = useMemo(() => ({
+        selectedCategory: state.selectedCategory,
         setSelectedCategory: handleCategorySelect,
-        selectedItem,
-        setSelectedItem,
-        categories: ["All", ...categories.map(c => c.name)], // Include "All" in categories
-        loading,
-        error,
-        getCurrentCategory: () => {
-            if (selectedCategory === "All") return null;
-            return getCategoryBySlug(selectedCategory);
-        },
-        getCurrentItem: () => {
-            if (!selectedCategory || selectedCategory === "All") return null;
-            return selectedItem ? 
-                getItemBySlug(selectedCategory, selectedItem) : null;
-        },
-        // Helper function to get category display name
+        selectedItem: state.selectedItem,
+        setSelectedItem: (item) => setState(prev => ({ ...prev, selectedItem: item })),
+        categories: categoryList,
+        loading: state.loading,
+        error: state.error,
+        getCurrentCategory,
+        getCurrentItem,
         getCategoryDisplayName: (categorySlug) => {
             if (categorySlug === "All") return "All";
             const category = categories.find(c => c.slug === categorySlug);
             return category ? category.name : categorySlug;
         },
-        // Helper function to get item display name
         getItemDisplayName: (categorySlug, itemSlug) => {
             if (!categorySlug || !itemSlug) return "";
             const item = getItemBySlug(categorySlug, itemSlug);
             return item ? item.name : itemSlug;
         },
-        // Get all items for a category
         getCategoryItems: (categorySlug) => {
             if (!categorySlug || categorySlug === "All") return [];
             const category = getCategoryBySlug(categorySlug);
             return category ? category.items : [];
         }
-    };
+    }), [
+        state.selectedCategory,
+        state.selectedItem,
+        state.loading,
+        state.error,
+        categoryList,
+        handleCategorySelect,
+        getCurrentCategory,
+        getCurrentItem
+    ]);
 
     return (
         <CategoryContext.Provider value={value}>

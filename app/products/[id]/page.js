@@ -30,10 +30,12 @@ export async function generateMetadata({ params }) {
       openGraph: {
         title: product.seo?.metaTitle || product.name,
         description: product.seo?.metaDescription || product.description,
-        type: 'product',
+        type: 'website',
         url: product.seo?.canonical || `/products/${product._id}`,
         images: [{ 
-          url: product.image,
+          url: product.imageUrl || product.cloudinaryPublicId 
+            ? `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/${product.cloudinaryPublicId}`
+            : '/images/placeholder.png',
           width: 800,
           height: 600,
           alt: product.name

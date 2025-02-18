@@ -8,6 +8,7 @@ import { IoArrowBack, IoAdd } from 'react-icons/io5';
 import { HiMinusSm, HiPlusSm } from 'react-icons/hi';
 import { useState, useCallback } from 'react';
 import { categories } from '@/data/categories';
+import { getCloudinaryUrl, FALLBACK_IMAGE } from '@/lib/cloudinary';
 
 // Moved outside component to prevent recreation on each render
 const getCategoryContent = (product) => ({
@@ -21,9 +22,6 @@ const getCategoryContent = (product) => ({
   Directions: product => product.directions || "Take as directed by your healthcare provider. Read all product information before use.",
   "Storage & Warnings": product => `Store at room temperature. Keep out of reach of children. ${product.warnings?.join('. ') || ''}`
 });
-
-// Update the fallbackImageUrl with the one from your Cloudinary
-const fallbackImageUrl = 'https://res.cloudinary.com/dv3cd1aoy/image/upload/v1737391942/viva-pharmacy/products/placeholder.svg';
 
 export default function ClientProductView({ product }) {
   const { addToCart, decrement, items = [] } = useCart();
@@ -140,7 +138,10 @@ export default function ClientProductView({ product }) {
               className="relative w-full h-full flex items-center justify-center"
             >
               <Image
-                src={imgError ? fallbackImageUrl : (product.imageKey ? `https://res.cloudinary.com/your-cloud-name/image/upload/${product.imageKey}` : product.image || fallbackImageUrl)}
+                src={imgError ? FALLBACK_IMAGE : (
+                  product.imageUrl || 
+                  (product.cloudinaryPublicId ? getCloudinaryUrl(product.cloudinaryPublicId) : FALLBACK_IMAGE)
+                )}
                 alt={product.name}
                 width={300}
                 height={300}

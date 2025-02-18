@@ -36,6 +36,14 @@ const createOrder = async (paymentIntent, retryCount = 0) => {
         const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
         const metadata = paymentIntent.metadata || {};
         
+        // Log metadata for debugging
+        console.log('📦 Processing metadata:', {
+            userId: metadata.userId,
+            deliveryMethod: metadata.deliveryMethod,
+            selectedTime: metadata.selectedTime,
+            hasCartItems: !!metadata.cartItems
+        });
+
         // Check for existing order number within transaction
         const existingOrderNumber = await Order.findOne({ orderNumber }).session(session);
         if (existingOrderNumber && retryCount < 3) {
@@ -44,8 +52,23 @@ const createOrder = async (paymentIntent, retryCount = 0) => {
         }
 
         const amount = parseFloat(metadata.amountInDollars || '0');
-        const cartItems = JSON.parse(metadata.cartItems || '[]');
-        
+        let cartItems = [];
+        try {
+            cartItems = JSON.parse(metadata.cartItems || '[]');
+        } catch (e) {
+            console.error('Failed to parse cartItems:', e);
+            cartItems = [];
+        }
+
+        // Validate required fields
+        if (!metadata.userId || !metadata.deliveryMethod || !metadata.selectedTime) {
+            throw new Error(`Missing required fields: ${JSON.stringify({
+                hasUserId: !!metadata.userId,
+                hasDeliveryMethod: !!metadata.deliveryMethod,
+                hasSelectedTime: !!metadata.selectedTime
+            })}`);
+        }
+
         const shippingAddress = metadata.deliveryMethod === 'delivery' 
             ? JSON.parse(metadata.shippingAddress || '{}')
             : {
@@ -55,14 +78,14 @@ const createOrder = async (paymentIntent, retryCount = 0) => {
                 zipCode: 'Store Pickup'
             };
 
-        const order = await Order.create([{
+        const orderData = {
             orderNumber,
             userId: metadata.userId,
             items: cartItems.map(item => ({
                 productId: item.id,
                 name: item.name,
-                price: parseFloat(item.price),
-                quantity: parseInt(item.quantity) || 1,
+                price: parseFloat(item.p || item.price),
+                quantity: parseInt(item.q || item.quantity) || 1,
                 image: item.image
             })),
             total: amount,
@@ -72,7 +95,17 @@ const createOrder = async (paymentIntent, retryCount = 0) => {
             selectedTime: metadata.selectedTime,
             shippingAddress,
             paymentIntentId: paymentIntent.id
-        }], { session });
+        };
+
+        // Log order data before creation
+        console.log('📝 Creating order with data:', {
+            orderNumber,
+            userId: metadata.userId,
+            itemCount: orderData.items.length,
+            total: amount
+        });
+
+        const order = await Order.create([orderData], { session });
 
         await session.commitTransaction();
         console.log('✅ Order created successfully:', order[0]._id);
@@ -140,10 +173,18 @@ const processRewards = async (order, userId) => {
 };
 
 export async function POST(request) {
+    console.log('🎣 Webhook endpoint hit');
+    
     try {
         const rawBody = await request.text();
         const headersList = await headers();
-        const sig = await headersList.get('stripe-signature');
+        const sig = headersList.get('stripe-signature');
+
+        console.log('📝 Webhook details:', {
+            hasSignature: !!sig,
+            bodyLength: rawBody.length,
+            webhookSecret: !!WEBHOOK_SECRET
+        });
 
         if (!sig) {
             console.error('❌ No Stripe signature found');
@@ -156,9 +197,15 @@ export async function POST(request) {
         let event;
         try {
             event = stripe.webhooks.constructEvent(rawBody, sig, WEBHOOK_SECRET);
-            console.log(`✅ Event constructed successfully: ${event.type}`);
+            console.log('✅ Webhook verified:', {
+                type: event.type,
+                id: event.id
+            });
         } catch (err) {
-            console.error('❌ Webhook signature verification failed:', err.message);
+            console.error('❌ Webhook verification failed:', {
+                error: err.message,
+                signature: sig?.substring(0, 20) + '...'
+            });
             return NextResponse.json(
                 { error: `Webhook Error: ${err.message}` },
                 { status: 400 }
@@ -181,11 +228,8 @@ export async function POST(request) {
                             
                             if (user) {
                                 const basePoints = Math.floor(order.total * REWARDS_CONFIG.POINTS_PER_DOLLAR);
-                                
-                                // Use the user's addPoints method which handles tier multiplier
                                 const result = await user.addPoints(basePoints, false);
                                 
-                                // Mark rewards as processed
                                 await Order.findByIdAndUpdate(order._id, {
                                     rewardsProcessed: true,
                                     pointsAwarded: result.adjustedPoints
@@ -204,43 +248,7 @@ export async function POST(request) {
                         }
                     }
 
-                    // Send confirmation email if not already sent
-                    if (order && paymentIntent.metadata.userEmail && !order.emailSent) {
-                        try {
-                            const emailContent = generateOrderConfirmationEmail({
-                                orderNumber: order.orderNumber,
-                                customerName: paymentIntent.metadata.userEmail.split('@')[0],
-                                items: order.items,
-                                subtotal: order.total,
-                                tax: 0,
-                                total: order.total,
-                                shippingAddress: order.shippingAddress,
-                                deliveryMethod: order.deliveryMethod,
-                                selectedTime: order.selectedTime,
-                                vivaBucksEarned: 0,
-                                rewardPointsEarned: order.pointsAwarded || 0
-                            });
-
-                            await sendOrderConfirmationEmail(
-                                paymentIntent.metadata.userEmail,
-                                'Your Order Confirmation',
-                                emailContent
-                            );
-
-                            await Order.findByIdAndUpdate(order._id, {
-                                emailSent: true,
-                                lastEmailAttempt: new Date(),
-                                emailAttempts: 1
-                            });
-                        } catch (emailError) {
-                            console.error('❌ Failed to send confirmation email:', emailError);
-                            await Order.findByIdAndUpdate(order._id, {
-                                lastEmailAttempt: new Date(),
-                                $inc: { emailAttempts: 1 }
-                            });
-                        }
-                    }
-
+                    // Let the confirmation endpoint handle the email sending
                     return NextResponse.json({ 
                         success: true,
                         orderId: order._id,

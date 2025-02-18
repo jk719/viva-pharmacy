@@ -19,83 +19,126 @@ function getCategoryNames(categorySlug, subcategorySlug, itemSlug) {
   };
 }
 
+// Add this helper function
+const handleError = (error) => {
+  console.error('Products API Error:', {
+    name: error.name,
+    message: error.message,
+    stack: error.stack,
+    code: error.code
+  });
+
+  // Check for specific error types
+  if (error.name === 'MongooseError') {
+    return {
+      status: 500,
+      body: {
+        success: false,
+        message: 'Database error',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      }
+    };
+  }
+
+  if (error.name === 'ValidationError') {
+    return {
+      status: 400,
+      body: {
+        success: false,
+        message: 'Validation error',
+        errors: Object.values(error.errors).map(err => err.message)
+      }
+    };
+  }
+
+  // Default error response
+  return {
+    status: 500,
+    body: {
+      success: false,
+      message: 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    }
+  };
+};
+
 export async function GET(request) {
   try {
-    const clientIp = request.headers.get('x-forwarded-for') || 'anonymous';
+    console.log('Products API: Starting request');
     
+    // Rate limit check
     if (!rateLimit.check(request)) {
+      console.log('Products API: Rate limit exceeded');
       return NextResponse.json({
         success: false,
-        message: 'Too many requests. Please try again later.'
-      }, { 
-        status: 429,
-        headers: {
-          'Retry-After': '60'
-        }
-      });
+        message: 'Too many requests'
+      }, { status: 429 });
     }
 
+    // Connect to database
+    console.log('Products API: Connecting to database...');
     await dbConnect();
-    
-    // Add a small delay to ensure connection is ready
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
     const Product = getProductModel();
-    const products = await Product.find({}).sort({ createdAt: -1 });
     
-    // Log raw product data
-    if (products[0]) {
-      console.log('API: Raw product data:', {
-        name: products[0].name,
-        category: products[0].category,
-        tagline: products[0].categoryTagline,
-        _raw: products[0].toObject()
-      });
-    }
+    console.log('Products API: Executing database query...');
+    const products = await Product.find({})
+      .lean()
+      .select('name description shortDescription price imageUrl category stock isNewProduct activeIngredients dosageForm slug item itemSlug isFeatured')
+      .sort({ createdAt: -1 });
 
-    const mappedProducts = products.map(product => {
-      const productObj = product.toObject();
-      
-      // Find the category tagline from categories data
-      const categoryData = categories.find(cat => 
-        cat.name.toLowerCase() === productObj.category.toLowerCase()
-      );
-      
-      return {
-        _id: productObj._id.toString(),
-        name: productObj.name,
-        description: productObj.description,
-        price: productObj.price,
-        image: productObj.imageUrl || '/images/placeholder.png', // Use Cloudinary URL
-        category: productObj.category,
-        categoryTagline: categoryData?.tagline || productObj.category, // Use category name as fallback
-        isInStock: productObj.stock > 0,
-        isNew: productObj.isNewProduct,
-        stock: productObj.stock,
-        activeIngredients: productObj.activeIngredients,
-        dosageForm: productObj.dosageForm
-      };
+    console.log('Products API: Database query complete', {
+      count: products.length,
+      firstProduct: products[0] ? {
+        id: products[0]._id,
+        name: products[0].name
+      } : null
     });
 
-    // Log mapped product
-    if (mappedProducts[0]) {
-      console.log('API: Mapped product:', {
-        name: mappedProducts[0].name,
-        category: mappedProducts[0].category,
-        tagline: mappedProducts[0].categoryTagline
-      });
-    }
+    const mappedProducts = products.map(product => ({
+      _id: product._id.toString(),
+      name: product.name,
+      description: product.description,
+      shortDescription: product.shortDescription,
+      price: product.price,
+      image: product.imageUrl || '/images/placeholder.png',
+      imageUrl: product.imageUrl,
+      category: product.category,
+      categoryTagline: categories.find(cat => 
+        cat.name.toLowerCase() === product.category.toLowerCase()
+      )?.tagline || product.category,
+      stock: product.stock,
+      isInStock: product.stock > 0,
+      isNew: product.isNewProduct || false,
+      activeIngredients: product.activeIngredients || [],
+      dosageForm: product.dosageForm,
+      slug: product.slug,
+      item: product.item,
+      itemSlug: product.itemSlug,
+      isFeatured: product.isFeatured
+    }));
+
+    console.log('Products API: Response ready', {
+      success: true,
+      count: mappedProducts.length
+    });
 
     return NextResponse.json({
       success: true,
       products: mappedProducts
     });
+
   } catch (error) {
-    console.error('Products API Error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch products' },
-      { status: 500 }
-    );
+    console.error('Products API Error:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
+    
+    return NextResponse.json({
+      success: false,
+      message: 'Failed to fetch products',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    }, { status: 500 });
   }
 }
 

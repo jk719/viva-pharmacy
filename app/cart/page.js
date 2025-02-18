@@ -23,11 +23,11 @@ function CartContent() {
     const deliveryFee = deliveryOption === 'delivery' ? 5 : 0;
     const total = subtotal + deliveryFee;
 
-    const handleQuantityChange = (itemId, newQuantity) => {
+    const handleQuantityChange = (productId, newQuantity) => {
         if (newQuantity < 1) {
-            removeFromCart(itemId);
+            removeFromCart(productId);
         } else {
-            updateQuantity(itemId, newQuantity);
+            updateQuantity(productId, newQuantity);
         }
     };
 
@@ -73,7 +73,7 @@ function CartContent() {
                         <AnimatePresence>
                             {items.map((item) => (
                                 <motion.div
-                                    key={item.id}
+                                    key={item.productId}
                                     initial={{ opacity: 0, x: -20 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     exit={{ opacity: 0, x: 20 }}
@@ -103,7 +103,7 @@ function CartContent() {
                                             <div className="flex items-center bg-white rounded-full shadow-sm">
                                                 <motion.button
                                                     whileTap={{ scale: 0.95 }}
-                                                    onClick={() => handleQuantityChange(item.id, (item.quantity || 0) - 1)}
+                                                    onClick={() => handleQuantityChange(item.productId, (item.quantity || 0) - 1)}
                                                     className="w-8 h-8 flex items-center justify-center text-red-500 
                                                              hover:bg-red-50 rounded-full transition-colors"
                                                 >
@@ -114,7 +114,7 @@ function CartContent() {
                                                 </span>
                                                 <motion.button
                                                     whileTap={{ scale: 0.95 }}
-                                                    onClick={() => handleQuantityChange(item.id, (item.quantity || 0) + 1)}
+                                                    onClick={() => handleQuantityChange(item.productId, (item.quantity || 0) + 1)}
                                                     className="w-8 h-8 flex items-center justify-center text-green-500 
                                                              hover:bg-green-50 rounded-full transition-colors"
                                                 >
@@ -124,7 +124,7 @@ function CartContent() {
                                             
                                             <motion.button
                                                 whileTap={{ scale: 0.95 }}
-                                                onClick={() => removeFromCart(item.id)}
+                                                onClick={() => removeFromCart(item.productId)}
                                                 className="flex items-center gap-1 text-red-500 px-3 py-1.5 
                                                          rounded-full hover:bg-red-50 transition-colors"
                                             >

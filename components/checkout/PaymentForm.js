@@ -153,32 +153,37 @@ export default function PaymentForm({ amount, items, shippingAddress, deliveryMe
           throw new Error('Cart is empty');
         }
 
+        // Generate request ID
+        const requestId = `${session?.user?.id}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+
         const payload = {
           amount: amount,
           cartItems: cartItems,
           deliveryMethod,
           selectedTime,
-          shippingAddress: formattedAddress
+          shippingAddress: formattedAddress,
+          requestId // Add requestId to payload
         };
 
         console.log('💰 Initializing payment:', {
           amountInDollars: amount,
           items: cartItems.length,
-          delivery: deliveryMethod
+          delivery: deliveryMethod,
+          requestId
         });
 
         const response = await fetch('/api/payments', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-Payment-Request-ID': `${session?.user?.id}_${Date.now()}`
+            'X-Payment-Request-ID': requestId // Keep header for backwards compatibility
           },
           body: JSON.stringify(payload),
         });
 
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.details || 'Payment initialization failed');
+          throw new Error(errorData.error || 'Payment initialization failed');
         }
 
         const data = await response.json();
@@ -197,7 +202,7 @@ export default function PaymentForm({ amount, items, shippingAddress, deliveryMe
     };
 
     initializePayment();
-  }, [amount]);
+  }, [amount, session?.user?.id, deliveryMethod, selectedTime]);
 
   if (isLoading) {
     return (

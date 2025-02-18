@@ -153,6 +153,11 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  stripeCustomerId: {
+    type: String,
+    sparse: true,
+    unique: true
+  },
   // Add addresses array
   addresses: [addressSchema],
   // Add reward history to user schema
@@ -326,40 +331,57 @@ userSchema.methods.calculateNextReward = async function() {
     try {
         session.startTransaction();
         
-        // Reload user to get latest points
-        const freshUser = await this.constructor.findById(this._id).session(session);
-        if (!freshUser) {
-            throw new Error('User not found during points calculation');
+        // Use findOneAndUpdate with optimistic concurrency control
+        const result = await this.constructor.findOneAndUpdate(
+            { 
+                _id: this._id,
+                rewardPoints: this.rewardPoints // Optimistic concurrency check
+            },
+            {
+                $set: {
+                    nextRewardMilestone: this.calculateNextMilestone()
+                }
+            },
+            { 
+                session,
+                new: true,
+                runValidators: true
+            }
+        );
+
+        if (!result) {
+            throw new Error('Concurrent update detected');
         }
 
-        const pointsNeeded = REWARDS_CONFIG.REWARD_RATE.POINTS_NEEDED;
-        const currentPoints = freshUser.rewardPoints || 0;
-        
-        // Calculate next milestone with validation
-        const nextMilestone = Math.ceil(currentPoints / pointsNeeded) * pointsNeeded;
-        const validatedMilestone = Math.min(
-            Math.max(pointsNeeded, nextMilestone),
-            REWARDS_CONFIG.MAX_MILESTONE
-        );
-
-        // Update atomically
-        await this.constructor.findByIdAndUpdate(
-            this._id,
-            { nextRewardMilestone: validatedMilestone },
-            { session }
-        );
-
         await session.commitTransaction();
-        return validatedMilestone;
+        return result.nextRewardMilestone;
 
     } catch (error) {
         if (session.inTransaction()) {
             await session.abortTransaction();
         }
+        // Add retry logic
+        if (error.message === 'Concurrent update detected' && !this._retryCount) {
+            this._retryCount = (this._retryCount || 0) + 1;
+            if (this._retryCount < 3) {
+                return this.calculateNextReward();
+            }
+        }
         throw error;
     } finally {
         await session.endSession();
     }
+};
+
+// Add helper method
+userSchema.methods.calculateNextMilestone = function() {
+    const pointsNeeded = REWARDS_CONFIG.REWARD_RATE.POINTS_NEEDED;
+    const currentPoints = this.rewardPoints || 0;
+    const nextMilestone = Math.ceil(currentPoints / pointsNeeded) * pointsNeeded;
+    return Math.min(
+        Math.max(pointsNeeded, nextMilestone),
+        REWARDS_CONFIG.MAX_MILESTONE
+    );
 };
 
 userSchema.methods.getRewardAmount = function() {

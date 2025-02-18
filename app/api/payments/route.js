@@ -3,13 +3,53 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import Stripe from 'stripe';
 import crypto from 'crypto';
+import User from '@/models/User';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+// Add this helper function at the top
+const createCompactCartMetadata = (cartItems) => {
+    return JSON.stringify(cartItems.map(item => ({
+        id: item.id || item._id,
+        name: item.name,
+        p: parseFloat(item.price),
+        q: parseInt(item.quantity) || 1
+    })));
+};
+
+async function getOrCreateStripeCustomer(userId, email) {
+    try {
+        // Find user
+        const user = await User.findById(userId);
+        if (!user) throw new Error('User not found');
+
+        // If user already has a Stripe customer ID, return it
+        if (user.stripeCustomerId) {
+            return user.stripeCustomerId;
+        }
+
+        // Create new Stripe customer
+        const customer = await stripe.customers.create({
+            email: email,
+            metadata: {
+                userId: userId
+            }
+        });
+
+        // Save Stripe customer ID to user
+        user.stripeCustomerId = customer.id;
+        await user.save();
+
+        return customer.id;
+    } catch (error) {
+        console.error('Error in getOrCreateStripeCustomer:', error);
+        throw error;
+    }
+}
 
 export async function POST(request) {
     console.log('💳 Payment endpoint hit');
     try {
-        // Get session
         const session = await getServerSession(authOptions);
         if (!session) {
             return NextResponse.json(
@@ -18,92 +58,74 @@ export async function POST(request) {
             );
         }
 
-        // Get request ID from headers
-        const requestId = request.headers.get('x-payment-request-id');
-        if (!requestId) {
-            return NextResponse.json(
-                { error: 'Missing request ID' },
-                { status: 400 }
-            );
-        }
-
-        // Check for existing payment intent with this request ID
-        const existingIntents = await stripe.paymentIntents.list({
-            limit: 1,
-            created: {
-                gte: Math.floor(Date.now() / 1000) - 300 // Last 5 minutes
-            }
-        });
-
-        const duplicateIntent = existingIntents.data.find(
-            intent => intent.metadata.requestId === requestId
-        );
-
-        if (duplicateIntent) {
-            console.log('⚠️ Duplicate payment request detected:', requestId);
-            return NextResponse.json({
-                clientSecret: duplicateIntent.client_secret
-            });
-        }
-
-        // Parse request body
+        // Get request data
+        const data = await request.json();
         const {
             cartItems,
             deliveryMethod,
             selectedTime,
             shippingAddress,
-            amount
-        } = await request.json();
+            amount,
+            requestId // Make sure this is passed from the client
+        } = data;
 
         // Validate required fields
-        if (!cartItems?.length || !deliveryMethod || !selectedTime || !amount) {
+        if (!cartItems?.length || !deliveryMethod || !selectedTime || !amount || !requestId) {
             return NextResponse.json(
                 { error: 'Missing required fields' },
                 { status: 400 }
             );
         }
 
-        // Convert amount to cents for Stripe
+        // Create deterministic idempotency key from request data
+        const idempotencyKey = crypto
+            .createHash('sha256')
+            .update(`${session.user.id}-${requestId}-${amount}`)
+            .digest('hex');
+
         const amountInCents = Math.round(parseFloat(amount) * 100);
 
-        // Create a unique idempotency key using timestamp and random string
-        const timestamp = Date.now();
-        const randomString = crypto.randomBytes(8).toString('hex');
-        const idempotencyKey = `payment_${session.user.id}_${timestamp}_${randomString}`;
-
-        console.log('📦 Payment request received:', {
-            user: `${session.user.email.substring(0, 8)}...`,
-            deliveryMethod,
-            selectedTime,
-            shippingAddress: shippingAddress || 'missing',
-            cartItems: cartItems.length,
-            amountInDollars: amount,
-            amountInCents
-        });
-
         try {
-            // Create payment intent with metadata
+            // Get or create Stripe customer
+            const customerId = await getOrCreateStripeCustomer(
+                session.user.id,
+                session.user.email
+            );
+
+            // First check for existing intent
+            const existingIntents = await stripe.paymentIntents.list({
+                limit: 1,
+                customer: customerId,
+                created: {
+                    gte: Math.floor(Date.now() / 1000) - 300
+                }
+            });
+
+            const duplicateIntent = existingIntents.data.find(
+                intent => intent.metadata.requestId === requestId
+            );
+
+            if (duplicateIntent) {
+                console.log('⚠️ Returning existing payment intent:', duplicateIntent.id);
+                return NextResponse.json({
+                    clientSecret: duplicateIntent.client_secret
+                });
+            }
+
+            // Create new payment intent with customer ID
             const paymentIntent = await stripe.paymentIntents.create({
                 amount: amountInCents,
                 currency: 'usd',
-                automatic_payment_methods: {
-                    enabled: true,
-                },
+                customer: customerId,
+                automatic_payment_methods: { enabled: true },
                 metadata: {
                     userId: session.user.id,
                     userEmail: session.user.email,
-                    cartItems: JSON.stringify(cartItems.map(item => ({
-                        id: item.id || item._id,
-                        name: item.name,
-                        price: parseFloat(item.price),
-                        quantity: parseInt(item.quantity) || 1,
-                        image: item.image
-                    }))),
+                    cartItems: createCompactCartMetadata(cartItems),
                     deliveryMethod,
                     selectedTime,
                     shippingAddress: JSON.stringify(shippingAddress || {}),
                     amountInDollars: amount.toString(),
-                    amountInCents: amountInCents.toString(),
                     requestId
                 }
             }, {
@@ -112,8 +134,8 @@ export async function POST(request) {
 
             console.log('✅ Payment intent created:', {
                 id: paymentIntent.id,
-                amountInCents,
-                idempotencyKey: `${idempotencyKey.substring(0, 20)}...`
+                customerId,
+                amountInCents
             });
 
             return NextResponse.json({
@@ -121,48 +143,7 @@ export async function POST(request) {
             });
 
         } catch (stripeError) {
-            console.error('❌ Stripe API error:', {
-                message: stripeError.message,
-                stack: stripeError.stack
-            });
-
-            // Check if it's an idempotency error
-            if (stripeError.code === 'idempotency_key_in_use') {
-                // Generate a new key and retry
-                const newIdempotencyKey = `payment_${session.user.id}_${Date.now()}_${crypto.randomBytes(8).toString('hex')}`;
-                
-                const paymentIntent = await stripe.paymentIntents.create({
-                    amount: amountInCents,
-                    currency: 'usd',
-                    automatic_payment_methods: {
-                        enabled: true,
-                    },
-                    metadata: {
-                        userId: session.user.id,
-                        userEmail: session.user.email,
-                        cartItems: JSON.stringify(cartItems.map(item => ({
-                            id: item.id || item._id,
-                            name: item.name,
-                            price: parseFloat(item.price),
-                            quantity: parseInt(item.quantity) || 1,
-                            image: item.image
-                        }))),
-                        deliveryMethod,
-                        selectedTime,
-                        shippingAddress: JSON.stringify(shippingAddress || {}),
-                        amountInDollars: amount.toString(),
-                        amountInCents: amountInCents.toString(),
-                        requestId
-                    }
-                }, {
-                    idempotencyKey: newIdempotencyKey
-                });
-
-                return NextResponse.json({
-                    clientSecret: paymentIntent.client_secret
-                });
-            }
-
+            console.error('❌ Stripe error:', stripeError);
             return NextResponse.json(
                 { error: stripeError.message },
                 { status: 500 }
@@ -170,11 +151,7 @@ export async function POST(request) {
         }
 
     } catch (error) {
-        console.error('❌ Payment API error:', {
-            message: error.message,
-            stack: error.stack
-        });
-
+        console.error('❌ General error:', error);
         return NextResponse.json(
             { error: 'Internal server error' },
             { status: 500 }

@@ -18,7 +18,7 @@ export function useCart() {
 const normalizeProduct = (product) => {
     if (!product) return null;
     return {
-        id: product._id || product.id,
+        productId: product._id || product.id,
         name: product.name,
         price: parseFloat(product.price),
         image: product.image,
@@ -33,7 +33,8 @@ export function CartProvider({ children }) {
         total: 0,
         subtotal: 0,
         tax: 0,
-        loading: true  // Start with loading true
+        loading: true,
+        initialized: false  // Add this flag
     });
 
     const [deliveryState, setDeliveryState] = useState({
@@ -55,16 +56,21 @@ export function CartProvider({ children }) {
                 const savedCart = localStorage.getItem('cart');
                 if (savedCart) {
                     const parsedCart = JSON.parse(savedCart);
+                    // Validate cart data
+                    const validCart = Array.isArray(parsedCart) ? parsedCart : [];
+                    
                     setCartState(prev => ({
                         ...prev,
-                        items: parsedCart,
-                        loading: false
+                        items: validCart,
+                        loading: false,
+                        initialized: true
                     }));
                 } else {
-                    // If no cart in localStorage, still set loading to false
                     setCartState(prev => ({
                         ...prev,
-                        loading: false
+                        items: [],
+                        loading: false,
+                        initialized: true
                     }));
                 }
             } catch (error) {
@@ -72,18 +78,22 @@ export function CartProvider({ children }) {
                 setCartState(prev => ({ 
                     ...prev, 
                     items: [],
-                    loading: false 
+                    loading: false,
+                    initialized: true
                 }));
             }
         };
 
-        // Add a small timeout to ensure hydration is complete
-        setTimeout(loadCart, 0);
+        // Remove the timeout and call loadCart directly
+        loadCart();
     }, []);
 
-    // Calculate totals when items change
+    // Update localStorage when cart changes
     useEffect(() => {
-        if (!cartState.loading) {
+        if (cartState.initialized && !cartState.loading) {
+            localStorage.setItem('cart', JSON.stringify(cartState.items));
+            
+            // Calculate totals
             const newSubtotal = cartState.items.reduce(
                 (sum, item) => sum + (item.price * item.quantity), 
                 0
@@ -96,48 +106,46 @@ export function CartProvider({ children }) {
                 tax: newTax,
                 total: newSubtotal + newTax
             }));
-            
-            localStorage.setItem('cart', JSON.stringify(cartState.items));
         }
-    }, [cartState.items, cartState.loading]);
+    }, [cartState.items, cartState.initialized, cartState.loading]);
 
     const getProductId = useCallback((product) => {
-        return product._id || product.id; // Support both MongoDB _id and legacy id
+        return product.productId || product._id || product.id;
     }, []);
 
-    const addToCart = useCallback((product) => {
+    const addToCart = useCallback(async (product) => {
         if (!product || (!product._id && !product.id)) {
             console.error('Invalid product:', product);
             return;
         }
         
-        setCartState(prevItems => {
-            const productId = getProductId(product);
-            const existingItem = prevItems.items.find(item => 
-                getProductId(item) === productId
+        const productId = getProductId(product);
+        
+        setCartState(prevState => {
+            // Check if item already exists
+            const existingItem = prevState.items.find(item => 
+                item.productId === productId
             );
             
             if (existingItem) {
+                // Update quantity of existing item
                 return {
-                    ...prevItems,
-                    items: prevItems.items.map(item =>
-                        getProductId(item) === productId
+                    ...prevState,
+                    items: prevState.items.map(item =>
+                        item.productId === productId
                             ? { ...item, quantity: item.quantity + 1 }
                             : item
                     )
                 };
             }
             
-            // Normalize product data when adding to cart
+            // Add new item
             const normalizedProduct = normalizeProduct(product);
-            console.log('Adding normalized product to cart:', normalizedProduct);
+            console.log('Adding new product to cart:', normalizedProduct);
             
             return {
-                ...prevItems,
-                items: [...prevItems.items, { 
-                    ...normalizedProduct,
-                    addedAt: new Date().toISOString() 
-                }]
+                ...prevState,
+                items: [...prevState.items, normalizedProduct]
             };
         });
     }, [getProductId]);
@@ -251,6 +259,37 @@ export function CartProvider({ children }) {
         }
     };
 
+    // Add the new updateItemQuantity function
+    const updateItemQuantity = useCallback((productId, newQuantity) => {
+        if (newQuantity < 0) return;
+        
+        setCartState(prevState => {
+            const existingItemIndex = prevState.items.findIndex(
+                item => getProductId(item) === productId
+            );
+
+            if (existingItemIndex === -1) {
+                console.warn('Attempted to update quantity for non-existent item:', productId);
+                return prevState;
+            }
+
+            const updatedItems = [...prevState.items];
+            if (newQuantity === 0) {
+                updatedItems.splice(existingItemIndex, 1);
+            } else {
+                updatedItems[existingItemIndex] = {
+                    ...updatedItems[existingItemIndex],
+                    quantity: newQuantity
+                };
+            }
+
+            return {
+                ...prevState,
+                items: updatedItems
+            };
+        });
+    }, [getProductId]);
+
     const value = {
         items: cartState.items,
         total: cartState.total,
@@ -262,6 +301,7 @@ export function CartProvider({ children }) {
         updateQuantity,
         clearCart,
         decrement,
+        updateItemQuantity,
         deliveryOption: deliveryState.option,
         setDeliveryOption: (option) => setDeliveryState(prev => ({ ...prev, option })),
         selectedTime: deliveryState.selectedTime,
