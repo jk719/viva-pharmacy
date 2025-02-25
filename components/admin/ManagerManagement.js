@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiUserPlus, FiTrash2, FiAlertCircle, FiCheckCircle, FiEdit2, FiMail, FiUser } from 'react-icons/fi';
 import LoadingSpinner from '../common/LoadingSpinner';
@@ -17,29 +17,40 @@ export default function ManagerManagement() {
   });
   const [successMessage, setSuccessMessage] = useState('');
 
-  // Fetch managers
+  // Add timeout cleanup for success message
   useEffect(() => {
-    fetchManagers();
-  }, []);
+    if (successMessage) {
+      const timer = setTimeout(() => {
+        setSuccessMessage('');
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
 
-  const fetchManagers = async () => {
+  const fetchManagers = useCallback(async () => {
     try {
+      setLoading(true);
       const response = await fetch('/api/admin/managers');
       const data = await response.json();
       
       if (!response.ok) throw new Error(data.error);
       
-      // Debug log to check the data
       console.log('Fetched managers:', data.managers);
-      
-      setManagers(data.managers);
+      setManagers(data.managers || []); // Ensure we always set an array
       setError(null);
     } catch (err) {
+      console.error('Fetch error:', err);
       setError(err.message);
+      setManagers([]); // Reset managers on error
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // Update useEffect dependency
+  useEffect(() => {
+    fetchManagers();
+  }, [fetchManagers]);
 
   const handleEdit = (manager) => {
     setEditingManager(manager);
@@ -55,10 +66,9 @@ export default function ManagerManagement() {
       return;
     }
 
-    console.log('Attempting to delete manager with ID:', managerId); // Debug log
-
     setLoading(true);
     setError(null);
+    setSuccessMessage(''); // Clear any existing success message
 
     try {
       const response = await fetch(`/api/admin/managers/${managerId}`, {
@@ -66,15 +76,21 @@ export default function ManagerManagement() {
       });
 
       const data = await response.json();
-      console.log('Delete response:', data); // Debug log
       
       if (!response.ok) throw new Error(data.error);
 
+      // Update the local state immediately
+      setManagers(prevManagers => 
+        prevManagers.filter(manager => manager._id !== managerId && manager.id !== managerId)
+      );
+      
       setSuccessMessage('Manager deleted successfully');
+      
+      // Refetch to ensure sync with server
       await fetchManagers();
 
     } catch (err) {
-      console.error('Delete error:', err); // Debug log
+      console.error('Delete error:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -88,8 +104,14 @@ export default function ManagerManagement() {
     setSuccessMessage('');
 
     try {
-      const response = await fetch('/api/admin/managers', {
-        method: 'POST',
+      const url = editingManager 
+        ? `/api/admin/managers/${editingManager._id}`
+        : '/api/admin/managers';
+      
+      const method = editingManager ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
@@ -99,11 +121,14 @@ export default function ManagerManagement() {
       if (!response.ok) throw new Error(data.error);
 
       setSuccessMessage(
-        `Manager account created successfully! An email has been sent to ${formData.email} with login instructions.`
+        editingManager
+          ? `Manager updated successfully!`
+          : `Manager account created successfully! An email has been sent to ${formData.email} with login instructions.`
       );
       
       setFormData({ name: '', email: '' });
       setShowForm(false);
+      setEditingManager(null);
       await fetchManagers();
 
     } catch (err) {
@@ -111,6 +136,14 @@ export default function ManagerManagement() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Add function to cancel editing
+  const handleCancel = () => {
+    setShowForm(false);
+    setEditingManager(null);
+    setFormData({ name: '', email: '' });
+    setError(null);
   };
 
   const formatDate = (date) => {
@@ -227,7 +260,7 @@ export default function ManagerManagement() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   type="button"
-                  onClick={() => setShowForm(false)}
+                  onClick={handleCancel}
                   className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors duration-200"
                 >
                   Cancel
@@ -239,7 +272,7 @@ export default function ManagerManagement() {
                   className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 
                            transition-all duration-200 shadow-sm hover:shadow-md"
                 >
-                  Create Manager
+                  {editingManager ? 'Update Manager' : 'Create Manager'}
                 </motion.button>
               </div>
             </motion.form>

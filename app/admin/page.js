@@ -14,6 +14,14 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('products');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // Move the authorization check into useEffect
+  useEffect(() => {
+    if (status === "authenticated" && 
+        (!session?.user?.role || !["ADMIN", "MANAGER"].includes(session.user.role))) {
+      router.push("/");
+    }
+  }, [session, status, router]);
+
   if (status === "loading") {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gray-50">
@@ -25,8 +33,8 @@ export default function AdminDashboard() {
     );
   }
 
-  if (!session?.user?.role || !["ADMIN", "MANAGER"].includes(session.user.role)) {
-    router.push("/");
+  // Remove the direct router.push() and return null
+  if (status === "unauthenticated") {
     return null;
   }
 

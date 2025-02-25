@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { FiPlus, FiEdit2, FiTrash2, FiSearch } from 'react-icons/fi';
@@ -9,26 +9,18 @@ export default function ProductManagement() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
+      setLoading(true);
       const response = await fetch('/api/products');
       
-      const contentType = response.headers.get("content-type");
-      console.log('Response content type:', contentType);
-      
       if (!response.ok) {
-        const text = await response.text();
-        console.error('Error response:', text);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
       const data = await response.json();
-      console.log('Fetched products:', data);
       
       if (data.success) {
         setProducts(data.products);
@@ -41,7 +33,18 @@ export default function ProductManagement() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
+  // Add search functionality with memoization
+  const filteredProducts = useMemo(() => {
+    return products.filter(product => 
+      product.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [products, searchTerm]);
 
   const deleteProduct = async (productId) => {
     if (!confirm('Are you sure you want to delete this product?')) return;
@@ -93,6 +96,8 @@ export default function ProductManagement() {
               type="text"
               placeholder="Search products..."
               className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-primary focus:border-transparent"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
             <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           </div>
@@ -120,7 +125,7 @@ export default function ProductManagement() {
         </div>
       )}
 
-      {products.length === 0 ? (
+      {filteredProducts.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
           No products found. Add your first product!
         </div>
@@ -149,7 +154,7 @@ export default function ProductManagement() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {products.map((product) => (
+                {filteredProducts.map((product) => (
                   <tr key={product._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">{product.name}</td>
                     <td className="px-6 py-4 whitespace-nowrap">{product.category}</td>
@@ -187,7 +192,7 @@ export default function ProductManagement() {
 
           {/* Mobile Product List */}
           <div className="md:hidden space-y-4">
-            {products.map((product) => (
+            {filteredProducts.map((product) => (
               <div key={product._id} className="bg-white rounded-lg shadow p-4">
                 <div className="flex justify-between items-start mb-2">
                   <div>

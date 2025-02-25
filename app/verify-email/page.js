@@ -7,19 +7,12 @@ import { FaEnvelope } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 
-function VerifyEmailContent() {
+export default function VerifyEmail() {
   const [status, setStatus] = useState('verifying');
-  const [isClient, setIsClient] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  useEffect(() => {
-    if (!isClient) return;
-    
     const verifyToken = async () => {
       const token = searchParams.get('token');
       
@@ -49,7 +42,6 @@ function VerifyEmailContent() {
         setStatus('success');
         
         if (data.userRole === 'MANAGER' && data.mustChangePassword) {
-          console.log('Manager verification successful, proceeding to login');
           toast.success('Email verified! Please set your password.');
           
           const result = await signIn('credentials', {
@@ -58,15 +50,9 @@ function VerifyEmailContent() {
             redirect: false,
           });
 
-          console.log('Sign in result:', result);
-
           if (result?.ok) {
-            console.log('Login successful, redirecting to password reset');
-            setTimeout(() => {
-              router.push('/reset-password');
-            }, 1500);
+            setTimeout(() => router.push('/reset-password'), 1500);
           } else {
-            console.error('Login failed:', result?.error);
             toast.error('Auto-login failed. Please try logging in manually.');
             setTimeout(() => router.push('/?showLogin=true'), 1500);
           }
@@ -83,73 +69,32 @@ function VerifyEmailContent() {
     };
 
     verifyToken();
-  }, [isClient, searchParams, router]);
-
-  const loadingSpinner = (
-    <div className="w-16 h-16 mx-auto">
-      <div className="animate-spin rounded-full h-16 w-16 border-4 border-orange-500 border-t-transparent" />
-    </div>
-  );
-
-  if (!isClient) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          {loadingSpinner}
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  }, [searchParams, router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="max-w-md w-full mx-auto p-8">
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
-          {status === 'verifying' && (
-            <div className="text-center space-y-4">
-              {loadingSpinner}
-              <p className="text-gray-600">Verifying your email...</p>
-            </div>
-          )}
-          
-          {status === 'success' && (
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-center space-y-4"
-            >
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-                <FaEnvelope className="text-2xl text-green-500" />
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-lg font-semibold text-gray-900">Email Verified!</h3>
-                <p className="text-sm text-gray-600">Redirecting you...</p>
-              </div>
-            </motion.div>
-          )}
-          
-          {status === 'error' && (
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-center space-y-4"
-            >
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto">
-                <FaEnvelope className="text-2xl text-red-500" />
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-lg font-semibold text-gray-900">Verification Failed</h3>
-                <p className="text-sm text-gray-600">Redirecting to home page...</p>
-              </div>
-            </motion.div>
-          )}
+          <div className="text-center space-y-4">
+            {status === 'verifying' && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-4"
+              >
+                <div className="w-16 h-16 mx-auto bg-orange-100 rounded-full flex items-center justify-center">
+                  <FaEnvelope className="w-8 h-8 text-orange-500" />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900">Verifying your email</h2>
+                <p className="text-gray-500">Please wait while we verify your email address...</p>
+                <div className="w-16 h-16 mx-auto">
+                  <div className="animate-spin rounded-full h-16 w-16 border-4 border-orange-500 border-t-transparent" />
+                </div>
+              </motion.div>
+            )}
+          </div>
         </div>
       </div>
     </div>
   );
-}
-
-export default function VerifyEmailPage() {
-  return <VerifyEmailContent />;
 }
