@@ -17,7 +17,6 @@
     "clean": "rm -rf .next && rm -rf node_modules/.cache && npm install",
     "clean:hard": "rm -rf .next node_modules package-lock.json && npm cache clean --force && npm install",
     "update-stock": "node scripts/updateProductStock.mjs",
-    "postinstall": "next build",
     "cache:clear": "rm -rf .next/cache",
     "dev:turbo": "NEXT_TURBO=1 next dev",
     "analyze": "ANALYZE=true next build",

@@ -2,11 +2,8 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import User from '@/models/User';
-import { 
-  generateVerificationToken, 
-  sendVerificationEmail, 
-  AUTH_ERRORS 
-} from '@/lib/auth';
+import { generateVerificationToken, AUTH_ERRORS } from '@/lib/auth';
+import { sendVerificationEmail } from '@/lib/email/sendEmail';
 
 export async function POST(request) {
   try {

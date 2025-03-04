@@ -2,7 +2,7 @@
 import { useState, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { PasswordStrengthIndicator } from '@/components/auth/PasswordStrengthIndicator';
+import PasswordStrengthIndicator from '@/components/auth/PasswordStrengthIndicator';
 import toast from 'react-hot-toast';
 import { FaStar, FaGift, FaCoins, FaEnvelope, FaLock, FaPhone, FaUser } from 'react-icons/fa';
 import { motion } from 'framer-motion';

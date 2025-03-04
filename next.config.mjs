@@ -48,14 +48,7 @@ const nextConfig = {
     ];
   },
   webpack: (config, { dev, isServer }) => {
-    config.cache = {
-      type: 'filesystem',
-      version: `${process.env.NODE_ENV}_${new Date().getTime()}`,
-      buildDependencies: {
-        config: [__filename],
-      },
-      cacheDirectory: path.resolve(__dirname, '.next/cache/webpack'),
-    };
+    config.cache = false;
 
     config.resolve.alias = {
       ...config.resolve.alias,
