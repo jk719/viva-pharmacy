@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { signIn } from 'next-auth/react';
 import toast from 'react-hot-toast';
 
 export default function VerificationForm({ token }) {
@@ -23,7 +24,24 @@ export default function VerificationForm({ token }) {
       }
 
       toast.success('Email verified successfully!');
-      router.push('/?verification=success');
+
+      // If this is a manager, handle auto-login
+      if (data.userRole === 'MANAGER') {
+        const signInResult = await signIn('credentials', {
+          email: data.email,
+          verificationLogin: 'true',
+          redirect: false,
+        });
+
+        if (signInResult?.ok) {
+          router.push('/reset-password');
+        } else {
+          toast.error('Auto-login failed. Please try logging in manually.');
+          router.push('/?showLogin=true');
+        }
+      } else {
+        router.push('/?verification=success');
+      }
     } catch (error) {
       toast.error(error.message || 'Verification failed');
       router.push('/');

@@ -1,22 +1,34 @@
 import { headers } from 'next/headers';
-import { getToken } from 'next-auth/jwt';
 import eventEmitter, { Events } from '@/lib/eventEmitter';
+import { getToken } from 'next-auth/jwt';
 
 export const runtime = 'edge';
 
 export async function GET(request) {
     try {
+        // Get token from request
+        const token = await getToken({ req: request });
+        if (!token) {
+            return new Response(
+                JSON.stringify({ error: 'Unauthorized' }), 
+                { status: 401 }
+            );
+        }
+
         // Parse URL and get user ID
         const url = new URL(request.url);
         const pathParts = url.pathname.split('/');
         const userId = pathParts[pathParts.indexOf('vivabucks') + 1];
         
-        if (!userId) {
+        // Validate user ID matches token
+        if (!userId || userId !== token.id) {
             return new Response(
-                JSON.stringify({ error: 'User ID is required' }), 
-                { status: 400 }
+                JSON.stringify({ error: 'Invalid user ID' }), 
+                { status: 403 }
             );
         }
+
+        console.log(`🔌 SSE: Establishing connection for user ${userId}`);
 
         return new Response(
             new ReadableStream({
@@ -24,104 +36,47 @@ export async function GET(request) {
                     const encoder = new TextEncoder();
                     let counter = 0;
                     let keepAliveInterval = null;
-                    let reconnectAttempts = 0;
-                    const MAX_RECONNECT_ATTEMPTS = 5;
-                    const activeListeners = new Set();
+
+                    // Send initial connection message
+                    controller.enqueue(
+                        encoder.encode(`data: ${JSON.stringify({
+                            type: 'CONNECTED',
+                            timestamp: new Date().toISOString()
+                        })}\n\n`)
+                    );
 
                     const eventListener = (data) => {
+                        console.log(`📨 SSE: Sending event to user ${userId}:`, data);
                         try {
                             controller.enqueue(
-                                encoder.encode(`data: ${JSON.stringify(data)}\n\n`)
+                                encoder.encode(`data: ${JSON.stringify({
+                                    ...data,
+                                    timestamp: new Date().toISOString()
+                                })}\n\n`)
                             );
                         } catch (error) {
-                            handleError(error);
+                            console.error('SSE: Error sending event:', error);
                         }
                     };
 
-                    const safeAddListener = (event) => {
-                        try {
-                            eventEmitter.on(event, eventListener);
-                            activeListeners.add(event);
-                        } catch (error) {
-                            console.error(`Error adding listener for ${event}:`, error);
-                        }
-                    };
+                    // Add event listeners
+                    console.log(`🎯 SSE: Adding event listeners for user ${userId}`);
+                    eventEmitter.on(Events.POINTS_UPDATED, eventListener);
+                    eventEmitter.on(Events.REWARD_REDEEMED, eventListener);
+                    eventEmitter.on(Events.REWARD_RESTORED, eventListener);
 
-                    // Enhanced cleanup function
-                    const cleanup = (reason = 'unknown') => {
-                        console.log(`SSE Connection closed: ${reason}`);
-                        
-                        try {
-                            if (keepAliveInterval) {
-                                clearInterval(keepAliveInterval);
-                                keepAliveInterval = null;
-                            }
-
-                            // Remove all active listeners
-                            activeListeners.forEach(event => {
-                                try {
-                                    eventEmitter.off(event, eventListener);
-                                } catch (error) {
-                                    console.error(`Error removing listener for ${event}:`, error);
-                                }
-                            });
-                            activeListeners.clear();
-                        } catch (error) {
-                            console.error('Error during cleanup:', error);
-                        }
-                    };
-
-                    // Add listeners and track them
-                    safeAddListener(Events.POINTS_UPDATED);
-                    safeAddListener(Events.REWARD_REDEEMED);
-                    safeAddListener(Events.REWARD_RESTORED);
-
-                    // Keep-alive with error handling
+                    // Keep-alive
                     keepAliveInterval = setInterval(() => {
-                        try {
-                            if (counter > 14400) { // 4 hour limit
-                                cleanup('Time limit reached');
-                                controller.close();
-                                return;
-                            }
-                            
-                            controller.enqueue(
-                                encoder.encode(`: keepalive ${counter++}\n\n`)
-                            );
-                        } catch (error) {
-                            console.error('SSE Ping Error:', error);
-                            handleError(error);
-                        }
-                    }, 10000);
+                        controller.enqueue(encoder.encode(`: keepalive ${counter++}\n\n`));
+                    }, 30000);
 
-                    // Enhanced error handling
-                    const handleError = (error) => {
-                        reconnectAttempts++;
-                        console.error(`SSE Error (attempt ${reconnectAttempts}):`, error);
-                        
-                        if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-                            cleanup('Max reconnection attempts reached');
-                            controller.error(error);
-                        } else {
-                            try {
-                                controller.enqueue(
-                                    encoder.encode(`data: ${JSON.stringify({ 
-                                        type: 'error', 
-                                        message: 'Attempting to reconnect...',
-                                        attempt: reconnectAttempts 
-                                    })}\n\n`)
-                                );
-                            } catch (enqueueError) {
-                                console.error('Error sending reconnect message:', enqueueError);
-                                cleanup('Enqueue error during reconnect');
-                                controller.error(enqueueError);
-                            }
-                        }
-                    };
-
-                    // Handle client disconnection
+                    // Cleanup on disconnect
                     request.signal.addEventListener('abort', () => {
-                        cleanup('Client disconnected');
+                        console.log(`🔌 SSE: Connection closed for user ${userId}`);
+                        clearInterval(keepAliveInterval);
+                        eventEmitter.off(Events.POINTS_UPDATED, eventListener);
+                        eventEmitter.off(Events.REWARD_REDEEMED, eventListener);
+                        eventEmitter.off(Events.REWARD_RESTORED, eventListener);
                     });
                 }
             }),
@@ -136,11 +91,7 @@ export async function GET(request) {
     } catch (error) {
         console.error('SSE Route Error:', error);
         return new Response(
-            JSON.stringify({ 
-                error: 'Internal Server Error',
-                message: error.message,
-                timestamp: Date.now()
-            }), 
+            JSON.stringify({ error: 'Internal Server Error' }), 
             { status: 500 }
         );
     }

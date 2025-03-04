@@ -3,11 +3,13 @@
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 
-export default function ResetPasswordForm() {
-  const { data: session } = useSession();
+export default function ResetPasswordForm({ isManagerReset = false }) {
+  const { data: session, update: updateSession } = useSession();
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState('');
+  const router = useRouter();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,15 +23,21 @@ export default function ResetPasswordForm() {
         },
         body: JSON.stringify({
           email,
-          isManagerReset: session?.user?.role === 'MANAGER' && session?.user?.mustChangePassword
+          isManagerReset: isManagerReset && session?.user?.role === 'MANAGER' && session?.user?.mustChangePassword
         }),
       });
 
       const data = await res.json();
 
       if (res.ok) {
-        toast.success('Password reset email sent successfully');
-        setEmail('');
+        if (data.updateSession) {
+          await updateSession({
+            user: data.user
+          });
+        }
+
+        toast.success('Password reset successfully');
+        router.push('/admin');
       } else {
         toast.error(data.error || 'Failed to send reset email');
       }

@@ -1,131 +1,78 @@
+import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
 
-export async function PUT(req, context) {
+export async function DELETE(request, context) {
   try {
     const session = await getServerSession(authOptions);
-    
-    // Check if user is admin
-    if (!session?.user?.role || session.user.role !== 'ADMIN') {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized - Admin access required' }), 
-        { status: 403 }
-      );
+    if (!session || session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const { params } = context;
+    const id = await params.id;
+    console.log('Attempting to delete manager:', id);
 
     await dbConnect();
-    const id = context.params.id;
-    const data = await req.json();
-    const { name, email, password } = data;
 
-    console.log('Updating manager:', { id, name, email }); // Debug log
-
-    // Find the manager
     const manager = await User.findOne({ _id: id, role: 'MANAGER' });
     if (!manager) {
-      return new Response(
-        JSON.stringify({ error: 'Manager not found' }), 
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Manager not found' }, { status: 404 });
     }
 
-    console.log('Before update:', { 
-      currentName: manager.name,
-      currentEmail: manager.email 
-    }); // Debug log
+    await User.findByIdAndDelete(id);
+    console.log('Successfully deleted manager:', id);
 
-    // Update fields
-    if (name !== undefined && name !== null) {
-      manager.name = name.trim();
-    }
-    if (email) {
-      manager.email = email.toLowerCase().trim();
-    }
-    if (password) {
-      manager.password = password;
-    }
-
-    // Update the lastUpdated timestamp
-    manager.updatedAt = new Date();
-
-    // Save the changes
-    const updatedManager = await manager.save();
-
-    console.log('After update:', { 
-      newName: updatedManager.name,
-      newEmail: updatedManager.email 
-    }); // Debug log
-
-    return new Response(
-      JSON.stringify({ 
-        message: 'Manager updated successfully',
-        manager: {
-          id: updatedManager._id,
-          email: updatedManager.email,
-          name: updatedManager.name,
-          role: updatedManager.role,
-          createdAt: updatedManager.createdAt,
-          updatedAt: updatedManager.updatedAt
-        }
-      }), 
-      { status: 200 }
-    );
+    return NextResponse.json({ message: 'Manager deleted successfully' });
 
   } catch (error) {
-    console.error('Error updating manager:', error);
-    return new Response(
-      JSON.stringify({ 
-        error: 'Failed to update manager',
-        details: error.message 
-      }), 
+    console.error('Error deleting manager:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete manager' },
       { status: 500 }
     );
   }
 }
 
-export async function DELETE(req, context) {
+export async function PUT(request, context) {
   try {
     const session = await getServerSession(authOptions);
-    
-    // Check if user is admin
-    if (!session?.user?.role || session.user.role !== 'ADMIN') {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized - Admin access required' }), 
-        { status: 403 }
-      );
+    if (!session || session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const { params } = context;
+    const id = await params.id;
+    const data = await request.json();
 
     await dbConnect();
-    const id = context.params.id;
 
-    console.log('Attempting to delete manager:', id);
-
-    // Find and delete the manager
-    const result = await User.deleteOne({ _id: id, role: 'MANAGER' });
-    
-    if (result.deletedCount === 0) {
-      return new Response(
-        JSON.stringify({ error: 'Manager not found' }), 
-        { status: 404 }
-      );
-    }
-
-    console.log('Successfully deleted manager:', id);
-
-    return new Response(
-      JSON.stringify({ message: 'Manager deleted successfully' }), 
-      { status: 200 }
+    const manager = await User.findOneAndUpdate(
+      { _id: id, role: 'MANAGER' },
+      { $set: data },
+      { new: true }
     );
 
+    if (!manager) {
+      return NextResponse.json({ error: 'Manager not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      message: 'Manager updated successfully',
+      manager: {
+        id: manager._id,
+        name: manager.name,
+        email: manager.email,
+        role: manager.role
+      }
+    });
+
   } catch (error) {
-    console.error('Error deleting manager:', error);
-    return new Response(
-      JSON.stringify({ 
-        error: 'Failed to delete manager',
-        details: error.message 
-      }), 
+    console.error('Error updating manager:', error);
+    return NextResponse.json(
+      { error: 'Failed to update manager' },
       { status: 500 }
     );
   }

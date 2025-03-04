@@ -1,67 +1,135 @@
 'use client';
-import { getPasswordStrength } from '@/lib/auth/password';
+
+import { useEffect, useState } from 'react';
 
 const PasswordStrengthIndicator = ({ password }) => {
-  const strength = getPasswordStrength(password);
-  
-  const getStrengthText = () => {
-    if (strength === 0) return '';
-    if (strength <= 20) return 'Very Weak';
-    if (strength <= 40) return 'Weak';
-    if (strength <= 60) return 'Medium';
-    if (strength <= 80) return 'Strong';
-    return 'Very Strong';
-  };
+  const [strength, setStrength] = useState({
+    score: 0,
+    feedback: '',
+    checks: {
+      minLength: false,
+      hasNumber: false,
+      hasSpecial: false,
+      hasUppercase: false,
+      hasLowercase: false
+    }
+  });
+
+  useEffect(() => {
+    const checkPassword = (pass) => {
+      const checks = {
+        minLength: pass.length >= 8,
+        hasNumber: /\d/.test(pass),
+        hasSpecial: /[!@#$%^&*(),.?":{}|<>]/.test(pass),
+        hasUppercase: /[A-Z]/.test(pass),
+        hasLowercase: /[a-z]/.test(pass)
+      };
+
+      // Calculate score (0-4)
+      const score = Object.values(checks).filter(Boolean).length;
+
+      // Generate feedback
+      let feedback = '';
+      if (score === 0) feedback = 'Very weak';
+      else if (score === 1) feedback = 'Weak';
+      else if (score === 2) feedback = 'Fair';
+      else if (score === 3) feedback = 'Good';
+      else if (score === 4) feedback = 'Strong';
+      else if (score === 5) feedback = 'Very strong';
+
+      return { score, feedback, checks };
+    };
+
+    setStrength(checkPassword(password));
+  }, [password]);
+
+  const getColorClass = (isValid) => 
+    isValid ? 'text-green-600' : 'text-gray-400';
 
   const getStrengthColor = () => {
-    if (strength <= 20) return 'bg-red-500';
-    if (strength <= 40) return 'bg-orange-500';
-    if (strength <= 60) return 'bg-yellow-500';
-    if (strength <= 80) return 'bg-lime-500';
-    return 'bg-green-500';
+    switch (strength.score) {
+      case 0: return 'bg-gray-200';
+      case 1: return 'bg-red-500';
+      case 2: return 'bg-orange-500';
+      case 3: return 'bg-yellow-500';
+      case 4: return 'bg-green-500';
+      case 5: return 'bg-green-600';
+      default: return 'bg-gray-200';
+    }
   };
 
-  const strengthText = getStrengthText();
-  const strengthColor = getStrengthColor();
-
   return (
-    <div className="mt-2 space-y-2">
+    <div className="space-y-3">
+      <div className="flex gap-1 h-1.5">
+        {[...Array(5)].map((_, i) => (
+          <div
+            key={i}
+            className={`h-full flex-1 rounded-full transition-colors duration-200 ${
+              i < strength.score ? getStrengthColor() : 'bg-gray-200'
+            }`}
+          />
+        ))}
+      </div>
+      
       {password && (
-        <>
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-gray-500">Password strength:</span>
-            <span className={`font-medium ${
-              strength <= 40 ? 'text-red-500' : 
-              strength <= 60 ? 'text-yellow-500' : 
-              'text-green-600'
-            }`}>
-              {strengthText}
-            </span>
-          </div>
-          <div className="h-1 w-full bg-gray-200 rounded-full overflow-hidden">
-            <div 
-              className={`h-full ${strengthColor} transition-all duration-300 ease-in-out`}
-              style={{ width: `${strength}%` }}
-            />
-          </div>
-          <ul className="text-xs text-gray-500 space-y-1 mt-2">
-            <li className={`flex items-center gap-1 ${password.length >= 8 ? 'text-green-600' : ''}`}>
-              {password.length >= 8 ? '✓' : '○'} At least 8 characters
+        <div className="text-sm space-y-2">
+          <p className="font-medium text-gray-700">
+            Password strength: <span className="font-semibold">{strength.feedback}</span>
+          </p>
+          
+          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+            <li className={`flex items-center gap-1 ${getColorClass(strength.checks.minLength)}`}>
+              <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                {strength.checks.minLength ? (
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                ) : (
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"/>
+                )}
+              </svg>
+              At least 8 characters
             </li>
-            <li className={`flex items-center gap-1 ${/[A-Z]/.test(password) ? 'text-green-600' : ''}`}>
-              {/[A-Z]/.test(password) ? '✓' : '○'} One uppercase letter
+            <li className={`flex items-center gap-1 ${getColorClass(strength.checks.hasNumber)}`}>
+              <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                {strength.checks.hasNumber ? (
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                ) : (
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"/>
+                )}
+              </svg>
+              Contains a number
             </li>
-            <li className={`flex items-center gap-1 ${/[a-z]/.test(password) ? 'text-green-600' : ''}`}>
-              {/[a-z]/.test(password) ? '✓' : '○'} One lowercase letter
+            <li className={`flex items-center gap-1 ${getColorClass(strength.checks.hasSpecial)}`}>
+              <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                {strength.checks.hasSpecial ? (
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                ) : (
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"/>
+                )}
+              </svg>
+              Contains a special character
             </li>
-            <li className={`flex items-center gap-1 ${/\d/.test(password) ? 'text-green-600' : ''}`}>
-              {/\d/.test(password) ? '✓' : '○'} One number
+            <li className={`flex items-center gap-1 ${getColorClass(strength.checks.hasUppercase)}`}>
+              <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                {strength.checks.hasUppercase ? (
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                ) : (
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"/>
+                )}
+              </svg>
+              Contains an uppercase letter
             </li>
-            <li className={`flex items-center gap-1 ${/[!@#$%^&*(),.?":{}|<>]/.test(password) ? 'text-green-600' : ''}`}>
-              {/[!@#$%^&*(),.?":{}|<>]/.test(password) ? '✓' : '○'} One special character
+            <li className={`flex items-center gap-1 ${getColorClass(strength.checks.hasLowercase)}`}>
+              <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                {strength.checks.hasLowercase ? (
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                ) : (
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"/>
+                )}
+              </svg>
+              Contains a lowercase letter
             </li>
           </ul>
-        </>
+        </div>
       )}
     </div>
   );

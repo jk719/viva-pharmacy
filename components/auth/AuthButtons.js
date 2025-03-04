@@ -1,6 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from 'react';
-import { useSession, signOut, signIn } from 'next-auth/react';
+import { useSession, signOut, signIn, getSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
@@ -20,7 +20,7 @@ const formatEmailForDisplay = (email, isMobile) => {
 };
 
 const AuthButtons = ({ isMobile = false }) => {
-  const { data: session, status } = useSession();
+  const { data: session, status, update: updateSession } = useSession();
   const [showLogin, setShowLogin] = useState(false);
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
@@ -88,16 +88,34 @@ const AuthButtons = ({ isMobile = false }) => {
     }
   }, []);
 
+  // Add effect to handle session updates
+  useEffect(() => {
+    const handleStorageChange = async () => {
+      if (typeof window !== 'undefined') {
+        // Force session refresh when auth state changes
+        await updateSession();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [updateSession]);
+
+  // Add function to refresh session
+  const refreshSession = async () => {
+    await updateSession();
+    router.refresh();
+  };
+
+  // Modify handleSubmit to use refreshSession
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
     try {
-      // Get stored callback URL if any
-      const callbackUrl = sessionStorage.getItem('loginCallbackUrl') || '/';
-      sessionStorage.removeItem('loginCallbackUrl'); // Clean up
-
+      console.log('Starting login process for:', formData.email);
+      
       const result = await signIn('credentials', {
         redirect: false,
         email: formData.email.toLowerCase().trim(),
@@ -105,13 +123,25 @@ const AuthButtons = ({ isMobile = false }) => {
       });
 
       if (result?.error) {
+        console.error('Login error:', result.error);
         setError(result.error);
         toast.error(result.error);
       } else {
         setShowLogin(false);
         toast.success('Successfully signed in!');
-        router.push(callbackUrl); // Redirect to callback URL if available
-        router.refresh();
+        
+        // Get the updated session
+        const session = await getSession();
+        console.log('Session after login:', session);
+        
+        if (session?.user?.role === 'MANAGER' && session?.user?.mustChangePassword) {
+          console.log('Manager needs to set password, redirecting...');
+          router.push('/reset-password');
+          toast.info('Please set your password');
+        } else {
+          console.log('Regular login success');
+          router.refresh();
+        }
       }
     } catch (err) {
       console.error('Sign in error:', err);

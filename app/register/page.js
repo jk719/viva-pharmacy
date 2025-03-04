@@ -59,7 +59,7 @@ function RegisterContent() {
             },
           }
         );
-        router.push('/?message=Registration+successful');
+        router.push('/login?registration=success');
       } else {
         toast.error(data.message || 'Something went wrong');
         setError(data.message || 'Something went wrong');
@@ -271,13 +271,13 @@ function RegisterContent() {
         <div className="text-center">
           <p className="text-sm text-gray-600">
             Already have an account?{' '}
-            <button
-              onClick={() => router.push('/?showLogin=true')}
+            <Link
+              href="/login"
               className="font-medium text-[#FF9F43] hover:text-[#ff9429]
                        transition-colors duration-200"
             >
               Sign in
-            </button>
+            </Link>
           </p>
         </div>
       </div>

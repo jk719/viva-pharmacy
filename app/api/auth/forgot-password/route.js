@@ -1,45 +1,52 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import User from '@/models/User';
-import { generateToken } from '@/lib/tokens';
+import { generateVerificationToken } from '@/lib/auth';
 import { sendPasswordResetEmail } from '@/lib/email/sendEmail';
 
-export async function POST(request) {
+export async function POST(req) {
   try {
-    const { email } = await request.json();
-    
+    const { email } = await req.json();
+
     if (!email) {
       return NextResponse.json(
-        { error: 'Email is required' },
+        { message: 'Email is required' },
         { status: 400 }
       );
     }
 
     await dbConnect();
-    
+
     const user = await User.findOne({ email: email.toLowerCase() });
+
+    // Don't reveal if user exists or not
     if (!user) {
       return NextResponse.json(
-        { message: 'If an account exists, a password reset email will be sent' },
+        { message: 'If an account exists, a password reset link will be sent' },
         { status: 200 }
       );
     }
 
-    const resetToken = generateToken();
+    // Generate reset token
+    const resetToken = generateVerificationToken();
+    const resetExpires = new Date(Date.now() + 1 * 60 * 60 * 1000); // 1 hour
+
+    // Update user with reset token
     user.resetPasswordToken = resetToken;
-    user.resetPasswordExpires = new Date(Date.now() + 3600000); // 1 hour
+    user.resetPasswordExpires = resetExpires;
     await user.save();
 
-    await sendPasswordResetEmail(email, resetToken, user.name);
+    // Send reset email
+    await sendPasswordResetEmail(email, resetToken);
 
-    return NextResponse.json(
-      { message: 'Password reset email sent' },
-      { status: 200 }
-    );
+    return NextResponse.json({
+      message: 'If an account exists, a password reset link will be sent'
+    });
+
   } catch (error) {
-    console.error('Forgot password error:', error);
+    console.error('Password reset request error:', error);
     return NextResponse.json(
-      { error: 'Failed to process password reset request' },
+      { message: 'Failed to process password reset request' },
       { status: 500 }
     );
   }

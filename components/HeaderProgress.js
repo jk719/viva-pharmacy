@@ -32,12 +32,13 @@ export default function HeaderProgress() {
   const { setActiveReward } = useRewardsStore();
   const ITEMS_PER_PAGE = 5;
 
-  // Add a mounted ref to prevent race conditions
+  // Refs for SSE management
   const mountedRef = useRef(false);
   const eventSourceRef = useRef(null);
   const retryTimeoutRef = useRef(null);
   const isConnectingRef = useRef(false);
 
+  // Move callback definitions before the useEffect that uses them
   const fetchRewardsData = useCallback(async () => {
     if (!session?.user?.id) return;
     try {
@@ -58,162 +59,166 @@ export default function HeaderProgress() {
     }
   }, [session?.user?.id]);
 
+  // Define updatePointsOptimistically before the useEffect
+  const updatePointsOptimistically = useCallback((amount) => {
+    console.log('🔄 Updating points optimistically:', amount);
+    setRewardsData(prev => {
+      const basePoints = Math.floor(amount * REWARDS_CONFIG.POINTS_PER_DOLLAR);
+      const multiplier = prev.pointsMultiplier || 1;
+      const adjustedPoints = Math.floor(basePoints * multiplier);
+      
+      return {
+        ...prev,
+        rewardPoints: (prev.rewardPoints || 0) + adjustedPoints,
+        cumulativePoints: (prev.cumulativePoints || 0) + adjustedPoints
+      };
+    });
+  }, []);
+
+  // Now the SSE useEffect can safely use both callbacks
   useEffect(() => {
+    if (!session?.user?.id) return;
+
     mountedRef.current = true;
-    
-    if (session?.user?.id) {
-        let retryCount = 0;
-        const maxRetries = 5;
-        let lastEventId = null;
+    let retryCount = 0;
+    const maxRetries = 5;
+    let lastEventId = null;
 
-        const connectSSE = () => {
-            if (isConnectingRef.current || eventSourceRef.current || !mountedRef.current) {
-                console.log('SSE: Already connecting or connected, skipping...');
-                return;
-            }
+    const connectSSE = async () => {
+      if (isConnectingRef.current || eventSourceRef.current || !mountedRef.current) {
+        console.log('SSE: Already connecting or connected, skipping...');
+        return;
+      }
 
-            try {
-                isConnectingRef.current = true;
-                console.log('SSE: Initiating connection...');
-                
-                if (eventSourceRef.current) {
-                    console.log('SSE: Closing existing connection');
-                    eventSourceRef.current.close();
-                    eventSourceRef.current = null;
-                }
+      try {
+        isConnectingRef.current = true;
+        console.log('SSE: Initiating connection...');
 
-                const newEventSource = new EventSource(
-                    `/api/user/vivabucks/${session.user.id}/events${lastEventId ? `?lastEventId=${lastEventId}` : ''}`
-                );
-                
-                eventSourceRef.current = newEventSource;
-                
-                newEventSource.onmessage = (event) => {
-                    if (!mountedRef.current) return;
-                    
-                    try {
-                        lastEventId = event.lastEventId;
-                        const data = JSON.parse(event.data);
-                        console.log('SSE: Message received:', {
-                            type: data.type,
-                            timestamp: new Date().toISOString()
-                        });
-                        
-                        if (data.type === 'POINTS_UPDATED' || 
-                            data.type === 'REWARD_REDEEMED' || 
-                            data.type === 'REWARD_RESTORED') {
-                            console.log('SSE: Fetching updated rewards data');
-                            fetchRewardsData().catch(error => {
-                                if (mountedRef.current) {
-                                    console.error('SSE: Error fetching rewards data:', error);
-                                }
-                            });
-                        }
-                    } catch (error) {
-                        if (mountedRef.current) {
-                            console.error('SSE: Error parsing message:', error, {
-                                data: event.data,
-                                lastEventId: event.lastEventId
-                            });
-                        }
-                    }
-                };
+        // Close any existing connection
+        if (eventSourceRef.current) {
+          console.log('SSE: Closing existing connection');
+          eventSourceRef.current.close();
+          eventSourceRef.current = null;
+        }
 
-                newEventSource.onerror = (error) => {
-                    if (!mountedRef.current) return;
-                    
-                    console.error('SSE: Connection error:', {
-                        error,
-                        readyState: newEventSource?.readyState,
-                        retryCount,
-                        timestamp: new Date().toISOString()
-                    });
-                    
-                    if (eventSourceRef.current) {
-                        eventSourceRef.current.close();
-                        eventSourceRef.current = null;
-                    }
-                    isConnectingRef.current = false;
-                    
-                    if (retryCount < maxRetries && mountedRef.current) {
-                        retryCount++;
-                        const delay = Math.min(1000 * Math.pow(2, retryCount), 30000);
-                        console.log(`SSE: Scheduling retry in ${delay}ms (${retryCount}/${maxRetries})`);
-                        retryTimeoutRef.current = setTimeout(connectSSE, delay);
-                    } else {
-                        console.log('SSE: Max retries reached, giving up');
-                    }
-                };
-                
-                newEventSource.onopen = () => {
-                    if (!mountedRef.current) return;
-                    
-                    console.log('SSE: Connection opened successfully', {
-                        timestamp: new Date().toISOString(),
-                        userId: session.user.id
-                    });
-                    retryCount = 0;
-                    isConnectingRef.current = false;
-                };
-            } catch (error) {
-                if (!mountedRef.current) return;
-                
-                console.error('SSE: Error establishing connection:', {
-                    error,
-                    timestamp: new Date().toISOString(),
-                    userId: session.user.id
+        const newEventSource = new EventSource(
+          `/api/user/vivabucks/${session.user.id}/events${lastEventId ? `?lastEventId=${lastEventId}` : ''}`,
+          { withCredentials: true }
+        );
+        
+        eventSourceRef.current = newEventSource;
+
+        // Handle all event types in one place
+        newEventSource.onmessage = (event) => {
+          if (!mountedRef.current) return;
+          
+          try {
+            lastEventId = event.lastEventId;
+            const data = JSON.parse(event.data);
+            console.log('SSE: Message received:', data);
+
+            // Handle different event types
+            switch (data.type) {
+              case 'POINTS_UPDATED':
+              case 'REWARD_REDEEMED':
+              case 'REWARD_RESTORED':
+                fetchRewardsData().catch(error => {
+                  console.error('Error fetching rewards data:', error);
                 });
-                isConnectingRef.current = false;
-                if (eventSourceRef.current) {
-                    eventSourceRef.current.close();
-                    eventSourceRef.current = null;
+                break;
+              case 'PAYMENT_COMPLETED':
+                if (data.amount) {
+                  updatePointsOptimistically(data.amount);
+                  setTimeout(fetchRewardsData, 2000);
                 }
+                break;
+              case 'error':
+                if (data.message === 'Unauthorized') {
+                  newEventSource.close();
+                  eventSourceRef.current = null;
+                }
+                break;
             }
+          } catch (error) {
+            console.error('SSE: Error handling message:', error);
+          }
         };
-        
-        console.log('SSE: Setting up connection');
-        connectSSE();
-        
-        // Cleanup function
-        return () => {
-            console.log('SSE: Cleaning up connection', {
-                timestamp: new Date().toISOString(),
-                hadEventSource: !!eventSourceRef.current,
-                hadRetryTimeout: !!retryTimeoutRef.current
-            });
-            
-            mountedRef.current = false;
-            
-            if (retryTimeoutRef.current) {
-                clearTimeout(retryTimeoutRef.current);
-                retryTimeoutRef.current = null;
-            }
-            if (eventSourceRef.current) {
-                eventSourceRef.current.close();
-                eventSourceRef.current = null;
-            }
-            isConnectingRef.current = false;
+
+        newEventSource.onerror = (error) => {
+          if (!mountedRef.current) return;
+          
+          console.error('SSE: Connection error:', {
+            error,
+            readyState: newEventSource?.readyState,
+            retryCount,
+            timestamp: new Date().toISOString()
+          });
+          
+          if (eventSourceRef.current) {
+            eventSourceRef.current.close();
+            eventSourceRef.current = null;
+          }
+          isConnectingRef.current = false;
+          
+          if (retryCount < maxRetries && mountedRef.current) {
+            retryCount++;
+            const delay = Math.min(1000 * Math.pow(2, retryCount), 30000);
+            console.log(`SSE: Scheduling retry in ${delay}ms (${retryCount}/${maxRetries})`);
+            retryTimeoutRef.current = setTimeout(connectSSE, delay);
+          } else {
+            console.log('SSE: Max retries reached or component unmounted');
+          }
         };
-    }
-  }, [session?.user?.id, fetchRewardsData]);
+
+        newEventSource.onopen = () => {
+          if (!mountedRef.current) return;
+          
+          console.log('SSE: Connection opened successfully', {
+            timestamp: new Date().toISOString(),
+            userId: session.user.id
+          });
+          retryCount = 0;
+          isConnectingRef.current = false;
+        };
+
+      } catch (error) {
+        console.error('SSE: Error establishing connection:', error);
+        isConnectingRef.current = false;
+        
+        if (eventSourceRef.current) {
+          eventSourceRef.current.close();
+          eventSourceRef.current = null;
+        }
+      }
+    };
+
+    // Initial connection
+    connectSSE();
+
+    // Cleanup function
+    return () => {
+      console.log('SSE: Cleaning up connection');
+      mountedRef.current = false;
+      
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
+      
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+      
+      isConnectingRef.current = false;
+    };
+  }, [session?.user?.id, fetchRewardsData, updatePointsOptimistically]);
 
   useEffect(() => {
     if (rewardsData?.availableVivaBucks) {
       setScale(REWARDS_CONFIG.REWARD_RATE.POINTS_NEEDED);
     }
   }, [rewardsData?.availableVivaBucks]);
-
-  useEffect(() => {
-    const handleRewardRestored = () => {
-      fetchRewardsData();
-    };
-
-    eventEmitter.on(Events.REWARD_RESTORED, handleRewardRestored);
-    
-    return () => {
-      eventEmitter.off(Events.REWARD_RESTORED, handleRewardRestored);
-    };
-  }, [fetchRewardsData]);
 
   const currentVivaBucks = Math.floor(rewardsData?.rewardPoints || 0);
   const progress = RewardsUtils.calculateProgress(currentVivaBucks);
@@ -273,74 +278,6 @@ export default function HeaderProgress() {
       console.error('Error redeeming reward:', error);
     }
   };
-
-  // Add optimistic updates for points
-  const updatePointsOptimistically = useCallback((amount) => {
-    console.log('🔄 Updating points optimistically:', amount);
-    setRewardsData(prev => {
-      const basePoints = Math.floor(amount * REWARDS_CONFIG.POINTS_PER_DOLLAR);
-      const multiplier = prev.pointsMultiplier || 1;
-      const adjustedPoints = Math.floor(basePoints * multiplier);
-      
-      return {
-        ...prev,
-        rewardPoints: (prev.rewardPoints || 0) + adjustedPoints,
-        cumulativePoints: (prev.cumulativePoints || 0) + adjustedPoints
-      };
-    });
-  }, []);
-
-  // Handle both event emitter and SSE updates
-  useEffect(() => {
-    let eventSource;
-
-    const handlePointsUpdate = (data) => {
-      console.log('🎯 Points update event received:', data);
-      if (data?.amount) {
-        updatePointsOptimistically(data.amount);
-        // Fetch latest data after a short delay
-        setTimeout(fetchRewardsData, 2000);
-      }
-    };
-
-    const setupSSE = () => {
-      if (session?.user?.id) {
-        eventSource = new EventSource(
-          `/api/user/vivabucks/${session.user.id}/events`
-        );
-        
-        eventSource.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data);
-            if (data.type === 'POINTS_UPDATED') {
-              console.log('📡 SSE Points update received:', data);
-              fetchRewardsData();
-            }
-          } catch (error) {
-            console.error('❌ Error handling SSE message:', error);
-          }
-        };
-
-        eventSource.onerror = (error) => {
-          console.error('❌ SSE connection error:', error);
-          eventSource.close();
-          // Retry connection after 5 seconds
-          setTimeout(setupSSE, 5000);
-        };
-      }
-    };
-
-    // Set up both event listeners
-    eventEmitter.on(Events.PAYMENT_COMPLETED, handlePointsUpdate);
-    setupSSE();
-
-    return () => {
-      eventEmitter.off(Events.PAYMENT_COMPLETED, handlePointsUpdate);
-      if (eventSource) {
-        eventSource.close();
-      }
-    };
-  }, [session?.user?.id, fetchRewardsData, updatePointsOptimistically]);
 
   if (!session) {
     return (

@@ -1,14 +1,14 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useSession, signIn, signOut } from 'next-auth/react';
 import { FaLock, FaArrowLeft } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import PasswordStrengthIndicator from '@/components/auth/PasswordStrengthIndicator';
 
-function ResetPasswordContent() {
+export default function ResetPassword() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -34,6 +34,7 @@ function ResetPasswordContent() {
     }
 
     try {
+      console.log('Starting password reset process...');
       const response = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -44,34 +45,46 @@ function ResetPasswordContent() {
       });
 
       const data = await response.json();
+      console.log('Password reset response:', { success: data.success });
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to reset password');
       }
 
-      // Update session
-      await update({
-        ...session,
-        user: {
-          ...session?.user,
-          mustChangePassword: false
-        }
-      });
-
       setSuccess(true);
       toast.success('Password updated successfully!');
-      
-      // Role-based redirect
-      setTimeout(() => {
-        if (session?.user?.role === 'MANAGER') {
+
+      // Sign out first
+      console.log('Signing out current session...');
+      await signOut({ redirect: false });
+
+      // Sign in with new credentials
+      console.log('Attempting sign in with new credentials...');
+      const signInResult = await signIn('credentials', {
+        email: session.user.email,
+        password: password,
+        redirect: false,
+      });
+
+      if (signInResult?.ok) {
+        console.log('Sign in successful, updating session...');
+        
+        // Force a complete session refresh
+        await update();
+        
+        // Add a delay before redirect
+        console.log('Redirecting to admin page in 2 seconds...');
+        setTimeout(() => {
           router.push('/admin');
-        } else {
-          router.push('/');
-        }
-      }, 2000);
-      
+          router.refresh();
+        }, 2000);
+      } else {
+        console.error('Sign in failed:', signInResult?.error);
+        throw new Error('Failed to sign in with new password');
+      }
+
     } catch (err) {
-      console.error('Error:', err);
+      console.error('Error in password reset flow:', err);
       toast.error(err.message);
     } finally {
       setLoading(false);
@@ -196,8 +209,4 @@ function ResetPasswordContent() {
       </div>
     </div>
   );
-}
-
-export default function ResetPassword() {
-  return <ResetPasswordContent />;
 }
