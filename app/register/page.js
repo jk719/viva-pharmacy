@@ -272,7 +272,7 @@ function RegisterContent() {
           <p className="text-sm text-gray-600">
             Already have an account?{' '}
             <Link
-              href="/login"
+              href="/?showLogin=true"
               className="font-medium text-[#FF9F43] hover:text-[#ff9429]
                        transition-colors duration-200"
             >

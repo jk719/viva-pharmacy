@@ -19,6 +19,17 @@ export default withAuth(
   function middleware(req) {
     const token = req.nextauth?.token;
     
+    // Add this near the start, after token declaration
+    if (req.nextUrl.pathname === '/login') {
+      const callbackUrl = req.nextUrl.searchParams.get('callbackUrl');
+      const redirectUrl = new URL('/', req.url);
+      redirectUrl.searchParams.set('showLogin', 'true');
+      if (callbackUrl) {
+        redirectUrl.searchParams.set('callbackUrl', callbackUrl);
+      }
+      return NextResponse.redirect(redirectUrl);
+    }
+
     // Handle admin routes first
     if (req.nextUrl.pathname.startsWith('/admin')) {
       if (!token) {

@@ -47,7 +47,7 @@ export default function ResetPasswordWithToken() {
       
       // Redirect to login after a short delay
       setTimeout(() => {
-        router.push('/login');
+        router.push('/?showLogin=true');
       }, 2000);
 
     } catch (error) {

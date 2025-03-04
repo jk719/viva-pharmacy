@@ -45,7 +45,7 @@ export default function Home() {
             <button
               onClick={() => {
                 toast.dismiss(t.id);
-                router.push('/login');
+                router.push('/?showLogin=true');
               }}
               className="bg-white text-primary px-4 py-2 rounded-md 
                          hover:bg-primary/10 transition-colors duration-200
