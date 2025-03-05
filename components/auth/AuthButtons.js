@@ -127,20 +127,23 @@ const AuthButtons = ({ isMobile = false }) => {
         setError(result.error);
         toast.error(result.error);
       } else {
+        // Wait for session to be fully updated
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Get fresh session
+        const newSession = await getSession();
+        console.log('New session:', newSession);
+
         setShowLogin(false);
         toast.success('Successfully signed in!');
         
-        // Get the updated session
-        const session = await getSession();
-        console.log('Session after login:', session);
-        
-        if (session?.user?.role === 'MANAGER' && session?.user?.mustChangePassword) {
+        if (newSession?.user?.role === 'MANAGER' && newSession?.user?.mustChangePassword) {
           console.log('Manager needs to set password, redirecting...');
           router.push('/reset-password');
           toast.info('Please set your password');
         } else {
-          console.log('Regular login success');
-          router.refresh();
+          // Single page refresh instead of multiple updates
+          window.location.reload();
         }
       }
     } catch (err) {
@@ -151,6 +154,14 @@ const AuthButtons = ({ isMobile = false }) => {
       setLoading(false);
     }
   };
+
+  // Add this effect to handle session changes
+  useEffect(() => {
+    if (status === "authenticated" && session) {
+      console.log('Session updated:', session);
+      setShowLogin(false);
+    }
+  }, [status, session]);
 
   const handleSignOut = async () => {
     try {
