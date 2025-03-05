@@ -30,18 +30,27 @@ export default function ManagerManagement() {
   const fetchManagers = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/admin/managers');
+      const response = await fetch('/api/admin/managers', {
+        // Add cache: 'no-store' to prevent caching
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      });
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to fetch managers');
+      }
+      
       const data = await response.json();
-      
-      if (!response.ok) throw new Error(data.error);
-      
       console.log('Fetched managers:', data.managers);
-      setManagers(data.managers || []); // Ensure we always set an array
+      setManagers(data.managers || []);
       setError(null);
     } catch (err) {
       console.error('Fetch error:', err);
       setError(err.message);
-      setManagers([]); // Reset managers on error
+      setManagers([]);
     } finally {
       setLoading(false);
     }
@@ -68,7 +77,7 @@ export default function ManagerManagement() {
 
     setLoading(true);
     setError(null);
-    setSuccessMessage(''); // Clear any existing success message
+    setSuccessMessage('');
 
     try {
       const response = await fetch(`/api/admin/managers/${managerId}`, {
@@ -81,17 +90,16 @@ export default function ManagerManagement() {
 
       // Update the local state immediately
       setManagers(prevManagers => 
-        prevManagers.filter(manager => manager._id !== managerId && manager.id !== managerId)
+        prevManagers.filter(manager => manager._id !== managerId)
       );
       
       setSuccessMessage('Manager deleted successfully');
-      
-      // Refetch to ensure sync with server
-      await fetchManagers();
 
     } catch (err) {
       console.error('Delete error:', err);
       setError(err.message);
+      // Refetch managers if there was an error to ensure sync
+      await fetchManagers();
     } finally {
       setLoading(false);
     }
@@ -166,7 +174,7 @@ export default function ManagerManagement() {
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div key={managers.length} className="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

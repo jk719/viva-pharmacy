@@ -11,8 +11,8 @@ export async function DELETE(request, context) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { params } = context;
-    const id = await params.id;
+    // Handle params asynchronously like in the products route
+    const id = await Promise.resolve(context.params).then(p => p.id);
     console.log('Attempting to delete manager:', id);
 
     await dbConnect();
@@ -43,8 +43,8 @@ export async function PUT(request, context) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { params } = context;
-    const id = await params.id;
+    // Handle params asynchronously like in the products route
+    const id = await Promise.resolve(context.params).then(p => p.id);
     const data = await request.json();
 
     await dbConnect();
