@@ -54,9 +54,9 @@ export default async function RootLayout({ children }) {
             <Providers session={session}>
               <ClientToaster />
               <SiteHeader />
-              <div className="h-[120px] md:h-[140px]" aria-hidden="true" />
+              <div className="h-[100px] md:h-[140px]" aria-hidden="true" />
               <main className="min-h-screen w-full flex-grow">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
                   <Suspense fallback={<LoadingSpinner />}>
                     {children}
                   </Suspense>

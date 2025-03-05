@@ -107,19 +107,19 @@ export default function Navbar() {
           <div className="flex md:hidden flex-col w-full px-2">
             <div className="flex items-center justify-between py-2">
               <Link href="/" className="flex-shrink-0">
-                <div className="relative w-[160px] h-[40px]">
+                <div className="relative w-[120px] h-[32px]">
                   <Image
                     src="/images/viva-online-logo.png"
                     alt="VIVA Logo"
                     fill
                     className="object-contain object-left"
-                    sizes="160px"
+                    sizes="120px"
                     priority
                   />
                 </div>
               </Link>
               
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 {mounted && session?.user?.role && 
                   ['ADMIN', 'MANAGER'].includes(session.user.role) && (
                     <AdminDashboardButton isMobile />
@@ -127,7 +127,7 @@ export default function Navbar() {
                 <Link href="/cart" className="relative flex items-center">
                   <ClientCartIcon />
                 </Link>
-                <div className="w-auto max-w-[120px]">
+                <div className="w-[100px]">
                   <AuthButtons
                     showLogin={showLogin}
                     setShowLogin={setShowLogin}

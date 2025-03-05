@@ -25,6 +25,57 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Mobile Auth Styles */
+@media (max-width: 640px) {
+  .auth-modal {
+    padding: 1rem !important;
+    margin: 0.5rem !important;
+    width: calc(100% - 1rem) !important;
+    max-width: 100% !important;
+  }
+
+  .auth-input {
+    min-height: 48px !important;
+    font-size: 16px !important;
+    padding: 0.75rem 1rem !important;
+  }
+
+  .auth-button {
+    min-height: 48px !important;
+    padding: 0.75rem 1rem !important;
+    width: 100% !important;
+  }
+
+  .auth-dropdown {
+    width: 100% !important;
+    max-width: calc(100vw - 2rem) !important;
+    right: 0 !important;
+  }
+}
+
+/* Modal Animations */
+.modal-enter {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+.modal-enter-active {
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 200ms, transform 200ms;
+}
+
+.modal-exit {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.modal-exit-active {
+  opacity: 0;
+  transform: scale(0.95);
+  transition: opacity 200ms, transform 200ms;
+}
+
 /* Scrollbar Styling */
 .scrollbar-thin {
   scrollbar-width: thin;
@@ -283,7 +334,7 @@ body {
   z-index: 50;
 }
 
-/* Update these navbar-specific styles */
+/* Update navbar-specific styles */
 .viva-navbar {
   background-color: var(--primary-color);
   width: 100%;
@@ -302,14 +353,23 @@ body {
 /* Mobile-specific navbar styles */
 @media (max-width: 767px) {
   .viva-navbar {
-    padding: 0;  /* Remove default padding */
+    padding: 0;
+  }
+  
+  /* Add mobile-specific auth navbar styles */
+  .auth-nav-container {
+    padding: 0.5rem;
+  }
+
+  .auth-nav-buttons {
+    gap: 0.5rem;
   }
 }
 
 /* Desktop navbar styles */
 @media (min-width: 768px) {
   .viva-navbar {
-    padding: 0;  /* Remove default padding */
+    padding: 0;
   }
 }
 
@@ -327,4 +387,36 @@ body {
 
 .animate-pulse-slow {
   animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Touch-friendly improvements */
+@media (max-width: 640px) {
+  button, 
+  [role="button"],
+  .clickable {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px !important; /* Prevents iOS zoom */
+  }
+
+  /* Improve modal touch targets */
+  .modal-close-button {
+    padding: 12px;
+    margin: -12px;
+  }
+
+  /* Better spacing for mobile forms */
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .form-label {
+    margin-bottom: 0.5rem;
+    display: block;
+  }
 }
