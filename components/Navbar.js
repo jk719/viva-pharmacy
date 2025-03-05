@@ -6,7 +6,7 @@ import Link from "next/link";
 import ClientCartIcon from "./ClientCartIcon";
 import { AuthButtons } from "./auth";
 import VerificationAlert from "./VerificationAlert";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession, signIn } from "next-auth/react";
 import { motion } from "framer-motion";
@@ -50,50 +50,43 @@ export default function Navbar() {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
   const [showLogin, setShowLogin] = useState(false);
-  const [formData, setFormData] = useState({});
-  const [error, setError] = useState(null);
-  const [avatarError, setAvatarError] = useState(false);
   const [mounted, setMounted] = useState(false);
+
+  // Memoize session check
+  const isAdmin = useMemo(() => {
+    return mounted && session?.user?.role && 
+      ['ADMIN', 'MANAGER'].includes(session.user.role);
+  }, [mounted, session?.user?.role]);
 
   useEffect(() => {
     setMounted(true);
+    return () => setMounted(false);
   }, []);
 
+  // Handle verification only once
   useEffect(() => {
     if (!mounted) return;
 
     const verification = searchParams?.get('verification');
     const email = searchParams?.get('email');
     
-    const handleVerification = async () => {
-      if (verification === 'success' && email) {
-        setShowLogin(true);
-        setFormData(prev => ({ ...prev, email }));
-        
+    if (verification === 'success' && email && !session) {
+      const handleVerification = async () => {
         try {
-          const result = await signIn('credentials', {
+          await signIn('credentials', {
             redirect: false,
             email: email.toLowerCase().trim(),
             verificationLogin: 'true'
           });
-
-          if (result?.ok) {
-            toast.success('Email verified and signed in successfully!');
-            router.refresh();
-          } else {
-            setError('Please sign in to continue');
-            setShowLogin(true);
-          }
         } catch (err) {
           console.error('Auto-login error:', err);
-          setError('Please sign in to continue');
           setShowLogin(true);
         }
-      }
-    };
+      };
 
-    handleVerification();
-  }, [mounted, searchParams, router]);
+      handleVerification();
+    }
+  }, [mounted, searchParams, session]);
 
   return (
     <>
@@ -120,9 +113,8 @@ export default function Navbar() {
               </Link>
               
               <div className="flex items-center gap-3">
-                {mounted && session?.user?.role && 
-                  ['ADMIN', 'MANAGER'].includes(session.user.role) && (
-                    <AdminDashboardButton isMobile />
+                {isAdmin && (
+                  <AdminDashboardButton isMobile />
                 )}
                 <Link href="/cart" className="relative flex items-center">
                   <ClientCartIcon />
@@ -131,10 +123,6 @@ export default function Navbar() {
                   <AuthButtons
                     showLogin={showLogin}
                     setShowLogin={setShowLogin}
-                    formData={formData}
-                    setFormData={setFormData}
-                    error={error}
-                    setError={setError}
                     isMobile={true}
                   />
                 </div>
@@ -157,9 +145,8 @@ export default function Navbar() {
             </Link>
 
             <div className="flex items-center gap-6">
-              {mounted && session?.user?.role && 
-                ['ADMIN', 'MANAGER'].includes(session.user.role) && (
-                  <AdminDashboardButton />
+              {isAdmin && (
+                <AdminDashboardButton />
               )}
               <Link href="/cart" className="relative flex items-center">
                 <ClientCartIcon />
@@ -167,10 +154,7 @@ export default function Navbar() {
               <AuthButtons
                 showLogin={showLogin}
                 setShowLogin={setShowLogin}
-                formData={formData}
-                setFormData={setFormData}
-                error={error}
-                setError={setError}
+                isMobile={false}
               />
             </div>
           </div>

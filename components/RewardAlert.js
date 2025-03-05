@@ -6,8 +6,6 @@ import { useSession } from 'next-auth/react';
 import eventEmitter, { Events } from '@/lib/eventEmitter';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { REWARDS_CONFIG } from '@/lib/rewards/config';
-import { RewardsUtils } from '@/lib/rewards/utils';
 
 export default function RewardAlert() {
   const { data: session, status } = useSession();
@@ -17,20 +15,10 @@ export default function RewardAlert() {
 
   useEffect(() => {
     setMounted(true);
-    
-    // Listen for points reset event
-    const handlePointsReset = () => {
-      clearActiveReward();
-    };
-    
-    eventEmitter.on(Events.POINTS_RESET, handlePointsReset);
-    
-    return () => {
-      setMounted(false);
-      eventEmitter.off(Events.POINTS_RESET, handlePointsReset);
-    };
-  }, [clearActiveReward]);
+    return () => setMounted(false);
+  }, []);
 
+  // Clear active reward on sign out
   useEffect(() => {
     if (status === 'unauthenticated') {
       clearActiveReward();
@@ -44,7 +32,6 @@ export default function RewardAlert() {
       setIsRestoring(true);
       console.log('Starting reward restoration for amount:', activeReward);
 
-      // First, check if the user has sufficient balance
       const balanceResponse = await fetch(`/api/user/vivabucks/${session.user.id}`);
       const balanceData = await balanceResponse.json();
       
@@ -55,25 +42,16 @@ export default function RewardAlert() {
 
       const response = await fetch(`/api/user/vivabucks/${session.user.id}/restore`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount: activeReward })
       });
 
       const data = await response.json();
       
       if (response.ok && data.success) {
-        console.log('Restoration successful:', data);
-        
-        // Clear the reward first
         clearActiveReward();
-        
-        // Emit events to update the dashboard
         eventEmitter.emit(Events.POINTS_UPDATED, data);
         eventEmitter.emit(Events.REWARD_RESTORED, data);
-        
-        // Show success message
         toast.success('Reward restored successfully');
       } else {
         console.error('Restoration failed:', data.error);
@@ -87,8 +65,9 @@ export default function RewardAlert() {
     }
   };
 
-  // Only show if we have an active reward amount greater than 0
-  if (!mounted || !initialized || !activeReward || activeReward <= 0 || status !== 'authenticated') return null;
+  if (!mounted || !initialized || !activeReward || activeReward <= 0 || status !== 'authenticated') {
+    return null;
+  }
 
   return (
     <AnimatePresence>

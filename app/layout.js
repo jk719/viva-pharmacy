@@ -15,6 +15,7 @@ import { authOptions } from '@/lib/auth';
 import eventEmitter from '../lib/eventEmitter';
 import { CategoryProvider } from '@/context/CategoryContext';
 import SWRConfigProvider from '@/components/SWRConfigProvider';
+import SSEProvider from '@/components/SSEProvider';
 
 // Metadata can be exported as a constant
 const siteConfig = {
@@ -26,11 +27,6 @@ const siteConfig = {
     tiktok: 'https://www.tiktok.com/@vivapharmacy'
   }
 };
-
-// Move this outside the RootLayout component
-function ClientToaster() {
-  return <Toaster position="top-center" />;
-}
 
 export default async function RootLayout({ children }) {
   const session = await getServerSession(authOptions);
@@ -52,51 +48,51 @@ export default async function RootLayout({ children }) {
         <SWRConfigProvider>
           <CategoryProvider>
             <Providers session={session}>
-              <ClientToaster />
-              <SiteHeader />
-              <div className="h-[100px] md:h-[140px]" aria-hidden="true" />
-              <main className="min-h-screen w-full flex-grow">
-                <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
-                  <Suspense fallback={<LoadingSpinner />}>
-                    {children}
-                  </Suspense>
-                </div>
-              </main>
-              <RewardAlert />
-              <SiteFooter />
-              <div id="modal-root" className="relative z-50" />
-              <Toaster 
-                position="top-center"
-                reverseOrder={false}
-                toastOptions={{
-                  // Default options for all toasts
-                  duration: 3000,
-                  style: {
-                    maxWidth: '90vw',
-                    margin: '0 auto',
-                  },
-                  // Customize different types of toasts
-                  success: {
+              <SSEProvider>
+                <Toaster 
+                  position="top-center"
+                  reverseOrder={false}
+                  toastOptions={{
+                    duration: 3000,
                     style: {
-                      background: '#10B981',
-                      color: 'white',
+                      maxWidth: '90vw',
+                      margin: '0 auto',
                     },
-                  },
-                  error: {
-                    style: {
-                      background: '#EF4444',
-                      color: 'white',
+                    // Customize different types of toasts
+                    success: {
+                      style: {
+                        background: '#10B981',
+                        color: 'white',
+                      },
                     },
-                    duration: 4000,
-                  },
-                  loading: {
-                    style: {
-                      background: '#3B82F6',
-                      color: 'white',
+                    error: {
+                      style: {
+                        background: '#EF4444',
+                        color: 'white',
+                      },
+                      duration: 4000,
                     },
-                  },
-                }}
-              />
+                    loading: {
+                      style: {
+                        background: '#3B82F6',
+                        color: 'white',
+                      },
+                    },
+                  }}
+                />
+                <SiteHeader />
+                <div className="h-[100px] md:h-[140px]" aria-hidden="true" />
+                <main className="min-h-screen w-full flex-grow">
+                  <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
+                    <Suspense fallback={<LoadingSpinner />}>
+                      {children}
+                    </Suspense>
+                  </div>
+                </main>
+                <RewardAlert />
+                <SiteFooter />
+                <div id="modal-root" className="relative z-50" />
+              </SSEProvider>
             </Providers>
           </CategoryProvider>
         </SWRConfigProvider>

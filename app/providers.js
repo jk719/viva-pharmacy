@@ -16,39 +16,20 @@ const fetcher = async (url) => {
 };
 
 export function Providers({ children, session }) {
-  // Cleanup effect for SSE connections
-  useEffect(() => {
-    return () => {
-      if (typeof window !== 'undefined') {
-        // Close any existing EventSource connections
-        const closeSSEConnections = () => {
-          const sources = Array.from(document.getElementsByTagName('*'))
-            .filter(element => element._eventSource)
-            .map(element => element._eventSource);
-          
-          sources.forEach(source => {
-            if (source && source.close) {
-              source.close();
-            }
-          });
-        };
-        
-        closeSSEConnections();
-      }
-    };
-  }, []);
+  // No need for SSE initialization here anymore
+  // The global connection tracker in RewardAlert.js handles everything
 
   return (
     <SessionProvider session={session}>
       <SWRConfig value={{
         fetcher,
         revalidateOnFocus: false,
-        revalidateOnReconnect: false
+        revalidateOnReconnect: false,
+        shouldRetryOnError: false
       }}>
         <CartProvider>
           <CategoryProvider>
             {children}
-            <Toaster />
           </CategoryProvider>
         </CartProvider>
       </SWRConfig>

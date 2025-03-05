@@ -1,10 +1,11 @@
 "use client";
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useSession, signOut, signIn, getSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { FiUser } from 'react-icons/fi';
+import sseManager from '@/lib/sseManager';
 
 const VERIFICATION_SUCCESS = 'verification_success';
 
@@ -17,6 +18,14 @@ const formatEmailForDisplay = (email, isMobile) => {
   const [username] = email.split('@');
   if (username.length <= 8) return username;
   return username.slice(0, 6) + '...';
+};
+
+const closeExistingSSE = (userId) => {
+  if (typeof window !== 'undefined' && window._eventSource) {
+    console.log('🔌 Closing existing SSE connection');
+    window._eventSource.close();
+    window._eventSource = null;
+  }
 };
 
 const AuthButtons = ({ isMobile = false }) => {
@@ -107,15 +116,56 @@ const AuthButtons = ({ isMobile = false }) => {
     router.refresh();
   };
 
-  // Modify handleSubmit to use refreshSession
+  const closeAllConnections = () => {
+    if (typeof window !== 'undefined' && window._sseConnection) {
+      console.log('🔌 Closing SSE connection during sign out');
+      window._sseConnection.close();
+      window._sseConnection = null;
+    }
+    // Also clean up global connection tracker if it exists
+    if (typeof globalConnectionTracker !== 'undefined') {
+      globalConnectionTracker.cleanup();
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      setShowLogin(false);
+      
+      // Close SSE connection
+      sseManager?.cleanup();
+      
+      // Clear storage
+      if (typeof window !== 'undefined') {
+        ['cart', 'selectedCategories'].forEach(item => 
+          localStorage.removeItem(item)
+        );
+      }
+      
+      // Sign out
+      await signOut({ 
+        redirect: false,
+        callbackUrl: '/' 
+      });
+      
+      // Single page refresh
+      window.location.href = '/';
+      
+    } catch (error) {
+      console.error('Sign out error:', error);
+      toast.error('Error signing out');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
     try {
-      console.log('Starting login process for:', formData.email);
-      
+      // Close any existing connections before login
+      closeAllConnections();
+
       const result = await signIn('credentials', {
         redirect: false,
         email: formData.email.toLowerCase().trim(),
@@ -123,98 +173,38 @@ const AuthButtons = ({ isMobile = false }) => {
       });
 
       if (result?.error) {
-        console.error('Login error:', result.error);
         setError(result.error);
         toast.error(result.error);
-      } else {
-        // Wait for session to be fully updated
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Get fresh session
-        const newSession = await getSession();
-        console.log('New session:', newSession);
-
+      } else if (result?.ok) {
         setShowLogin(false);
         toast.success('Successfully signed in!');
         
-        if (newSession?.user?.role === 'MANAGER' && newSession?.user?.mustChangePassword) {
-          console.log('Manager needs to set password, redirecting...');
-          router.push('/reset-password');
-          toast.info('Please set your password');
-        } else {
-          // Single page refresh instead of multiple updates
-          window.location.reload();
-        }
+        // Single page refresh
+        window.location.href = result.url || '/';
       }
     } catch (err) {
       console.error('Sign in error:', err);
       setError('An unexpected error occurred');
-      toast.error('An unexpected error occurred');
     } finally {
       setLoading(false);
     }
   };
 
-  // Add this effect to handle session changes
+  // Update the session effect
   useEffect(() => {
-    if (status === "authenticated" && session) {
-      console.log('Session updated:', session);
-      setShowLogin(false);
-    }
-  }, [status, session]);
+    const checkSession = async () => {
+      const session = await getSession();
+      if (session?.user) {
+        console.log('Session established:', session);
+        setShowLogin(false);
+        router.refresh();
+      }
+    };
 
-  const handleSignOut = async () => {
-    try {
-      setShowLogin(false);
-      
-      // Clear local storage first
-      if (typeof window !== 'undefined') {
-        const itemsToClear = ['cart', 'selectedCategories'];
-        itemsToClear.forEach(item => localStorage.removeItem(item));
-      }
-      
-      // Close any existing SSE connections
-      if (session?.user?.id) {
-        try {
-          const events = new EventSource(`/api/user/vivabucks/${session.user.id}/events`);
-          events.close();
-        } catch (error) {
-          console.error('Error closing SSE connection:', error);
-        }
-      }
-      
-      // Show success message before sign out
-      toast.success('Successfully signed out');
-      
-      // Perform sign out with immediate UI update
-      await signOut({ 
-        redirect: false,
-        callbackUrl: '/' 
-      });
-      
-      // Clear any remaining session data
-      if (typeof window !== 'undefined') {
-        window.sessionStorage.clear();
-        
-        // Force a clean navigation
-        router.replace('/');
-        
-        // Force a refresh after a brief delay to ensure clean state
-        setTimeout(() => {
-          window.location.reload();
-        }, 100);
-      }
-      
-    } catch (error) {
-      console.error('Sign out error:', error);
-      toast.error('Error signing out');
-      
-      // Fallback navigation
-      if (typeof window !== 'undefined') {
-        window.location.href = '/';
-      }
+    if (status === "authenticated") {
+      checkSession();
     }
-  };
+  }, [status, router]);
 
   // Add navigation handler
   const handleNavigation = () => {

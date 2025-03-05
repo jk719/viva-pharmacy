@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 
 // Create a context for the cart
 const CartContext = createContext();
@@ -57,6 +57,38 @@ export function CartProvider({ children }) {
         paymentIntentId: null,
         error: null
     });
+
+    // Memoize cart calculations
+    const cartCalculations = useMemo(() => {
+        if (!cartState.initialized || cartState.loading) return null;
+        
+        const subtotal = cartState.items.reduce(
+            (sum, item) => sum + (item.price * item.quantity), 
+            0
+        );
+        
+        const deliveryFee = deliveryState.option === 'delivery' 
+            ? DELIVERY_FEES[deliveryState.deliverySpeed]
+            : 0;
+        
+        const tax = (subtotal + deliveryFee) * 0.08875;
+        
+        return {
+            subtotal,
+            deliveryFee,
+            tax,
+            total: subtotal + deliveryFee + tax
+        };
+    }, [cartState.items, cartState.initialized, cartState.loading, deliveryState.option, deliveryState.deliverySpeed]);
+
+    useEffect(() => {
+        if (cartCalculations) {
+            setCartState(prev => ({
+                ...prev,
+                ...cartCalculations
+            }));
+        }
+    }, [cartCalculations]);
 
     // Load cart from localStorage on initial mount
     useEffect(() => {

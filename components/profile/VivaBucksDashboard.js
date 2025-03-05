@@ -12,6 +12,7 @@ import eventEmitter, { Events } from '@/lib/eventEmitter';
 import { motion, AnimatePresence } from 'framer-motion';
 import { REWARDS_CONFIG } from '@/lib/rewards/config';
 import { RewardsUtils } from '@/lib/rewards/utils';
+import sseManager from '@/lib/sseManager';
 
 const TIER_COLORS = {
   'Standard': '#6B7280',
@@ -69,12 +70,15 @@ export default function VivaBucksDashboard() {
       refreshData();
     };
 
-    window.addEventListener('rewardsUpdated', handleRewardsUpdate);
+    // Add listener to SSE manager instead of creating new connection
+    const removeListener = sseManager?.addListener(handleRewardsUpdate);
+
+    // Also listen for local events
     eventEmitter.on(Events.POINTS_UPDATED, handleRewardsUpdate);
     eventEmitter.on(Events.REWARD_RESTORED, handleRewardsUpdate);
 
     return () => {
-      window.removeEventListener('rewardsUpdated', handleRewardsUpdate);
+      removeListener?.();
       eventEmitter.off(Events.POINTS_UPDATED, handleRewardsUpdate);
       eventEmitter.off(Events.REWARD_RESTORED, handleRewardsUpdate);
     };

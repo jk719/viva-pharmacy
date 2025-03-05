@@ -6,11 +6,25 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from '@/lib/auth';
 import { REWARDS_CONFIG } from '@/lib/rewards/config';
 import { RewardsUtils } from '@/lib/rewards/utils';
+import rateLimit from '@/lib/rateLimit';
 
 let processing = false;
 
 export async function GET(request) {
   try {
+    if (!rateLimit.check(request, 60)) {
+      return new Response(
+        JSON.stringify({ error: 'Too many requests' }),
+        { 
+          status: 429,
+          headers: {
+            'Retry-After': '60',
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+    }
+
     if (processing) {
       return NextResponse.json(
         { error: 'Request in progress' },
@@ -61,6 +75,18 @@ export async function GET(request) {
       nextRewardMilestone: user.nextRewardMilestone || 100
     });
   } catch (error) {
+    if (error.status === 429) {
+      return new Response(
+        JSON.stringify({ error: 'Too many requests' }),
+        { 
+          status: 429,
+          headers: {
+            'Retry-After': '5',
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+    }
     processing = false;
     console.error('Error fetching VivaBucks:', error);
     return NextResponse.json(
@@ -73,6 +99,19 @@ export async function GET(request) {
 // Add POST method for adding points
 export async function POST(request) {
   try {
+    if (!rateLimit.check(request, 60)) {
+      return new Response(
+        JSON.stringify({ error: 'Too many requests' }),
+        { 
+          status: 429,
+          headers: {
+            'Retry-After': '60',
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+    }
+
     console.log('🔄 Processing POST request...');
     
     const session = await getServerSession(authOptions);

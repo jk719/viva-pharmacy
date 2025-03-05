@@ -1,7 +1,7 @@
 // src/app/page.js
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import FeaturedProducts from '../components/products/FeaturedProducts';
 import { useCategory } from '../context/CategoryContext';
@@ -126,11 +126,23 @@ export default function Home() {
     setSelectedCategory(categoryFromUrl);
   }, [searchParams]);
 
-  const handleCategorySelect = (categorySlug) => {
+  const handleCategorySelect = useCallback((categorySlug) => {
     const newCategory = categorySlug.toLowerCase();
     setSelectedCategory(newCategory);
     router.push(`/?category=${newCategory}`, { scroll: false });
-  };
+  }, [router, setSelectedCategory]);
+
+  const showVerificationToast = useCallback((email) => {
+    toast.success('Email verified successfully!', {
+      duration: 3000,
+      style: {
+        background: '#10B981',
+        color: '#FFFFFF',
+        padding: '16px',
+        borderRadius: '10px',
+      },
+    });
+  }, [router]);
 
   return (
     <div className="min-h-screen bg-white">
