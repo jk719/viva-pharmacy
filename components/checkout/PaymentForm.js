@@ -9,7 +9,7 @@ import { useSession } from "next-auth/react";
 import { useCart } from '@/context/CartContext';
 import { useRouter } from 'next/navigation';
 
-const CheckoutForm = ({ amount, items, shippingAddress, deliveryMethod, selectedTime }) => {
+const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryMethod, selectedTime }) => {
   const router = useRouter();
   const stripe = useStripe();
   const elements = useElements();
@@ -56,9 +56,10 @@ const CheckoutForm = ({ amount, items, shippingAddress, deliveryMethod, selected
                             quantity: item.quantity,
                             image: item.image
                         })),
-                        subtotal: amount,
-                        tax: amount * 0.08875,
-                        total: amount * 1.08875, // Include tax in total
+                        deliveryFee: deliveryMethod === 'delivery' ? amount.deliveryFee : 0,
+                        subtotal: amount.subtotal,
+                        tax: amount.tax,
+                        total: amount.total,
                         shippingAddress,
                         deliveryMethod,
                         selectedTime,
@@ -122,7 +123,7 @@ const CheckoutForm = ({ amount, items, shippingAddress, deliveryMethod, selected
   );
 };
 
-export default function PaymentForm({ amount, items, shippingAddress, deliveryMethod, selectedTime }) {
+export default function PaymentForm({ amount, amountDetails, items, shippingAddress, deliveryMethod, selectedTime }) {
   const { getFormattedItems } = useCart();
   const [clientSecret, setClientSecret] = useState('');
   const [error, setError] = useState(null);
@@ -153,16 +154,16 @@ export default function PaymentForm({ amount, items, shippingAddress, deliveryMe
           throw new Error('Cart is empty');
         }
 
-        // Generate request ID
         const requestId = `${session?.user?.id}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
         const payload = {
           amount: amount,
+          amountDetails,
           cartItems: cartItems,
           deliveryMethod,
           selectedTime,
           shippingAddress: formattedAddress,
-          requestId // Add requestId to payload
+          requestId
         };
 
         console.log('💰 Initializing payment:', {
@@ -176,7 +177,7 @@ export default function PaymentForm({ amount, items, shippingAddress, deliveryMe
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-Payment-Request-ID': requestId // Keep header for backwards compatibility
+            'X-Payment-Request-ID': requestId
           },
           body: JSON.stringify(payload),
         });
@@ -202,7 +203,7 @@ export default function PaymentForm({ amount, items, shippingAddress, deliveryMe
     };
 
     initializePayment();
-  }, [amount, session?.user?.id, deliveryMethod, selectedTime]);
+  }, [amount, amountDetails, session?.user?.id, deliveryMethod, selectedTime]);
 
   if (isLoading) {
     return (
@@ -239,6 +240,7 @@ export default function PaymentForm({ amount, items, shippingAddress, deliveryMe
         >
           <CheckoutForm 
             amount={amount}
+            amountDetails={amountDetails}
             items={items}
             shippingAddress={shippingAddress}
             deliveryMethod={deliveryMethod}

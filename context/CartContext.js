@@ -26,6 +26,13 @@ const normalizeProduct = (product) => {
     };
 };
 
+// Add these constants at the top
+const DELIVERY_FEES = {
+  SAME_DAY: 0,
+  TWO_HOUR: 5,
+  ONE_HOUR: 7
+};
+
 // CartProvider component
 export function CartProvider({ children }) {
     const [cartState, setCartState] = useState({
@@ -33,13 +40,15 @@ export function CartProvider({ children }) {
         total: 0,
         subtotal: 0,
         tax: 0,
+        deliveryFee: 0,
         loading: true,
-        initialized: false  // Add this flag
+        initialized: false
     });
 
     const [deliveryState, setDeliveryState] = useState({
         option: 'pickup',
         selectedTime: '',
+        deliverySpeed: 'SAME_DAY',  // Add this
         showTimeError: false
     });
 
@@ -93,21 +102,28 @@ export function CartProvider({ children }) {
         if (cartState.initialized && !cartState.loading) {
             localStorage.setItem('cart', JSON.stringify(cartState.items));
             
-            // Calculate totals
             const newSubtotal = cartState.items.reduce(
                 (sum, item) => sum + (item.price * item.quantity), 
                 0
             );
-            const newTax = newSubtotal * 0.08;
+
+            // Calculate delivery fee based on delivery method and speed
+            const deliveryFee = deliveryState.option === 'delivery' 
+                ? DELIVERY_FEES[deliveryState.deliverySpeed]
+                : 0;
+
+            // Calculate tax on both subtotal AND delivery fee
+            const newTax = (newSubtotal + deliveryFee) * 0.08875; // NYC tax rate
             
             setCartState(prev => ({
                 ...prev,
                 subtotal: newSubtotal,
+                deliveryFee: deliveryFee,
                 tax: newTax,
-                total: newSubtotal + newTax
+                total: newSubtotal + deliveryFee + newTax
             }));
         }
-    }, [cartState.items, cartState.initialized, cartState.loading]);
+    }, [cartState.items, cartState.initialized, cartState.loading, deliveryState.option, deliveryState.deliverySpeed]);
 
     const getProductId = useCallback((product) => {
         return product.productId || product._id || product.id;
@@ -295,6 +311,7 @@ export function CartProvider({ children }) {
         total: cartState.total,
         subtotal: cartState.subtotal,
         tax: cartState.tax,
+        deliveryFee: cartState.deliveryFee,
         loading: cartState.loading,
         addToCart,
         removeFromCart,
@@ -314,7 +331,14 @@ export function CartProvider({ children }) {
         startPaymentProcessing,
         completePaymentProcessing,
         handlePaymentError,
-        handlePaymentSuccess
+        handlePaymentSuccess,
+        deliverySpeed: deliveryState.deliverySpeed,
+        setDeliverySpeed: (speed) => setDeliveryState(prev => ({ 
+            ...prev, 
+            deliverySpeed: speed,
+            selectedTime: ''
+        })),
+        DELIVERY_FEES
     };
 
     return (
