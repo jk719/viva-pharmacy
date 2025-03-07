@@ -131,7 +131,7 @@ export default function ManagerManagement() {
       setSuccessMessage(
         editingManager
           ? `Manager updated successfully!`
-          : `Manager account created successfully! An email has been sent to ${formData.email} with login instructions.`
+          : `Manager account created successfully! An email has been sent to ${formData.email} with instructions to set up their account.`
       );
       
       setFormData({ name: '', email: '' });

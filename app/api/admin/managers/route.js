@@ -28,19 +28,14 @@ export async function POST(request) {
       );
     }
 
-    // Generate temporary password and hash it
-    const tempPassword = `Welcome${Math.random().toString(36).slice(-8)}!`;
-    const hashedPassword = await bcrypt.hash(tempPassword, 10);
-
     // Generate verification token
     const verificationToken = generateVerificationToken();
     console.log('Generated verification token:', verificationToken.substring(0, 10) + '...');
 
-    // Create new manager with hashed password
+    // Create new manager without password
     const newManager = new User({
       email: email.toLowerCase(),
       name,
-      password: hashedPassword,
       role: 'MANAGER',
       verificationToken,
       verificationExpires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
@@ -55,10 +50,9 @@ export async function POST(request) {
       expires: newManager.verificationExpires
     });
 
-    // Send welcome email with temporary password
+    // Send welcome email without temporary password
     await sendAdminWelcomeEmail(email, { 
-      verificationToken,
-      tempPassword 
+      verificationToken
     });
 
     return NextResponse.json({
