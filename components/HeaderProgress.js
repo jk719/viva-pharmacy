@@ -1,7 +1,7 @@
 'use client';
 
 import { useSession } from "next-auth/react";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import eventEmitter, { Events } from '@/lib/eventEmitter';
 import { FaStar, FaGift, FaCoins } from 'react-icons/fa';
@@ -14,9 +14,9 @@ import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { debounce } from 'lodash';
 
-export default function HeaderProgress() {
+const HeaderProgress = memo(function HeaderProgress() {
   console.log('HeaderProgress: Component rendering');
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [rewardsData, setRewardsData] = useState({
     vivaBucks: 0,
     currentTier: 'STANDARD',
@@ -32,8 +32,13 @@ export default function HeaderProgress() {
   const [redeemAmount, setRedeemAmount] = useState(0);
   const { setActiveReward } = useRewardsStore();
   const ITEMS_PER_PAGE = 5;
-
+  const [isAnimating, setIsAnimating] = useState(false);
+  const animationTimeoutRef = useRef(null);
+  const [debugEvents, setDebugEvents] = useState([]);
   const mountedRef = useRef(false);
+
+  // Add this at the top of the component
+  const ANIMATION_DURATION = 1000;
 
   // Create a stable reference to the debounced function
   const debouncedFetchRef = useRef(
@@ -66,34 +71,83 @@ export default function HeaderProgress() {
 
   // Memoized fetch function that uses the debounced reference
   const fetchRewardsData = useCallback(() => {
-    if (session?.user?.id) {
+    if (status === 'authenticated' && session?.user?.id) {
       return debouncedFetchRef(session.user.id);
     }
-  }, [session?.user?.id, debouncedFetchRef]);
+  }, [session?.user?.id, status, debouncedFetchRef]);
 
-  // Effect for event listeners
+  // Add this debug function
+  const logEvent = (type, data) => {
+    console.log(`🎯 ${type} event received:`, data);
+    setDebugEvents(prev => [...prev, { type, data, timestamp: new Date() }]);
+  };
+
+  // Update the handleAnimation function
+  const handleAnimation = useCallback((data) => {
+    if (!data.animate) return;
+    
+    console.log('🎯 Starting animation sequence:', data);
+    
+    // Clear any existing animation timeout
+    if (animationTimeoutRef.current) {
+        animationTimeoutRef.current.forEach(clearTimeout);
+    }
+
+    setIsAnimating(true);
+    setScale(0);
+
+    const timeouts = [];
+    
+    // First timeout: Start the progress animation
+    timeouts.push(setTimeout(() => {
+        console.log('🎬 Starting progress animation');
+        setScale(100);
+    }, 100));
+
+    // Second timeout: Reset animation state and fetch updated data
+    timeouts.push(setTimeout(() => {
+        console.log('✨ Completing animation');
+        setIsAnimating(false);
+        fetchRewardsData();
+    }, ANIMATION_DURATION + 100));
+
+    animationTimeoutRef.current = timeouts;
+  }, [fetchRewardsData]);
+
   useEffect(() => {
+    if (status !== 'authenticated') return;
+    
     mountedRef.current = true;
 
-    const handlePointsUpdate = () => {
-      fetchRewardsData();
+    const handlePointsUpdate = (data) => {
+      if (!mountedRef.current) return;
+      logEvent('POINTS_UPDATED', data);
+      handleAnimation(data);
     };
 
-    // Initial fetch
+    const handlePaymentCompleted = (data) => {
+      if (!mountedRef.current) return;
+      logEvent('PAYMENT_COMPLETED', data);
+      handleAnimation(data);
+    };
+
+    // Initial fetch only when authenticated
     fetchRewardsData();
 
-    eventEmitter.on(Events.POINTS_UPDATED, handlePointsUpdate);
-    eventEmitter.on(Events.REWARD_REDEEMED, handlePointsUpdate);
-    eventEmitter.on(Events.REWARD_RESTORED, handlePointsUpdate);
+    // Set up event listeners
+    eventEmitter.on('POINTS_UPDATED', handlePointsUpdate);
+    eventEmitter.on('PAYMENT_COMPLETED', handlePaymentCompleted);
 
     return () => {
       mountedRef.current = false;
-      debouncedFetchRef.cancel(); // Cancel any pending debounced calls
-      eventEmitter.off(Events.POINTS_UPDATED, handlePointsUpdate);
-      eventEmitter.off(Events.REWARD_REDEEMED, handlePointsUpdate);
-      eventEmitter.off(Events.REWARD_RESTORED, handlePointsUpdate);
+      if (animationTimeoutRef.current) {
+        animationTimeoutRef.current.forEach(clearTimeout);
+      }
+      eventEmitter.off('POINTS_UPDATED', handlePointsUpdate);
+      eventEmitter.off('PAYMENT_COMPLETED', handlePaymentCompleted);
+      debouncedFetchRef.cancel();
     };
-  }, [fetchRewardsData]);
+  }, [fetchRewardsData, handleAnimation, status]);
 
   useEffect(() => {
     if (rewardsData?.availableVivaBucks) {
@@ -159,6 +213,18 @@ export default function HeaderProgress() {
       console.error('Error redeeming reward:', error);
     }
   };
+
+  // Only log state in development and when actually changed
+  const prevState = useRef({ isAnimating, scale, progress: progressPercentage });
+  useEffect(() => {
+  if (process.env.NODE_ENV === 'development') {
+      const newState = { isAnimating, scale, progress: progressPercentage };
+      if (JSON.stringify(prevState.current) !== JSON.stringify(newState)) {
+        console.log('🔍 Current state:', newState);
+        prevState.current = newState;
+      }
+    }
+  }, [isAnimating, scale, progressPercentage]);
 
   if (!session) {
     return (
@@ -387,17 +453,33 @@ export default function HeaderProgress() {
                   <div className="relative h-full">
                     <motion.div
                       className="absolute h-full bg-gradient-to-r from-[#FF9F43] to-[#FFB976] rounded-full"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${Math.min(progressPercentage, 100)}%` }}
+                      initial={{ width: 0, scale: 1 }}
+                      animate={{ 
+                        width: `${Math.min(progressPercentage, 100)}%`,
+                        scale: isAnimating ? [0.8, 1.1, 1] : 1
+                      }}
                       transition={{ 
-                        duration: 0.8, 
-                        ease: [0.34, 1.56, 0.64, 1]
+                        width: {
+                          duration: 0.8,
+                          ease: [0.34, 1.56, 0.64, 1]
+                        },
+                        scale: {
+                          duration: 0.6,
+                          times: [0, 0.6, 1],
+                          ease: "easeOut"
+                        }
                       }}
                     >
                       {/* Progress indicator with enhanced animations */}
                       <div 
-                        className="absolute -right-2.5 top-1/2 -translate-y-1/2
-                                 transition-transform duration-300 group-hover:scale-110"
+                        className="absolute -right-2.5 top-1/2 -translate-y-1/2"
+                        animate={{
+                          scale: isAnimating ? [1, 1.2, 1] : 1
+                        }}
+                        transition={{
+                          duration: 0.6,
+                          ease: "easeInOut"
+                        }}
                       >
                         <div className="flex items-center justify-center w-5 h-5 
                                          bg-white rounded-full border-2 border-[#FFB976]
@@ -490,17 +572,33 @@ export default function HeaderProgress() {
                   <div className="relative h-full">
                     <motion.div
                       className="absolute h-full bg-gradient-to-r from-[#FF9F43] to-[#FFB976] rounded-full"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${Math.min(progressPercentage, 100)}%` }}
+                      initial={{ width: 0, scale: 1 }}
+                      animate={{ 
+                        width: `${Math.min(progressPercentage, 100)}%`,
+                        scale: isAnimating ? [0.8, 1.1, 1] : 1
+                      }}
                       transition={{ 
-                        duration: 0.8, 
-                        ease: [0.34, 1.56, 0.64, 1]
+                        width: {
+                          duration: 0.8,
+                          ease: [0.34, 1.56, 0.64, 1]
+                        },
+                        scale: {
+                          duration: 0.6,
+                          times: [0, 0.6, 1],
+                          ease: "easeOut"
+                        }
                       }}
                     >
                       {/* Animated progress indicator */}
                       <div 
-                        className="absolute -right-2.5 top-1/2 -translate-y-1/2
-                                 group transition-all duration-300"
+                        className="absolute -right-2.5 top-1/2 -translate-y-1/2"
+                        animate={{
+                          scale: isAnimating ? [1, 1.2, 1] : 1
+                        }}
+                        transition={{
+                          duration: 0.6,
+                          ease: "easeInOut"
+                        }}
                       >
                         <motion.div 
                           className="flex items-center justify-center w-5 h-5 
@@ -766,4 +864,6 @@ export default function HeaderProgress() {
       )}
     </div>
   );
-}
+});
+
+export default HeaderProgress;

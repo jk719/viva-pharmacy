@@ -5,7 +5,7 @@ import { CartProvider } from "../context/CartContext";
 import { CategoryProvider } from "../context/CategoryContext";
 import { Toaster } from 'react-hot-toast';
 import { SWRConfig } from 'swr';
-import { useEffect } from 'react';
+import SSEProvider from '@/components/SSEProvider';
 
 const fetcher = async (url) => {
   const res = await fetch(url);
@@ -16,11 +16,8 @@ const fetcher = async (url) => {
 };
 
 export function Providers({ children, session }) {
-  // No need for SSE initialization here anymore
-  // The global connection tracker in RewardAlert.js handles everything
-
   return (
-    <SessionProvider session={session}>
+    <SessionProvider session={session} refetchInterval={0}>
       <SWRConfig value={{
         fetcher,
         revalidateOnFocus: false,
@@ -29,7 +26,9 @@ export function Providers({ children, session }) {
       }}>
         <CartProvider>
           <CategoryProvider>
-            {children}
+            <SSEProvider>
+              {children}
+            </SSEProvider>
           </CategoryProvider>
         </CartProvider>
       </SWRConfig>

@@ -18,78 +18,78 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
   const { data: session } = useSession();
   const { clearCart } = useCart();
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    console.log('🔄 Starting payment submission...');
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsProcessing(true);
     
     try {
-        setIsProcessing(true);
-        console.log('💳 Processing payment with Stripe...');
+      console.log('🔄 Starting payment submission...');
+      
+      const { paymentIntent, error } = await stripe.confirmPayment({
+        elements,
+        redirect: 'if_required',
+        confirmParams: {
+          return_url: `${window.location.origin}/checkout/success`,
+        },
+      });
+
+      if (error) {
+        console.error('❌ Payment confirmation error:', error);
+        setError(error.message);
+      } else if (paymentIntent.status === 'succeeded') {
+        console.log('✅ Payment confirmed successfully');
         
-        const { paymentIntent, error } = await stripe.confirmPayment({
-            elements,
-            redirect: 'if_required',
-            confirmParams: {
-                return_url: `${window.location.origin}/checkout/success`,
-            },
+        // Emit payment completed event with animation flag
+        eventEmitter.emit(Events.PAYMENT_COMPLETED, {
+          userId: session.user.id,
+          amount: amount.total,
+          animate: true,
+          timestamp: new Date().toISOString()
         });
 
-        if (error) {
-            console.error('❌ Payment confirmation error:', error);
-            setError(error.message);
-        } else if (paymentIntent.status === 'succeeded') {
-            console.log('✅ Payment confirmed successfully');
-            
-            // Send order confirmation email
-            try {
-                const orderConfirmationResponse = await fetch('/api/orders/confirmations', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        orderNumber: paymentIntent.id,
-                        email: session?.user?.email,
-                        items: items.map(item => ({
-                            name: item.name,
-                            price: item.price,
-                            quantity: item.quantity,
-                            image: item.image
-                        })),
-                        deliveryFee: deliveryMethod === 'delivery' ? amount.deliveryFee : 0,
-                        subtotal: amount.subtotal,
-                        tax: amount.tax,
-                        total: amount.total,
-                        shippingAddress,
-                        deliveryMethod,
-                        selectedTime,
-                        customerName: session?.user?.name || 'Valued Customer'
-                    })
-                });
-
-                if (!orderConfirmationResponse.ok) {
-                    console.error('Failed to send order confirmation email');
-                }
-            } catch (emailError) {
-                console.error('Order confirmation email error:', emailError);
-            }
-
-            eventEmitter.emit(Events.PAYMENT_COMPLETED, {
-                paymentIntentId: paymentIntent.id,
-                amount: amount,
-                timestamp: Date.now()
-            });
-
-            clearCart();
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            router.push('/checkout/success');
-        }
+        // Wait briefly before redirecting
+        await new Promise(resolve => setTimeout(resolve, 500));
+        router.push('/checkout/success');
+      }
     } catch (error) {
-        console.error('❌ Payment submission error:', error);
-        setError('An unexpected error occurred.');
+      console.error('❌ Payment submission error:', error);
+      setError('An unexpected error occurred.');
     } finally {
-        setIsProcessing(false);
+      setIsProcessing(false);
     }
+  };
+
+  const handleOrderConfirmation = async (paymentIntent) => {
+    const response = await fetch('/api/orders/confirmations', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            orderNumber: paymentIntent.id,
+            email: session?.user?.email,
+            items: items.map(item => ({
+                name: item.name,
+                price: item.price,
+                quantity: item.quantity,
+                image: item.image
+            })),
+            deliveryFee: deliveryMethod === 'delivery' ? amount.deliveryFee : 0,
+            subtotal: amount.subtotal,
+            tax: amount.tax,
+            total: amount.total,
+            shippingAddress,
+            deliveryMethod,
+            selectedTime,
+            customerName: session?.user?.name || 'Valued Customer'
+        })
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to send order confirmation');
+    }
+
+    return response.json();
   };
 
   return (

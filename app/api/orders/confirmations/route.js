@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { generateOrderConfirmationEmail } from '@/lib/email-templates/order-confirmation';
 import { sendOrderConfirmationEmail } from '@/lib/email/sendEmail';
+import { eventEmitter } from '@/lib/eventEmitter';
+import { Events } from '@/lib/events';
+import { session } from '@/lib/session';
 
 export async function POST(request) {
   try {
@@ -89,6 +92,28 @@ export async function POST(request) {
       email,
       emailData
     );
+
+    // After sending email, emit events in sequence
+    if (vivaBucksEarned > 0) {
+      console.log('📢 Emitting reward events for order:', orderNumber);
+      
+      // First emit payment completion if not already done
+      eventEmitter.emit(Events.PAYMENT_COMPLETED, {
+        userId: session.user.id,
+        amount: total,
+        animate: true,
+        timestamp: new Date().toISOString()
+      });
+
+      // Then emit points update
+      eventEmitter.emit(Events.POINTS_UPDATED, {
+        userId: session.user.id,
+        points: rewardPointsEarned,
+        animate: true,
+        afterPayment: true,
+        timestamp: new Date().toISOString()
+      });
+    }
 
     return NextResponse.json({ 
       success: true,

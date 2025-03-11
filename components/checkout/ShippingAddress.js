@@ -121,12 +121,12 @@ export default function ShippingAddress({ onAddressSelect }) {
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Saved Addresses</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {displayedAddresses.map((address, index) => (
+            {displayedAddresses.map((address) => (
               <button
-                key={index}
+                key={address._id || `${address.street}-${address.zipCode}`}
                 onClick={() => handleAddressSelect(address)}
                 className={`relative p-4 rounded-lg border transition-all text-left ${
-                  selectedAddress === address
+                  selectedAddress?._id === address._id
                     ? 'border-[#289d44] bg-white shadow-md'
                     : 'border-gray-200 hover:border-gray-300'
                 }`}

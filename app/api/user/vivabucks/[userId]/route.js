@@ -7,6 +7,7 @@ import { authOptions } from '@/lib/auth';
 import { REWARDS_CONFIG } from '@/lib/rewards/config';
 import { RewardsUtils } from '@/lib/rewards/utils';
 import rateLimit from '@/lib/rateLimit';
+import mongoose from 'mongoose';
 
 let processing = false;
 
@@ -98,6 +99,9 @@ export async function GET(request) {
 
 // Add POST method for adding points
 export async function POST(request) {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  
   try {
     if (!rateLimit.check(request, 60)) {
       return new Response(
@@ -131,7 +135,7 @@ export async function POST(request) {
       return NextResponse.json({ error: "Invalid points value" }, { status: 400 });
     }
 
-    const user = await User.findById(userId);
+    const user = await User.findById(userId).session(session);
     if (!user) {
       console.error('❌ User not found for ID:', userId);
       return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -141,34 +145,45 @@ export async function POST(request) {
     const multiplier = user.pointsMultiplier || 1;
     const adjustedPoints = points * multiplier;
 
-    // Update user's points
-    user.vivaBucks = (user.vivaBucks || 0) + adjustedPoints;
-    user.rewardPoints = (user.rewardPoints || 0) + adjustedPoints;
-    user.cumulativePoints = (user.cumulativePoints || 0) + adjustedPoints;
-
     // Check and update tier
     const currentPoints = user.cumulativePoints;
     const tierInfo = RewardsUtils.getMembershipTier(currentPoints);
-    user.currentTier = tierInfo.name;
-    user.pointsMultiplier = tierInfo.multiplier;
 
-    // Update next reward milestone
-    user.nextRewardMilestone = Math.ceil(user.rewardPoints / 100) * 100;
+    // Atomic update
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      {
+        $inc: {
+          vivaBucks: adjustedPoints,
+          rewardPoints: adjustedPoints,
+          cumulativePoints: adjustedPoints
+        },
+        $set: {
+          currentTier: tierInfo.name,
+          pointsMultiplier: tierInfo.multiplier,
+          nextRewardMilestone: Math.ceil((user.rewardPoints + adjustedPoints) / 100) * 100
+        }
+      },
+      { new: true, session }
+    );
 
-    await user.save();
+    await session.commitTransaction();
 
     console.log('✅ Points updated successfully');
     return NextResponse.json({
       success: true,
-      vivaBucks: user.vivaBucks,
-      rewardPoints: user.rewardPoints,
-      currentTier: user.currentTier,
-      nextRewardMilestone: user.nextRewardMilestone
+      vivaBucks: updatedUser.vivaBucks,
+      rewardPoints: updatedUser.rewardPoints,
+      currentTier: updatedUser.currentTier,
+      nextRewardMilestone: updatedUser.nextRewardMilestone
     });
 
   } catch (error) {
+    await session.abortTransaction();
     console.error('❌ Error processing request:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
+  } finally {
+    session.endSession();
   }
 }
  

@@ -28,6 +28,7 @@ export default function VivaBucksDashboard() {
   const [rewardsData, setRewardsData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [progressAnimation, setProgressAnimation] = useState(0);
 
   const refreshData = () => {
     setRefreshTrigger(prev => prev + 1);
@@ -67,13 +68,15 @@ export default function VivaBucksDashboard() {
   useEffect(() => {
     const handleRewardsUpdate = (event) => {
       console.log('Rewards update received:', event);
-      refreshData();
+      setProgressAnimation(0);
+      setTimeout(() => {
+        refreshData();
+        setProgressAnimation(100);
+      }, 300);
     };
 
-    // Add listener to SSE manager instead of creating new connection
     const removeListener = sseManager?.addListener(handleRewardsUpdate);
 
-    // Also listen for local events
     eventEmitter.on(Events.POINTS_UPDATED, handleRewardsUpdate);
     eventEmitter.on(Events.REWARD_RESTORED, handleRewardsUpdate);
 
@@ -122,7 +125,6 @@ export default function VivaBucksDashboard() {
     }
   };
 
-  // Calculate values using REWARDS_CONFIG
   const currentVivaBucks = Math.floor(rewardsData?.rewardPoints || 0);
   const availableReward = REWARDS_CONFIG.getRewardAmount(currentVivaBucks);
   const progress = (currentVivaBucks % REWARDS_CONFIG.REWARD_RATE.POINTS_NEEDED) / REWARDS_CONFIG.REWARD_RATE.POINTS_NEEDED * 100;
@@ -172,9 +174,7 @@ export default function VivaBucksDashboard() {
           <p className="text-lg text-gray-600">Track your rewards and benefits</p>
         </motion.div>
 
-        {/* Stats Grid - Updated with new values */}
         <div className="flex flex-col sm:flex-row gap-4 lg:gap-6 mb-10 overflow-x-auto pb-4 -mx-4 px-4">
-          {/* Current Points Card */}
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -197,9 +197,17 @@ export default function VivaBucksDashboard() {
               </div>
               <div className="mt-2">
                 <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div
+                  <motion.div
                     className="h-full bg-gradient-to-r from-[#FF9F43] to-[#FFB976]"
-                    style={{ width: `${progress}%` }}
+                    initial={{ width: 0 }}
+                    animate={{ 
+                      width: `${progress}%`,
+                      scale: progressAnimation / 100
+                    }}
+                    transition={{ 
+                      duration: 0.8,
+                      ease: [0.34, 1.56, 0.64, 1]
+                    }}
                   />
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
@@ -210,7 +218,6 @@ export default function VivaBucksDashboard() {
             </div>
           </motion.div>
 
-          {/* Available Rewards Card */}
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -237,7 +244,6 @@ export default function VivaBucksDashboard() {
             </div>
           </motion.div>
 
-          {/* Current Tier Card */}
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -265,7 +271,6 @@ export default function VivaBucksDashboard() {
           </motion.div>
         </div>
 
-        {/* Tier Benefits Section */}
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -284,7 +289,6 @@ export default function VivaBucksDashboard() {
           />
         </motion.div>
 
-        {/* Reward History Section */}
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -300,7 +304,6 @@ export default function VivaBucksDashboard() {
           <RewardHistory />
         </motion.div>
 
-        {/* Development Tools */}
         {process.env.NODE_ENV === 'development' && (
           <motion.div
             initial={{ y: 20, opacity: 0 }}

@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import Stripe from 'stripe';
 import crypto from 'crypto';
 import User from '@/models/User';
+import eventEmitter, { Events } from '@/lib/eventEmitter';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -84,6 +85,7 @@ export async function POST(request) {
             .digest('hex');
 
         const amountInCents = Math.round(parseFloat(amount) * 100);
+        const amountInDollars = amount.toString();
 
         try {
             // Get or create Stripe customer
@@ -130,6 +132,21 @@ export async function POST(request) {
                 }
             }, {
                 idempotencyKey
+            });
+
+            console.log('🔄 Starting payment tracking:', {
+                paymentIntentId: paymentIntent.id,
+                amount: amountInDollars,
+                userId: session.user.id
+            });
+
+            // Emit payment started event with more details
+            eventEmitter.emit(Events.PAYMENT_STARTED, {
+                paymentIntentId: paymentIntent.id,
+                amount: amountInDollars,
+                userId: session.user.id,
+                timestamp: new Date().toISOString(),
+                type: 'PAYMENT_STARTED'
             });
 
             console.log('✅ Payment intent created:', {

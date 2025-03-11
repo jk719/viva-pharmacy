@@ -282,6 +282,7 @@ function CheckoutContent() {
               
               {deliveryMethod === option.id && (
                 <motion.div
+                  key={`checkmark-${option.id}`}
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   className="absolute -top-2 -right-2 bg-primary text-white rounded-full p-1"
@@ -363,6 +364,7 @@ function CheckoutContent() {
                 </div>
                 {deliverySpeed === option.id && (
                   <motion.div
+                    key={`checkmark-speed-${option.id}`}
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     className="absolute -top-2 -right-2 bg-primary text-white rounded-full p-1"
@@ -394,7 +396,7 @@ function CheckoutContent() {
             <AnimatePresence>
               {timeSlots.slice(0, displayCount).map((slot) => (
                 <motion.button
-                  key={slot.id}
+                  key={`${slot.id}-${slot.full}`}
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
@@ -475,7 +477,7 @@ function CheckoutContent() {
                   alt={item.name}
                   fill
                   className="object-contain"
-                  sizes="80px"
+                  sizes="(max-width: 768px) 80px, 80px"
                 />
               </div>
               <div className="flex-grow">
@@ -500,21 +502,39 @@ function CheckoutContent() {
             <div className="flex justify-between items-center text-gray-600">
               <span className="flex items-center gap-2">
                 <span>Delivery Fee</span>
-                {deliverySpeed === 'ONE_HOUR' && (
-                  <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
-                    1 Hour Priority
+                {[
+                  {
+                    id: 'ONE_HOUR',
+                    show: deliverySpeed === 'ONE_HOUR',
+                    content: (
+                      <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
+                        1 Hour Priority
+                      </span>
+                    )
+                  },
+                  {
+                    id: 'TWO_HOUR',
+                    show: deliverySpeed === 'TWO_HOUR',
+                    content: (
+                      <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
+                        2 Hour Express
+                      </span>
+                    )
+                  },
+                  {
+                    id: 'SAME_DAY',
+                    show: deliverySpeed === 'SAME_DAY',
+                    content: (
+                      <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                        Free Delivery
+                      </span>
+                    )
+                  }
+                ].map(badge => badge.show && (
+                  <span key={`delivery-badge-${badge.id}`}>
+                    {badge.content}
                   </span>
-                )}
-                {deliverySpeed === 'TWO_HOUR' && (
-                  <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
-                    2 Hour Express
-                  </span>
-                )}
-                {deliverySpeed === 'SAME_DAY' && (
-                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
-                    Free Delivery
-                  </span>
-                )}
+                ))}
               </span>
               <span>${DELIVERY_FEES[deliverySpeed].toFixed(2)}</span>
             </div>

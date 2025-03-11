@@ -15,7 +15,6 @@ import { authOptions } from '@/lib/auth';
 import eventEmitter from '../lib/eventEmitter';
 import { CategoryProvider } from '@/context/CategoryContext';
 import SWRConfigProvider from '@/components/SWRConfigProvider';
-import SSEProvider from '@/components/SSEProvider';
 
 // Metadata can be exported as a constant
 const siteConfig = {
@@ -48,51 +47,49 @@ export default async function RootLayout({ children }) {
         <SWRConfigProvider>
           <CategoryProvider>
             <Providers session={session}>
-              <SSEProvider>
-                <Toaster 
-                  position="top-center"
-                  reverseOrder={false}
-                  toastOptions={{
-                    duration: 3000,
+              <Toaster 
+                position="top-center"
+                reverseOrder={false}
+                toastOptions={{
+                  duration: 3000,
+                  style: {
+                    maxWidth: '90vw',
+                    margin: '0 auto',
+                  },
+                  // Customize different types of toasts
+                  success: {
                     style: {
-                      maxWidth: '90vw',
-                      margin: '0 auto',
+                      background: '#10B981',
+                      color: 'white',
                     },
-                    // Customize different types of toasts
-                    success: {
-                      style: {
-                        background: '#10B981',
-                        color: 'white',
-                      },
+                  },
+                  error: {
+                    style: {
+                      background: '#EF4444',
+                      color: 'white',
                     },
-                    error: {
-                      style: {
-                        background: '#EF4444',
-                        color: 'white',
-                      },
-                      duration: 4000,
+                    duration: 4000,
+                  },
+                  loading: {
+                    style: {
+                      background: '#3B82F6',
+                      color: 'white',
                     },
-                    loading: {
-                      style: {
-                        background: '#3B82F6',
-                        color: 'white',
-                      },
-                    },
-                  }}
-                />
-                <SiteHeader />
-                <div className="h-[100px] md:h-[140px]" aria-hidden="true" />
-                <main className="min-h-screen w-full flex-grow">
-                  <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
-                    <Suspense fallback={<LoadingSpinner />}>
-                      {children}
-                    </Suspense>
-                  </div>
-                </main>
-                <RewardAlert />
-                <SiteFooter />
-                <div id="modal-root" className="relative z-50" />
-              </SSEProvider>
+                  },
+                }}
+              />
+              <SiteHeader />
+              <div className="h-[100px] md:h-[140px]" aria-hidden="true" />
+              <main className="min-h-screen w-full flex-grow">
+                <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
+                  <Suspense fallback={<LoadingSpinner />}>
+                    {children}
+                  </Suspense>
+                </div>
+              </main>
+              <RewardAlert />
+              <SiteFooter />
+              <div id="modal-root" className="relative z-50" />
             </Providers>
           </CategoryProvider>
         </SWRConfigProvider>
@@ -127,7 +124,7 @@ function SiteFooter() {
             width={120}
             height={40}
             priority
-            className="object-contain"
+            className="object-contain w-auto h-auto"
           />
         </div>
         <div className="flex space-x-6 items-center justify-center">

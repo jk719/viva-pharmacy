@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import eventEmitter, { Events } from '@/lib/eventEmitter';
 
 const OrderSchema = new mongoose.Schema({
     orderNumber: {
@@ -141,11 +142,30 @@ OrderSchema.pre('save', async function(next) {
         status: this.status,
         total: this.total
     });
+    
     try {
         if (this.isNew) {
-            // ... existing code ...
-            console.log('✅ Order created successfully:', this._id);
+            // Emit order created event
+            eventEmitter.emit(Events.ORDER_CREATED, {
+                orderId: this._id,
+                userId: this.userId,
+                total: this.total,
+                type: 'ORDER_CREATED',
+                timestamp: new Date().toISOString()
+            });
         }
+        
+        if (this.isModified('status') && this.status === 'Completed') {
+            // Emit order completed event
+            eventEmitter.emit(Events.ORDER_COMPLETED, {
+                orderId: this._id,
+                userId: this.userId,
+                total: this.total,
+                type: 'ORDER_COMPLETED',
+                timestamp: new Date().toISOString()
+            });
+        }
+        
         next();
     } catch (error) {
         console.error('❌ Order pre-save error:', error);

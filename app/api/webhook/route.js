@@ -10,6 +10,8 @@ import { REWARDS_CONFIG } from '@/lib/rewards/config';
 import { RewardsUtils } from '@/lib/rewards/utils';
 import mongoose from 'mongoose';
 import { paymentTracker } from '@/lib/stripe/paymentTracker';
+import eventEmitter from '@/lib/eventEmitter';
+import { Events } from '@/lib/events';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const WEBHOOK_SECRET = process.env.STRIPE_SIGNING_SECRET;
@@ -172,136 +174,90 @@ const processRewards = async (order, userId) => {
     }
 };
 
-export async function POST(request) {
-    console.log('🎣 Webhook endpoint hit');
-    
+const emitEvent = async (type, data) => {
+    console.log(`🚀 Emitting ${type} event:`, data);
     try {
-        const rawBody = await request.text();
-        const headersList = await headers();
-        const sig = headersList.get('stripe-signature');
+        eventEmitter.emit(type, {
+            ...data,
+            type,
+            animate: true,
+            timestamp: new Date().toISOString()
+        });
+        console.log(`✅ Successfully emitted ${type} event`);
+    } catch (error) {
+        console.error(`❌ Error emitting ${type} event:`, error);
+    }
+};
 
-        console.log('📝 Webhook details:', {
-            hasSignature: !!sig,
-            bodyLength: rawBody.length,
-            webhookSecret: !!WEBHOOK_SECRET
+export async function POST(req) {
+  const body = await req.text();
+  const signature = headers().get('stripe-signature');
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(
+      body,
+      signature,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+
+    console.log('📦 Webhook event received:', event.type);
+
+    if (event.type === 'payment_intent.succeeded') {
+      const paymentIntent = event.data.object;
+      const { metadata } = paymentIntent;
+      const userId = metadata.userId;
+      const amount = (paymentIntent.amount / 100).toFixed(2);
+
+      console.log('💳 Processing successful payment:', {
+        paymentIntentId: paymentIntent.id,
+        userId,
+        amount
+      });
+
+      try {
+        // First emit payment completion
+        await emitEvent(Events.PAYMENT_COMPLETED, {
+            paymentIntentId: paymentIntent.id,
+            userId,
+            amount
         });
 
-        if (!sig) {
-            console.error('❌ No Stripe signature found');
-            return NextResponse.json(
-                { error: 'No Stripe signature found' },
-                { status: 400 }
-            );
-        }
+        // Process the order
+        const order = await createOrder(paymentIntent);
+        console.log('📦 Order created:', order._id);
 
-        let event;
-        try {
-            event = stripe.webhooks.constructEvent(rawBody, sig, WEBHOOK_SECRET);
-            console.log('✅ Webhook verified:', {
-                type: event.type,
-                id: event.id
-            });
-        } catch (err) {
-            console.error('❌ Webhook verification failed:', {
-                error: err.message,
-                signature: sig?.substring(0, 20) + '...'
-            });
-            return NextResponse.json(
-                { error: `Webhook Error: ${err.message}` },
-                { status: 400 }
-            );
-        }
+        // Process rewards
+        const rewardsResult = await processRewards(order, userId);
+        console.log('🎁 Rewards processed:', rewardsResult);
 
-        switch (event.type) {
-            case 'payment_intent.succeeded':
-                const paymentIntent = event.data.object;
-                console.log('💰 Processing payment intent succeeded:', paymentIntent.id);
-                
-                try {
-                    await dbConnect();
-                    const order = await createOrder(paymentIntent);
-                    
-                    // Process rewards only if it's a new order
-                    if (order && paymentIntent.metadata.userId && !order.rewardsProcessed) {
-                        try {
-                            const user = await User.findById(paymentIntent.metadata.userId);
-                            
-                            if (user) {
-                                const basePoints = Math.floor(order.total * REWARDS_CONFIG.POINTS_PER_DOLLAR);
-                                const result = await user.addPoints(basePoints, false);
-                                
-                                await Order.findByIdAndUpdate(order._id, {
-                                    rewardsProcessed: true,
-                                    pointsAwarded: result.adjustedPoints
-                                });
+        // Then emit points update with a flag
+        await emitEvent(Events.POINTS_UPDATED, {
+            userId,
+            amount,
+            points: rewardsResult?.adjustedPoints || 0,
+            animate: true,
+            afterPayment: true,
+            timestamp: new Date().toISOString()
+        });
 
-                                console.log('✅ Rewards processed:', {
-                                    userId: user._id,
-                                    basePoints,
-                                    adjustedPoints: result.adjustedPoints,
-                                    newTier: result.currentTier,
-                                    multiplier: result.multiplier
-                                });
-                            }
-                        } catch (rewardsError) {
-                            console.error('❌ Failed to process rewards:', rewardsError);
-                        }
-                    }
-
-                    // Let the confirmation endpoint handle the email sending
-                    return NextResponse.json({ 
-                        success: true,
-                        orderId: order._id,
-                        status: order.rewardsProcessed ? 'existing' : 'new'
-                    });
-
-                } catch (err) {
-                    console.error('❌ Error processing payment:', err);
-                    return NextResponse.json(
-                        { error: err.message },
-                        { status: 500 }
-                    );
-                }
-
-            case 'payment_intent.created':
-                const createdIntent = event.data.object;
-                console.log('🆕 Payment intent created:', {
-                    id: createdIntent.id,
-                    amount: createdIntent.amount,
-                    currency: createdIntent.currency
-                });
-                return NextResponse.json({ received: true });
-
-            case 'charge.succeeded':
-                const charge = event.data.object;
-                console.log('💳 Charge succeeded:', {
-                    id: charge.id,
-                    amount: charge.amount,
-                    status: charge.status
-                });
-                return NextResponse.json({ received: true });
-
-            case 'charge.updated':
-                const updatedCharge = event.data.object;
-                console.log('📝 Charge updated:', {
-                    id: updatedCharge.id,
-                    amount: updatedCharge.amount,
-                    status: updatedCharge.status
-                });
-                return NextResponse.json({ received: true });
-
-            default:
-                console.log(`ℹ️ Unhandled event type ${event.type}`);
-                return NextResponse.json({ 
-                    received: true,
-                    message: `Unhandled event type: ${event.type}`
-                });
-        }
-    } catch (err) {
-        console.error('❌ General webhook error:', err);
-        return NextResponse.json(
-            { error: err.message },
-            { status: 500 }
-        );
+        return NextResponse.json({ 
+            received: true,
+            orderId: order._id,
+            rewardsProcessed: true
+        });
+      } catch (error) {
+        console.error('Error processing payment success:', error);
+        throw error;
+      }
     }
+
+    return NextResponse.json({ received: true });
+  } catch (err) {
+    console.error('❌ Webhook error:', err);
+    return NextResponse.json(
+      { error: 'Webhook handler failed' },
+      { status: 400 }
+    );
+  }
 }
