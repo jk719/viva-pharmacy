@@ -95,96 +95,40 @@ const SubcategoryGrid = ({ category }) => {
 };
 
 export default function FeaturedProducts({ categoryFilter }) {
+  const { products, isLoading, error } = useProducts();
   const { addToCart, decrement, items = [] } = useCart();
   const { isRateLimited } = useRateLimit();
-  const { products, isLoading, error } = useProducts();
-
-  // Add debugging logs
-  useEffect(() => {
-    console.log('FeaturedProducts: State update', {
-      productsCount: products?.length || 0,
-      isLoading,
-      error,
-      categoryFilter
-    });
-  }, [products, isLoading, error, categoryFilter]);
 
   // Filter products based on categoryFilter prop
   const filteredProducts = useMemo(() => {
+    if (isLoading || !products) return [];
+    
     console.log('Filtering products:', {
-      totalProducts: products?.length || 0,
+      totalProducts: products.length,
       categoryFilter
     });
 
-    if (!products?.length) {
-      console.log('No products available to filter');
-      return [];
-    }
-
     if (!categoryFilter || categoryFilter === 'all') {
-      console.log('Returning all products');
       return products;
     }
     
     const category = categories.find(cat => cat.slug === categoryFilter);
-    if (!category) {
-      console.log('Category not found:', categoryFilter);
-      return [];
-    }
+    if (!category) return [];
 
-    const filtered = products.filter(product => {
+    return products.filter(product => {
       const normalizedProductCategory = normalizeString(product.category);
       const normalizedProductItem = normalizeString(product.item || '');
       
-      if (normalizedProductCategory === normalizeString(category.name)) {
-        return true;
-      }
-
-      return category.items.some(item => 
-        normalizedProductItem === normalizeString(item.name)
-      );
+      return normalizedProductCategory === normalizeString(category.name) ||
+             category.items.some(item => 
+               normalizedProductItem === normalizeString(item.name)
+             );
     });
-
-    console.log('Filtered products:', {
-      categoryName: category.name,
-      filteredCount: filtered.length
-    });
-
-    return filtered;
-  }, [products, categoryFilter]);
-
-  if (isRateLimited) {
-    return (
-      <div className="py-6 text-center">
-        <div className="text-amber-600 mb-4">
-          Too many requests. Please wait a moment before trying again.
-        </div>
-        <div className="text-sm text-gray-500">
-          The page will automatically refresh when ready.
-        </div>
-      </div>
-    );
-  }
+  }, [products, categoryFilter, isLoading]);
 
   if (isLoading) return <LoadingState />;
-  
-  if (error && !error.isRateLimit) {
-    return (
-      <div className="py-6 text-center">
-        <div className="text-red-500 mb-4">
-          Error loading products. Please try again.
-        </div>
-        <button 
-          onClick={() => window.location.reload()}
-          className="px-4 py-2 bg-primary text-white rounded-md"
-        >
-          Retry
-        </button>
-      </div>
-    );
-  }
-
-  if (!products || products.length === 0) return <EmptyState />;
+  if (error) return <div>Error loading products</div>;
+  if (!products?.length) return <EmptyState />;
 
   return (
     <section className="py-4 sm:py-6">

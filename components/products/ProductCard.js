@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
-import { useState, useRef, useEffect, useCallback, memo } from 'react';
+import { useState, useRef, useEffect, useCallback, memo, useMemo } from 'react';
 import { getCloudinaryUrl, FALLBACK_IMAGE } from '@/lib/cloudinary';
 import { HiMinus, HiPlus } from 'react-icons/hi';
 import { debounce } from 'lodash';
@@ -48,10 +48,23 @@ const ProductCard = memo(({ product }) => {
     };
   }, [debouncedAddToCart]);
 
-  const imageUrl = !imageError ? (
-    product.imageUrl || 
-    (product.cloudinaryPublicId ? getCloudinaryUrl(product.cloudinaryPublicId) : FALLBACK_IMAGE)
-  ) : FALLBACK_IMAGE;
+  const imageUrl = useMemo(() => {
+    if (imageError) return FALLBACK_IMAGE;
+    
+    try {
+      if (product.imageUrl) {
+        return getCloudinaryUrl(product.imageUrl, {
+          width: 800,
+          quality: 'auto',
+          format: 'auto'
+        });
+      }
+      return FALLBACK_IMAGE;
+    } catch (error) {
+      console.error('Error generating image URL:', error);
+      return FALLBACK_IMAGE;
+    }
+  }, [product.imageUrl, imageError]);
 
   // Move QuantityControls outside of the main component
   const QuantityControls = memo(() => (

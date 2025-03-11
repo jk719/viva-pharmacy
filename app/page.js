@@ -85,34 +85,16 @@ export default function Home() {
     const loadCategories = async () => {
       try {
         setIsLoading(true);
-        const { success, products, error } = await fetchProducts();
+        const response = await fetch('/api/products');
+        const data = await response.json();
         
-        if (success && products?.length > 0) {
-          const uniqueCategories = ["All", ...new Set(products.map(p => p.category))].sort();
+        if (data.success && data.products?.length > 0) {
+          const uniqueCategories = ["All", ...new Set(data.products.map(p => p.category))].sort();
           setProductCategories(uniqueCategories);
-        } else if (error) {
-          console.error('Error loading products:', error);
-          toast.error('Failed to load products', {
-            style: {
-              background: '#EF4444',
-              color: '#FFFFFF',
-              padding: '16px',
-              borderRadius: '10px',
-            },
-          });
-          setProductCategories(["All"]); // Fallback to default
         }
       } catch (error) {
-        console.error('Error loading products:', error);
+        console.error('Error loading categories:', error);
         setProductCategories(["All"]); // Fallback to default
-        toast.error('Unable to load categories', {
-          style: {
-            background: '#EF4444',
-            color: '#FFFFFF',
-            padding: '16px',
-            borderRadius: '10px',
-          },
-        });
       } finally {
         setIsLoading(false);
       }
