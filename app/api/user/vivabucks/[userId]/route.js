@@ -99,8 +99,8 @@ export async function GET(request) {
 
 // Add POST method for adding points
 export async function POST(request) {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  const mongoSession = await mongoose.startSession();
+  mongoSession.startTransaction();
   
   try {
     if (!rateLimit.check(request, 60)) {
@@ -118,8 +118,8 @@ export async function POST(request) {
 
     console.log('🔄 Processing POST request...');
     
-    const session = await getServerSession(authOptions);
-    if (!session) {
+    const authSession = await getServerSession(authOptions);
+    if (!authSession) {
       console.error('❌ Not authenticated');
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
@@ -135,7 +135,8 @@ export async function POST(request) {
       return NextResponse.json({ error: "Invalid points value" }, { status: 400 });
     }
 
-    const user = await User.findById(userId).session(session);
+    // Find user without session first
+    const user = await User.findById(userId);
     if (!user) {
       console.error('❌ User not found for ID:', userId);
       return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -143,13 +144,13 @@ export async function POST(request) {
 
     // Calculate points with multiplier
     const multiplier = user.pointsMultiplier || 1;
-    const adjustedPoints = points * multiplier;
+    const adjustedPoints = Math.floor(points * multiplier);
 
     // Check and update tier
-    const currentPoints = user.cumulativePoints;
-    const tierInfo = RewardsUtils.getMembershipTier(currentPoints);
+    const currentPoints = user.cumulativePoints || 0;
+    const tierInfo = RewardsUtils.getMembershipTier(currentPoints + adjustedPoints);
 
-    // Atomic update
+    // Atomic update with transaction
     const updatedUser = await User.findByIdAndUpdate(
       userId,
       {
@@ -161,13 +162,22 @@ export async function POST(request) {
         $set: {
           currentTier: tierInfo.name,
           pointsMultiplier: tierInfo.multiplier,
-          nextRewardMilestone: Math.ceil((user.rewardPoints + adjustedPoints) / 100) * 100
+          nextRewardMilestone: Math.ceil((currentPoints + adjustedPoints) / 100) * 100,
+          'rewardHistory': [...user.rewardHistory, {
+            type: 'POINTS_EARNED',
+            points: points,
+            adjustedPoints: adjustedPoints,
+            multiplier: multiplier,
+            tier: tierInfo.name,
+            source: source || 'purchase',
+            timestamp: new Date()
+          }]
         }
       },
-      { new: true, session }
+      { new: true, session: mongoSession }
     );
 
-    await session.commitTransaction();
+    await mongoSession.commitTransaction();
 
     console.log('✅ Points updated successfully');
     return NextResponse.json({
@@ -179,11 +189,11 @@ export async function POST(request) {
     });
 
   } catch (error) {
-    await session.abortTransaction();
+    await mongoSession.abortTransaction();
     console.error('❌ Error processing request:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to update points" }, { status: 500 });
   } finally {
-    session.endSession();
+    await mongoSession.endSession();
   }
 }
  
