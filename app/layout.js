@@ -13,8 +13,7 @@ import { headers } from 'next/headers';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from '@/lib/auth';
 import eventEmitter from '../lib/eventEmitter';
-import { CategoryProvider } from '@/context/CategoryContext';
-import SWRConfigProvider from '@/components/SWRConfigProvider';
+import LoadingSpinner from '@/components/common/LoadingSpinner';
 
 // Metadata can be exported as a constant
 const siteConfig = {
@@ -44,55 +43,51 @@ export default async function RootLayout({ children }) {
         )}
       </head>
       <body className="bg-white text-primary-color">
-        <SWRConfigProvider>
-          <CategoryProvider>
-            <Providers session={session}>
-              <Toaster 
-                position="top-center"
-                reverseOrder={false}
-                toastOptions={{
-                  duration: 3000,
-                  style: {
-                    maxWidth: '90vw',
-                    margin: '0 auto',
-                  },
-                  // Customize different types of toasts
-                  success: {
-                    style: {
-                      background: '#10B981',
-                      color: 'white',
-                    },
-                  },
-                  error: {
-                    style: {
-                      background: '#EF4444',
-                      color: 'white',
-                    },
-                    duration: 4000,
-                  },
-                  loading: {
-                    style: {
-                      background: '#3B82F6',
-                      color: 'white',
-                    },
-                  },
-                }}
-              />
-              <SiteHeader />
-              <div className="h-[100px] md:h-[140px]" aria-hidden="true" />
-              <main className="min-h-screen w-full flex-grow">
-                <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
-                  <Suspense fallback={<LoadingSpinner />}>
-                    {children}
-                  </Suspense>
-                </div>
-              </main>
-              <RewardAlert />
-              <SiteFooter />
-              <div id="modal-root" className="relative z-50" />
-            </Providers>
-          </CategoryProvider>
-        </SWRConfigProvider>
+        <Providers session={session}>
+          <Toaster 
+            position="top-center"
+            reverseOrder={false}
+            toastOptions={{
+              duration: 3000,
+              style: {
+                maxWidth: '90vw',
+                margin: '0 auto',
+              },
+              // Customize different types of toasts
+              success: {
+                style: {
+                  background: '#10B981',
+                  color: 'white',
+                },
+              },
+              error: {
+                style: {
+                  background: '#EF4444',
+                  color: 'white',
+                },
+                duration: 4000,
+              },
+              loading: {
+                style: {
+                  background: '#3B82F6',
+                  color: 'white',
+                },
+              },
+            }}
+          />
+          <SiteHeader />
+          <div className="h-[100px] md:h-[140px]" aria-hidden="true" />
+          <main className="min-h-screen w-full flex-grow">
+            <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
+              <Suspense fallback={<LoadingSpinner />}>
+                {children}
+              </Suspense>
+            </div>
+          </main>
+          <RewardAlert />
+          <SiteFooter />
+          <div id="modal-root" className="relative z-50" />
+        </Providers>
       </body>
     </html>
   );
@@ -154,16 +149,5 @@ function SiteFooter() {
         </div>
       </div>
     </footer>
-  );
-}
-
-function LoadingSpinner() {
-  return (
-    <div className="flex items-center justify-center min-h-[60vh]">
-      <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-gray-900" 
-           role="status">
-        <span className="sr-only">Loading...</span>
-      </div>
-    </div>
   );
 }

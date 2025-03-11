@@ -8,9 +8,12 @@ import { useState, useEffect, Suspense } from 'react';
 import { FaShoppingBag } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HiMinusSm, HiPlusSm, HiOutlineTrash } from 'react-icons/hi';
+import { useSession } from 'next-auth/react';
+import ErrorBoundary from '@/components/common/ErrorBoundary';
 
 function CartContent() {
     const router = useRouter();
+    const { data: session, status } = useSession();
     const { 
         items = [], 
         updateQuantity, 
@@ -33,9 +36,24 @@ function CartContent() {
 
     const handleCheckout = (e) => {
         e.preventDefault();
+        if (status === 'unauthenticated') {
+            router.push(`/?showLogin=true&redirect=/checkout`);
+            return;
+        }
         console.log('Checkout clicked');
         router.push('/checkout');
     };
+
+    if (status === 'loading') {
+        return (
+            <div className="container mx-auto px-4 md:px-6 py-8">
+                <div className="animate-pulse space-y-6">
+                    <div className="h-8 bg-gray-200 rounded w-48"></div>
+                    <div className="h-32 bg-gray-200 rounded"></div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="container mx-auto px-4 md:px-6 py-8">
@@ -174,23 +192,25 @@ function CartContent() {
 
 export default function CartPage() {
     return (
-        <Suspense 
-            fallback={
-                <div className="container mx-auto px-4 md:px-6">
-                    <div className="bg-white rounded-lg shadow-sm p-4 md:p-6">
-                        <div className="animate-pulse">
-                            <div className="h-8 bg-gray-200 rounded w-48 mb-6"></div>
-                            <div className="space-y-4">
-                                <div className="h-24 bg-gray-200 rounded"></div>
-                                <div className="h-24 bg-gray-200 rounded"></div>
-                                <div className="h-24 bg-gray-200 rounded"></div>
+        <ErrorBoundary>
+            <Suspense 
+                fallback={
+                    <div className="container mx-auto px-4 md:px-6">
+                        <div className="bg-white rounded-lg shadow-sm p-4 md:p-6">
+                            <div className="animate-pulse">
+                                <div className="h-8 bg-gray-200 rounded w-48 mb-6"></div>
+                                <div className="space-y-4">
+                                    <div className="h-24 bg-gray-200 rounded"></div>
+                                    <div className="h-24 bg-gray-200 rounded"></div>
+                                    <div className="h-24 bg-gray-200 rounded"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            }
-        >
-            <CartContent />
-        </Suspense>
+                }
+            >
+                <CartContent />
+            </Suspense>
+        </ErrorBoundary>
     );
 }

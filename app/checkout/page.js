@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { calculateTax, formatTaxRate, getTaxRate } from '@/lib/tax/taxRates';
 import ShippingAddress from '@/components/checkout/ShippingAddress';
 import { useSession } from 'next-auth/react';
-import { FaClock, FaTruck, FaStore, FaMapMarkerAlt, FaRegClock, FaBox, FaBolt, FaCalendarAlt } from 'react-icons/fa';
+import { FaClock, FaTruck, FaStore, FaMapMarkerAlt, FaRegClock, FaBox, FaBolt } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 
@@ -92,6 +92,14 @@ function CheckoutContent() {
     typeof window !== 'undefined' ? window.innerWidth : 0
   );
 
+  // Add validation state
+  const [validationErrors, setValidationErrors] = useState({
+    deliveryMethod: false,
+    deliverySpeed: false,
+    time: false,
+    address: false
+  });
+
   useEffect(() => {
     if (!session) {
       router.push('/?showLogin=true&redirect=/checkout');
@@ -117,6 +125,9 @@ function CheckoutContent() {
   };
 
   const timeSlots = useMemo(() => {
+    // Return empty array if no delivery method selected
+    if (!deliveryMethod) return [];
+    
     const slots = [];
     const now = new Date();
     const endDate = new Date(now.getTime() + (48 * 60 * 60 * 1000));
@@ -125,9 +136,13 @@ function CheckoutContent() {
     let interval = deliveryMethod === 'pickup' ? 15 : 60;
     let effectiveEndDate = endDate;
     
-    if (deliveryMethod === 'delivery') {
+    if (deliveryMethod === 'delivery' && deliverySpeed) {
       const deliveryOption = DELIVERY_OPTIONS[deliverySpeed];
-      effectiveEndDate = new Date(now.getTime() + (deliveryOption.hours * 60 * 60 * 1000));
+      if (deliveryOption) { // Add null check here
+        effectiveEndDate = new Date(now.getTime() + (deliveryOption.hours * 60 * 60 * 1000));
+      } else {
+        return []; // Return empty array if delivery option is invalid
+      }
     }
 
     // Round current time up to next interval
@@ -205,6 +220,43 @@ function CheckoutContent() {
     }
   }, [items, loading, shippingAddress, deliveryMethod, deliverySpeed]);
 
+  // Add validation check function
+  const validateSelections = () => {
+    const errors = {
+      deliveryMethod: !deliveryMethod,
+      deliverySpeed: deliveryMethod === 'delivery' && !deliverySpeed,
+      time: !selectedTime,
+      address: deliveryMethod === 'delivery' && !shippingAddress
+    };
+    
+    setValidationErrors(errors);
+    return !Object.values(errors).some(error => error);
+  };
+
+  // Update payment form rendering condition
+  const shouldShowPaymentForm = useMemo(() => {
+    return (
+      cartTotal > 0 &&
+      deliveryMethod &&
+      selectedTime &&
+      (deliveryMethod === 'pickup' || (deliveryMethod === 'delivery' && shippingAddress && deliverySpeed))
+    );
+  }, [cartTotal, deliveryMethod, selectedTime, shippingAddress, deliverySpeed]);
+
+  // Add validation message component
+  const ValidationMessage = ({ show, message }) => {
+    if (!show) return null;
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-red-500 text-sm mt-2"
+      >
+        {message}
+      </motion.div>
+    );
+  };
+
   if (loading) {
     return (
       <motion.div 
@@ -248,6 +300,11 @@ function CheckoutContent() {
         <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
           <FaBox className="text-primary" />
           Delivery Method
+          {!deliveryMethod && (
+            <span className="text-sm font-normal text-red-500 ml-2">
+              (Required)
+            </span>
+          )}
         </h2>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -295,6 +352,11 @@ function CheckoutContent() {
             </motion.button>
           ))}
         </div>
+        
+        <ValidationMessage 
+          show={validationErrors.deliveryMethod} 
+          message="Please select a delivery method"
+        />
       </motion.div>
 
       {deliveryMethod === 'delivery' && (
@@ -302,9 +364,17 @@ function CheckoutContent() {
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: 'auto' }}
           exit={{ opacity: 0, height: 0 }}
-          className="mt-6"
+          className="mb-8 bg-white rounded-2xl shadow-lg p-6"
         >
-          <h3 className="text-lg font-medium text-gray-800 mb-4">Delivery Speed</h3>
+          <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+            <FaBolt className="text-primary" />
+            Delivery Speed
+            {!deliverySpeed && (
+              <span className="text-sm font-normal text-red-500 ml-2">
+                (Required)
+              </span>
+            )}
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[
               { 
@@ -312,7 +382,7 @@ function CheckoutContent() {
                 label: 'Same Day Delivery', 
                 fee: 0, 
                 desc: 'Free • Delivered Today',
-                icon: FaCalendarAlt,
+                icon: FaClock,
                 time: 'By end of day'
               },
               { 
@@ -377,6 +447,11 @@ function CheckoutContent() {
               </motion.button>
             ))}
           </div>
+          
+          <ValidationMessage 
+            show={validationErrors.deliverySpeed} 
+            message="Please select a delivery speed"
+          />
         </motion.div>
       )}
 
@@ -390,6 +465,11 @@ function CheckoutContent() {
           <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
             <FaClock className="text-primary" />
             Select Pickup Time
+            {!selectedTime && (
+              <span className="text-sm font-normal text-red-500">
+                (Please select a pickup time)
+              </span>
+            )}
           </h2>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -452,121 +532,36 @@ function CheckoutContent() {
               </motion.button>
             )}
           </div>
+          
+          <ValidationMessage 
+            show={validationErrors.time} 
+            message="Please select a pickup time"
+          />
         </motion.div>
       )}
-
-      <motion.div 
-        className="mb-8 bg-white rounded-2xl shadow-lg p-6"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-      >
-        <h2 className="text-xl font-semibold mb-6">Order Summary</h2>
-        
-        <div className="space-y-4">
-          {items.map((item) => (
-            <motion.div
-              key={item.id || item._id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl"
-            >
-              <div className="relative h-20 w-20 bg-white rounded-lg p-2 shadow-sm">
-                <Image
-                  src={item.image}
-                  alt={item.name}
-                  fill
-                  className="object-contain"
-                  sizes="(max-width: 768px) 80px, 80px"
-                />
-              </div>
-              <div className="flex-grow">
-                <h3 className="font-medium text-gray-800">{item.name}</h3>
-                <div className="flex justify-between items-center mt-1">
-                  <div className="text-gray-600">Qty: {item.quantity}</div>
-                  <div className="font-semibold text-primary">
-                    ${(parseFloat(item.price) * parseInt(item.quantity)).toFixed(2)}
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-
-        <div className="mt-6 p-4 bg-gray-50 rounded-xl space-y-3">
-          <div className="flex justify-between items-center text-gray-600">
-            <span>Subtotal</span>
-            <span>${subtotal.toFixed(2)}</span>
-          </div>
-          {deliveryMethod === 'delivery' && (
-            <div className="flex justify-between items-center text-gray-600">
-              <span className="flex items-center gap-2">
-                <span>Delivery Fee</span>
-                {[
-                  {
-                    id: 'ONE_HOUR',
-                    show: deliverySpeed === 'ONE_HOUR',
-                    content: (
-                      <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
-                        1 Hour Priority
-                      </span>
-                    )
-                  },
-                  {
-                    id: 'TWO_HOUR',
-                    show: deliverySpeed === 'TWO_HOUR',
-                    content: (
-                      <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
-                        2 Hour Express
-                      </span>
-                    )
-                  },
-                  {
-                    id: 'SAME_DAY',
-                    show: deliverySpeed === 'SAME_DAY',
-                    content: (
-                      <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
-                        Free Delivery
-                      </span>
-                    )
-                  }
-                ].map(badge => badge.show && (
-                  <span key={`delivery-badge-${badge.id}`}>
-                    {badge.content}
-                  </span>
-                ))}
-              </span>
-              <span>${DELIVERY_FEES[deliverySpeed].toFixed(2)}</span>
-            </div>
-          )}
-          {shippingAddress && (
-            <div className="flex justify-between items-center text-gray-600">
-              <span>Tax ({formatTaxRate(getTaxRate(shippingAddress.state, 'NYC'))})</span>
-              <span>${tax.toFixed(2)}</span>
-            </div>
-          )}
-          <div className="flex justify-between items-center text-xl font-bold text-primary pt-3 border-t">
-            <span>Total</span>
-            <span>${cartTotal.toFixed(2)}</span>
-          </div>
-        </div>
-      </motion.div>
 
       {deliveryMethod === 'delivery' && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="mb-8 bg-white rounded-2xl shadow-lg p-6"
-        >
+        <motion.div className="mb-8 bg-white rounded-2xl shadow-lg p-6">
+          <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+            <FaMapMarkerAlt className="text-primary" />
+            Delivery Address
+            {!shippingAddress && (
+              <span className="text-sm font-normal text-red-500 ml-2">
+                (Required)
+              </span>
+            )}
+          </h2>
+          
           <ShippingAddress onAddressSelect={setShippingAddress} />
+          
+          <ValidationMessage 
+            show={validationErrors.address} 
+            message="Please enter a delivery address"
+          />
         </motion.div>
       )}
 
-      {((deliveryMethod === 'delivery' && shippingAddress) || 
-         deliveryMethod === 'pickup') && 
-       selectedTime && 
-       cartTotal > 0 && (
+      {shouldShowPaymentForm && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

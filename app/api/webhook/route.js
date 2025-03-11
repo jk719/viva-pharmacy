@@ -10,8 +10,7 @@ import { REWARDS_CONFIG } from '@/lib/rewards/config';
 import { RewardsUtils } from '@/lib/rewards/utils';
 import mongoose from 'mongoose';
 import { paymentTracker } from '@/lib/stripe/paymentTracker';
-import eventEmitter from '@/lib/eventEmitter';
-import { Events } from '@/lib/events';
+import eventEmitter, { Events } from '@/lib/eventEmitter';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const WEBHOOK_SECRET = process.env.STRIPE_SIGNING_SECRET;

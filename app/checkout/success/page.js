@@ -13,22 +13,31 @@ function SuccessContent() {
   const router = useRouter();
   const { data: session } = useSession();
   const [countdown, setCountdown] = useState(5);
+  const [isCleanedUp, setIsCleanedUp] = useState(false);
 
-  // Add check for processed payment
   useEffect(() => {
     const hasProcessedPayment = sessionStorage.getItem('paymentProcessed');
     const paymentIntentId = sessionStorage.getItem('paymentIntentId');
+    const paymentAmount = sessionStorage.getItem('paymentAmount');
     
     if (!hasProcessedPayment || !paymentIntentId) {
-        router.push('/');
-        return;
+      router.replace('/');
+      return;
     }
 
-    // First time loading
-    clearCart();
-    sessionStorage.removeItem('paymentProcessed');
-    sessionStorage.removeItem('paymentIntentId');
-  }, [clearCart, router]);
+    // Cleanup function
+    const cleanup = async () => {
+      if (!isCleanedUp) {
+        await clearCart();
+        sessionStorage.removeItem('paymentProcessed');
+        sessionStorage.removeItem('paymentIntentId');
+        sessionStorage.removeItem('paymentAmount');
+        setIsCleanedUp(true);
+      }
+    };
+
+    cleanup();
+  }, [clearCart, router, isCleanedUp]);
 
   // Modified countdown effect
   useEffect(() => {
@@ -39,13 +48,16 @@ function SuccessContent() {
         setCountdown(prev => prev - 1);
       }, 1000);
     } else {
-      router.replace('/');
+      // Only redirect if cleanup is done
+      if (isCleanedUp) {
+        router.replace('/');
+      }
     }
 
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [countdown, router]);
+  }, [countdown, router, isCleanedUp]);
 
   // Keep confetti effect
   useEffect(() => {

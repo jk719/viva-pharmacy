@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Elements } from '@stripe/react-stripe-js';
 import { PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import stripePromise from '@/lib/stripe/client';
@@ -8,6 +8,37 @@ import eventEmitter, { Events } from '@/lib/eventEmitter';
 import { useSession } from "next-auth/react";
 import { useCart } from '@/context/CartContext';
 import { useRouter } from 'next/navigation';
+import ReactConfetti from 'react-confetti';
+import toast from 'react-hot-toast';
+
+// Add this custom hook
+const useWindowSize = () => {
+  const [windowSize, setWindowSize] = useState({
+    width: typeof window !== 'undefined' ? window.innerWidth : 0,
+    height: typeof window !== 'undefined' ? window.innerHeight : 0,
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleResize = () => {
+      setWindowSize({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    };
+
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Call once to set initial size
+
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return windowSize;
+};
+
+const ANIMATION_DURATION = 2000;
+const REDIRECT_DELAY = 3000;
 
 const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryMethod, selectedTime }) => {
   const router = useRouter();
@@ -17,10 +48,29 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
   const [isProcessing, setIsProcessing] = useState(false);
   const { data: session } = useSession();
   const { clearCart } = useCart();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submitTimeoutRef = useRef(null);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const { width, height } = useWindowSize();
+
+  // Add payment status tracking
+  const [paymentStatus, setPaymentStatus] = useState('idle'); // 'idle' | 'processing' | 'succeeded' | 'failed'
+
+  useEffect(() => {
+    return () => {
+      if (submitTimeoutRef.current) {
+        clearTimeout(submitTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsProcessing(true);
+    if (isSubmitting || isProcessing || paymentStatus === 'processing') return;
+    
+    setIsSubmitting(true);
+    setPaymentStatus('processing');
+    const loadingToast = toast.loading('Processing payment...');
     
     try {
       console.log('🔄 Starting payment submission...');
@@ -34,92 +84,176 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
       });
 
       if (error) {
-        console.error('❌ Payment confirmation error:', error);
-        setError(error.message);
-      } else if (paymentIntent.status === 'succeeded') {
-        console.log('✅ Payment confirmed successfully');
-        
-        // Emit payment completed event with animation flag
-        eventEmitter.emit(Events.PAYMENT_COMPLETED, {
-          userId: session.user.id,
-          amount: amount.total,
-          animate: true,
-          timestamp: new Date().toISOString()
-        });
-
-        // Wait briefly before redirecting
-        await new Promise(resolve => setTimeout(resolve, 500));
-        router.push('/checkout/success');
+        console.error('❌ Payment error:', error);
+        toast.error(error.message, { id: loadingToast });
+        setPaymentStatus('failed');
+        return;
       }
-    } catch (error) {
-      console.error('❌ Payment submission error:', error);
-      setError('An unexpected error occurred.');
+
+      if (paymentIntent.status === 'succeeded') {
+        console.log('✅ Payment succeeded:', paymentIntent.id);
+        setPaymentStatus('succeeded');
+
+        // Store payment info
+        sessionStorage.setItem('paymentProcessed', 'true');
+        sessionStorage.setItem('paymentIntentId', paymentIntent.id);
+        sessionStorage.setItem('paymentAmount', amountDetails.total);
+
+        try {
+          // Show success message
+          toast.success('Payment successful!', { id: loadingToast });
+          setShowConfetti(true);
+
+          // Send order confirmation
+          await handleOrderConfirmation(paymentIntent);
+
+          // Emit payment completed event
+          eventEmitter.emit(Events.PAYMENT_COMPLETED, {
+            userId: session?.user?.id,
+            paymentIntentId: paymentIntent.id,
+            amount: parseFloat(amountDetails.total),
+            animate: true,
+            timestamp: new Date().toISOString()
+          });
+
+          // Wait for animations
+          await new Promise(resolve => setTimeout(resolve, ANIMATION_DURATION));
+
+          // Clear cart and redirect
+          await clearCart();
+          router.replace('/checkout/success');
+
+        } catch (err) {
+          console.error('Post-payment error:', err);
+          setTimeout(() => router.replace('/checkout/success'), REDIRECT_DELAY);
+        }
+      }
+    } catch (err) {
+      console.error('❌ Payment submission error:', err);
+      toast.error('An unexpected error occurred', { id: loadingToast });
+      setPaymentStatus('failed');
     } finally {
-      setIsProcessing(false);
+      setIsSubmitting(false);
     }
   };
 
   const handleOrderConfirmation = async (paymentIntent) => {
+    // Format all numbers before sending
+    const formattedAmount = {
+      subtotal: parseFloat(amountDetails.subtotal || 0).toFixed(2),
+      tax: parseFloat(amountDetails.tax || 0).toFixed(2),
+      total: parseFloat(amountDetails.total || 0).toFixed(2),
+      deliveryFee: parseFloat(
+        deliveryMethod === 'delivery' ? amountDetails.deliveryFee : 0
+      ).toFixed(2)
+    };
+
+    const formattedItems = items.map(item => ({
+      name: item.name,
+      price: parseFloat(item.price || 0).toFixed(2),
+      quantity: parseInt(item.quantity || 1),
+      image: item.image,
+      hasImage: !!item.image
+    }));
+
     const response = await fetch('/api/orders/confirmations', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            orderNumber: paymentIntent.id,
-            email: session?.user?.email,
-            items: items.map(item => ({
-                name: item.name,
-                price: item.price,
-                quantity: item.quantity,
-                image: item.image
-            })),
-            deliveryFee: deliveryMethod === 'delivery' ? amount.deliveryFee : 0,
-            subtotal: amount.subtotal,
-            tax: amount.tax,
-            total: amount.total,
-            shippingAddress,
-            deliveryMethod,
-            selectedTime,
-            customerName: session?.user?.name || 'Valued Customer'
-        })
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        orderNumber: paymentIntent.id,
+        email: session?.user?.email,
+        items: formattedItems,
+        deliveryFee: formattedAmount.deliveryFee,
+        subtotal: formattedAmount.subtotal,
+        tax: formattedAmount.tax,
+        total: formattedAmount.total,
+        shippingAddress,
+        deliveryMethod,
+        selectedTime,
+        customerName: session?.user?.name || 'Valued Customer'
+      })
     });
 
     if (!response.ok) {
-        throw new Error('Failed to send order confirmation');
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to send order confirmation');
     }
 
     return response.json();
   };
 
+  // Add cleanup for confetti
+  useEffect(() => {
+    if (showConfetti) {
+      const timer = setTimeout(() => setShowConfetti(false), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [showConfetti]);
+
+  // Add cleanup effect
+  useEffect(() => {
+    return () => {
+      if (submitTimeoutRef.current) {
+        clearTimeout(submitTimeoutRef.current);
+      }
+      // Only clear storage if payment failed
+      if (paymentStatus === 'failed') {
+        sessionStorage.removeItem('paymentProcessed');
+        sessionStorage.removeItem('paymentIntentId');
+        sessionStorage.removeItem('paymentAmount');
+      }
+    };
+  }, [paymentStatus]);
+
+  // Prevent form submission during processing
+  const isFormDisabled = !stripe || isProcessing || isSubmitting || paymentStatus === 'processing';
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <PaymentElement />
-      {error && (
-        <div className="text-red-500 text-sm mt-2 p-2 bg-red-50 rounded">
-          {error}
-        </div>
+    <>
+      {showConfetti && (
+        <ReactConfetti
+          width={width}
+          height={height}
+          recycle={false}
+          numberOfPieces={200}
+          gravity={0.3}
+          initialVelocityY={20}
+          colors={['#FF9F43', '#0066cc', '#10B981', '#3B82F6']}
+          onConfettiComplete={() => setShowConfetti(false)}
+        />
       )}
-      <button
-        type="submit"
-        disabled={!stripe || isProcessing}
-        className="w-full mt-4 bg-primary text-white py-3 px-6 rounded-lg font-semibold 
-                 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90
-                 transition-opacity duration-200"
-      >
-        {isProcessing ? (
-          <span className="flex items-center justify-center">
-            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            Processing...
-          </span>
-        ) : (
-          'Pay Now'
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <PaymentElement />
+        {error && (
+          <div className="text-red-500 text-sm mt-2 p-2 bg-red-50 rounded">
+            {error}
+          </div>
         )}
-      </button>
-    </form>
+        <button
+          type="submit"
+          disabled={isFormDisabled}
+          className={`w-full mt-4 py-3 px-6 rounded-lg font-semibold 
+                   transition-all duration-200
+                   ${isFormDisabled 
+                     ? 'bg-gray-400 cursor-not-allowed opacity-50' 
+                     : 'bg-primary text-white hover:opacity-90'}`}
+        >
+          {paymentStatus === 'processing' ? (
+            <span className="flex items-center justify-center">
+              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Processing Payment...
+            </span>
+          ) : (
+            'Pay Now'
+          )}
+        </button>
+      </form>
+    </>
   );
 };
 
@@ -130,6 +264,7 @@ export default function PaymentForm({ amount, amountDetails, items, shippingAddr
   const [isLoading, setIsLoading] = useState(true);
   const [paymentInitialized, setPaymentInitialized] = useState(false);
   const { data: session } = useSession();
+  const [requestId] = useState(() => `${Date.now()}_${Math.random().toString(36).slice(2)}`);
 
   useEffect(() => {
     if (paymentInitialized || !amount || amount <= 0) {
@@ -153,8 +288,6 @@ export default function PaymentForm({ amount, amountDetails, items, shippingAddr
         if (!cartItems.length) {
           throw new Error('Cart is empty');
         }
-
-        const requestId = `${session?.user?.id}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
         const payload = {
           amount: amount,
@@ -202,7 +335,9 @@ export default function PaymentForm({ amount, amountDetails, items, shippingAddr
       }
     };
 
-    initializePayment();
+    // Debounce the initialization
+    const timeoutId = setTimeout(initializePayment, 100);
+    return () => clearTimeout(timeoutId);
   }, [amount, amountDetails, session?.user?.id, deliveryMethod, selectedTime]);
 
   if (isLoading) {

@@ -46,9 +46,9 @@ export function CartProvider({ children }) {
     });
 
     const [deliveryState, setDeliveryState] = useState({
-        option: 'pickup',
+        option: '',
         selectedTime: '',
-        deliverySpeed: 'SAME_DAY',  // Add this
+        deliverySpeed: '',
         showTimeError: false
     });
 
@@ -236,8 +236,24 @@ export function CartProvider({ children }) {
             items: [],
             total: 0,
             subtotal: 0,
-            tax: 0
+            tax: 0,
+            deliveryFee: 0
         }));
+        
+        // Reset delivery state
+        setDeliveryState({
+            option: '',
+            selectedTime: '',
+            deliverySpeed: '',
+            showTimeError: false
+        });
+        
+        // Reset payment status
+        setPaymentStatus({
+            processing: false,
+            paymentIntentId: null,
+            error: null
+        });
     }, []);
 
     const getCartSize = useCallback(() => {

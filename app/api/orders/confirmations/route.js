@@ -1,135 +1,91 @@
 import { NextResponse } from 'next/server';
 import { generateOrderConfirmationEmail } from '@/lib/email-templates/order-confirmation';
 import { sendOrderConfirmationEmail } from '@/lib/email/sendEmail';
-import { eventEmitter } from '@/lib/eventEmitter';
-import { Events } from '@/lib/events';
-import { session } from '@/lib/session';
+import { eventEmitter, Events, paymentTracker } from '@/lib/eventEmitter';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
 export async function POST(request) {
   try {
+    const session = await getServerSession(authOptions);
     const data = await request.json();
-    const {
-      orderNumber,
-      email,
-      items = [],
-      subtotal,
-      tax,
-      total,
-      shippingAddress,
-      deliveryMethod,
-      selectedTime,
-      vivaBucksEarned = 0,
-      rewardPointsEarned = 0,
-      customerName = 'Valued Customer'
-    } = data;
+    
+    // Format all numerical values immediately
+    const formattedData = {
+      orderNumber: data.orderNumber,
+      email: data.email,
+      items: data.items.map(item => ({
+        name: item.name,
+        price: parseFloat(item.price || 0).toFixed(2),
+        quantity: parseInt(item.quantity || 1),
+        image: item.image,
+        hasImage: !!item.image,
+        subtotal: (parseFloat(item.price || 0) * parseInt(item.quantity || 1)).toFixed(2)
+      })),
+      subtotal: parseFloat(data.subtotal || 0).toFixed(2),
+      tax: parseFloat(data.tax || 0).toFixed(2),
+      total: parseFloat(data.total || 0).toFixed(2),
+      shippingAddress: data.shippingAddress,
+      deliveryMethod: data.deliveryMethod,
+      selectedTime: data.selectedTime,
+      vivaBucksEarned: parseFloat(data.vivaBucksEarned || 0).toFixed(2),
+      rewardPointsEarned: parseInt(data.rewardPointsEarned || 0),
+      customerName: data.customerName || session?.user?.name || 'Valued Customer'
+    };
 
-    // Log initial request
+    // Log formatted data
     console.log('📦 Received order confirmation request:', {
-      hasSession: !!email,
-      userEmail: email?.replace(/@.*$/, '@...'),
-      orderData: { 
-        orderNumber, 
-        total, 
-        itemCount: items.length,
-        subtotal,
-        tax
+      hasSession: !!session,
+      userEmail: formattedData.email?.replace(/@.*$/, '@...'),
+      userId: session?.user?.id,
+      orderData: {
+        orderNumber: formattedData.orderNumber,
+        total: parseFloat(formattedData.total),
+        itemCount: formattedData.items.length,
+        subtotal: parseFloat(formattedData.subtotal),
+        tax: parseFloat(formattedData.tax)
       }
     });
 
-    // Add more detailed logging for items
-    console.log('📧 Processing email data:', {
-      orderNumber,
-      items: items.map(item => ({
-        name: item.name,
-        hasImage: !!item.image,
-        imageUrl: item.image?.substring(0, 50) + '...',
-        price: item.price,
-        quantity: item.quantity
-      })),
-      totals: { subtotal, tax, total }
-    });
-
-    // Format items with proper validation and calculations
-    const formattedItems = items.map(item => {
-      const itemPrice = parseFloat(item.price || 0);
-      const itemQuantity = parseInt(item.quantity || 1);
-      return {
-        name: item.name || item.title || 'Product',
-        price: itemPrice,
-        quantity: itemQuantity,
-        image: item.image || null,
-        subtotal: (itemPrice * itemQuantity)
-      };
-    });
-
-    // Calculate totals if not provided
-    const calculatedSubtotal = formattedItems.reduce((sum, item) => 
-      sum + item.subtotal, 0
-    );
-
-    const calculatedTax = tax ? parseFloat(tax) : (calculatedSubtotal * 0.08875);
-    const calculatedTotal = total ? parseFloat(total) : (calculatedSubtotal + calculatedTax);
-
-    // Generate email data
+    // Generate email with formatted data
     const emailData = {
-      orderNumber,
-      customerName,
-      items: formattedItems,
-      subtotal: calculatedSubtotal,
-      tax: calculatedTax,
-      total: calculatedTotal,
-      shippingAddress,
-      deliveryMethod,
-      selectedTime,
-      vivaBucksEarned: parseFloat(vivaBucksEarned),
-      rewardPointsEarned: parseInt(rewardPointsEarned)
+      ...formattedData,
+      items: formattedData.items.map(item => ({
+        ...item,
+        price: parseFloat(item.price),
+        subtotal: parseFloat(item.subtotal)
+      }))
     };
 
-    console.log('✅ Email template generated successfully');
+    await sendOrderConfirmationEmail(formattedData.email, emailData);
 
-    // Send email
-    await sendOrderConfirmationEmail(
-      email,
-      emailData
-    );
-
-    // After sending email, emit events in sequence
-    if (vivaBucksEarned > 0) {
-      console.log('📢 Emitting reward events for order:', orderNumber);
-      
-      // First emit payment completion if not already done
-      eventEmitter.emit(Events.PAYMENT_COMPLETED, {
-        userId: session.user.id,
-        amount: total,
-        animate: true,
-        timestamp: new Date().toISOString()
-      });
-
-      // Then emit points update
-      eventEmitter.emit(Events.POINTS_UPDATED, {
-        userId: session.user.id,
-        points: rewardPointsEarned,
-        animate: true,
-        afterPayment: true,
-        timestamp: new Date().toISOString()
-      });
+    // Emit events with formatted numbers
+    if (session?.user?.id) {
+      const amount = parseFloat(formattedData.total);
+      if (amount > 0) {
+        eventEmitter.emit(Events.PAYMENT_COMPLETED, {
+          userId: session.user.id,
+          paymentIntentId: formattedData.orderNumber,
+          amount,
+          animate: true,
+          timestamp: new Date().toISOString()
+        });
+      }
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       data: {
-        subtotal: calculatedSubtotal,
-        tax: calculatedTax,
-        total: calculatedTotal
+        subtotal: parseFloat(formattedData.subtotal),
+        tax: parseFloat(formattedData.tax),
+        total: parseFloat(formattedData.total),
+        vivaBucksEarned: parseFloat(formattedData.vivaBucksEarned),
+        rewardPointsEarned: formattedData.rewardPointsEarned
       }
     });
 
   } catch (error) {
-    console.error('❌ Order confirmation error:', {
-      message: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
-    
+    console.error('❌ Order confirmation error:', error);
     return NextResponse.json(
       { error: 'Failed to send order confirmation' },
       { status: 500 }

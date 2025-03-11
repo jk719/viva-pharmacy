@@ -5,7 +5,13 @@ import { CartProvider } from "../context/CartContext";
 import { CategoryProvider } from "../context/CategoryContext";
 import { Toaster } from 'react-hot-toast';
 import { SWRConfig } from 'swr';
-import SSEProvider from '@/components/SSEProvider';
+import dynamic from 'next/dynamic';
+
+// Dynamically import SSEProvider with no SSR
+const SSEProvider = dynamic(() => import('@/components/SSEProvider'), {
+  ssr: false,
+  loading: () => null
+});
 
 const fetcher = async (url) => {
   const res = await fetch(url);
@@ -24,13 +30,13 @@ export function Providers({ children, session }) {
         revalidateOnReconnect: false,
         shouldRetryOnError: false
       }}>
-        <CartProvider>
-          <CategoryProvider>
+        <CategoryProvider>
+          <CartProvider>
             <SSEProvider>
               {children}
             </SSEProvider>
-          </CategoryProvider>
-        </CartProvider>
+          </CartProvider>
+        </CategoryProvider>
       </SWRConfig>
     </SessionProvider>
   );

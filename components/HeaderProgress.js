@@ -1,7 +1,7 @@
 'use client';
 
 import { useSession } from "next-auth/react";
-import { useState, useEffect, useCallback, useRef, memo } from "react";
+import { useState, useEffect, useCallback, useRef, memo, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import eventEmitter, { Events } from '@/lib/eventEmitter';
 import { FaStar, FaGift, FaCoins } from 'react-icons/fa';
@@ -13,6 +13,11 @@ import { useRewardsStore } from '@/lib/stores/rewardsStore';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { debounce } from 'lodash';
+import { REWARD_CONSTANTS } from '@/lib/rewards/constants';
+
+const logEvent = (eventName, data) => {
+  console.log(`[HeaderProgress] ${eventName}:`, data);
+};
 
 const HeaderProgress = memo(function HeaderProgress() {
   console.log('HeaderProgress: Component rendering');
@@ -25,7 +30,7 @@ const HeaderProgress = memo(function HeaderProgress() {
     rewardPoints: 0,
     cumulativePoints: 0
   });
-  const [scale, setScale] = useState(100);
+  const [scale, setScale] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const [isRedeeming, setIsRedeeming] = useState(false);
@@ -33,86 +38,229 @@ const HeaderProgress = memo(function HeaderProgress() {
   const { setActiveReward } = useRewardsStore();
   const ITEMS_PER_PAGE = 5;
   const [isAnimating, setIsAnimating] = useState(false);
-  const animationTimeoutRef = useRef(null);
+  const animationTimeoutRef = useRef([]);
   const [debugEvents, setDebugEvents] = useState([]);
-  const mountedRef = useRef(false);
+  const mountedRef = useRef(true);
+  const lastPaymentRef = useRef(null);
+  const progressRef = useRef(0);
+  const lastPointsRef = useRef(0);
+  const initialRenderRef = useRef(true);
+  const debouncedFetchRef = useRef(null);
+  const timeoutRef = useRef(null);
+  const lastProcessedPaymentRef = useRef(null);
 
   // Add this at the top of the component
   const ANIMATION_DURATION = 1000;
 
-  // Create a stable reference to the debounced function
-  const debouncedFetchRef = useRef(
-    debounce(async (userId) => {
-      if (!userId || !mountedRef.current) return;
+  // Add state for tracking point updates
+  const [pointUpdateQueue, setPointUpdateQueue] = useState([]);
+  const lastFetchRef = useRef(Date.now());
+  const FETCH_COOLDOWN = 2000; // 2 seconds cooldown between fetches
+
+  // 1. Define calculateProgress first, before any other functions that use it
+  const calculateProgress = useCallback((points) => {
+    const pointsNeeded = REWARD_CONSTANTS.REWARD_RATE.POINTS_NEEDED;
+    const pointsInCycle = points % pointsNeeded;
+    return (pointsInCycle / pointsNeeded) * 100;
+  }, []);
+
+  // 2. Then define fetchRewardsData which uses calculateProgress
+  const fetchRewardsData = useCallback(async () => {
+    if (!session?.user?.id || !mountedRef.current) return;
+
+    try {
+      const response = await fetch(`/api/user/vivabucks/${session.user.id}`);
+      if (response.ok && mountedRef.current) {
+        const data = await response.json();
+        setRewardsData(prev => ({
+          ...prev,
+          ...data
+        }));
+      }
+    } catch (error) {
+      console.error('[HeaderProgress] Error fetching rewards data:', error);
+    }
+  }, [session?.user?.id]);
+
+  // 3. Then define handleAnimation which also uses calculateProgress
+  const handleAnimation = useCallback(async (amount) => {
+    if (!session?.user?.id || !mountedRef.current) return;
+    
+    try {
+      console.log('[HeaderProgress] Starting animation with amount:', amount);
       
+      const currentPoints = rewardsData.rewardPoints || 0;
+      const pointsToAdd = Math.floor(amount * REWARD_CONSTANTS.REWARD_RATE.POINTS_PER_DOLLAR);
+      const newPoints = currentPoints + pointsToAdd;
+      
+      const progress = calculateProgress(newPoints);
+      progressRef.current = progress;
+      
+      console.log('[HeaderProgress] Calculated progress:', {
+        currentPoints,
+        pointsToAdd,
+        newPoints,
+        progress
+      });
+      
+      setScale(progress);
+      lastPointsRef.current = newPoints;
+      
+      timeoutRef.current = setTimeout(async () => {
+        if (mountedRef.current) {
+          await fetchRewardsData();
+        }
+      }, 1000);
+    } catch (error) {
+      console.error('[HeaderProgress] Animation error:', error);
+    }
+  }, [session?.user?.id, rewardsData.rewardPoints, calculateProgress, fetchRewardsData]);
+
+  // 4. Then define other functions and effects
+  const updatePoints = useCallback(async (points) => {
+    if (!session?.user?.id || !points) return;
+    
+    try {
+      const response = await fetch(`/api/user/vivabucks/${session.user.id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          points: Math.floor(points),
+          source: 'payment'
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setRewardsData(prev => ({
+          ...prev,
+          vivaBucks: data.vivaBucks,
+          rewardPoints: data.rewardPoints,
+          currentTier: data.currentTier,
+          cumulativePoints: data.cumulativePoints
+        }));
+      } else {
+        console.error('Failed to update points:', await response.text());
+        // Retry once after a short delay
+        setTimeout(() => updatePoints(points), 2000);
+      }
+    } catch (error) {
+      console.error('Error updating points:', error);
+      // Retry once after a short delay
+      setTimeout(() => updatePoints(points), 2000);
+    }
+  }, [session?.user?.id]);
+
+  // Add effect to handle point update queue
+  useEffect(() => {
+    if (pointUpdateQueue.length === 0) return;
+    
+    const updatePoints = async () => {
       try {
-        const response = await fetch(`/api/user/vivabucks/${userId}`);
+        const totalPoints = pointUpdateQueue.reduce((sum, points) => sum + points, 0);
+        
+        const response = await fetch(`/api/user/vivabucks/${session.user.id}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            points: totalPoints,
+            source: 'payment'
+          })
+        });
+
         if (response.ok) {
           const data = await response.json();
-          if (mountedRef.current) {
-            setRewardsData({
-              vivaBucks: data.vivaBucks || 0,
-              currentTier: data.currentTier || 'STANDARD',
-              cumulativeVivaBucks: data.cumulativePoints || 0,
-              availableVivaBucks: data.rewardPoints || 0,
-              rewardPoints: data.rewardPoints || 0,
-              cumulativePoints: data.cumulativePoints || 0
-            });
-          }
-        } else if (response.status === 429) {
-          console.log('Rate limited, retrying in 5s...');
-          setTimeout(() => debouncedFetchRef.current(userId), 5000);
+          // Update state with server response
+          setRewardsData(prev => ({
+            ...prev,
+            vivaBucks: data.vivaBucks,
+            rewardPoints: data.rewardPoints,
+            currentTier: data.currentTier,
+            cumulativePoints: data.cumulativePoints || prev.cumulativePoints
+          }));
         }
       } catch (error) {
-        console.error('Error fetching rewards data:', error);
+        console.error('Error updating points:', error);
+      } finally {
+        setPointUpdateQueue([]); // Clear the queue
       }
-    }, 1000)
-  ).current;
+    };
 
-  // Memoized fetch function that uses the debounced reference
-  const fetchRewardsData = useCallback(() => {
-    if (status === 'authenticated' && session?.user?.id) {
-      return debouncedFetchRef(session.user.id);
-    }
-  }, [session?.user?.id, status, debouncedFetchRef]);
+    // Debounce the points update
+    const timeoutId = setTimeout(updatePoints, 1000);
+    return () => clearTimeout(timeoutId);
+  }, [pointUpdateQueue, session?.user?.id]);
 
-  // Add this debug function
-  const logEvent = (type, data) => {
-    console.log(`🎯 ${type} event received:`, data);
-    setDebugEvents(prev => [...prev, { type, data, timestamp: new Date() }]);
-  };
+  // Update the progress calculation
+  const progress = useMemo(() => {
+    const currentPoints = rewardsData.rewardPoints || 0;
+    const pointsInCurrentCycle = currentPoints % REWARD_CONSTANTS.REWARD_RATE.POINTS_NEEDED;
+    return {
+      currentPoints: pointsInCurrentCycle,
+      totalPoints: currentPoints,
+      progress: calculateProgress(currentPoints),
+      pointsToNextReward: REWARD_CONSTANTS.REWARD_RATE.POINTS_NEEDED - pointsInCurrentCycle,
+      isAnimating
+    };
+  }, [rewardsData.rewardPoints, isAnimating, calculateProgress]);
 
-  // Update the handleAnimation function
-  const handleAnimation = useCallback((data) => {
-    if (!data.animate) return;
-    
-    console.log('🎯 Starting animation sequence:', data);
-    
-    // Clear any existing animation timeout
-    if (animationTimeoutRef.current) {
-        animationTimeoutRef.current.forEach(clearTimeout);
-    }
+  // Update the progress bar component
+  const ProgressBar = () => (
+    <div className="relative h-full">
+      <motion.div
+        className="absolute h-full bg-gradient-to-r from-[#FF9F43] to-[#FFB976] rounded-full"
+        style={{ 
+          width: `${Math.min(scale, 100)}%`,
+          transformOrigin: 'left'
+        }}
+        initial={false}
+        animate={{ 
+          width: `${Math.min(scale, 100)}%`
+        }}
+        transition={{ 
+          duration: 0.8,
+          ease: "easeInOut"
+        }}
+      >
+        <motion.div 
+          className="absolute -right-2.5 top-1/2 -translate-y-1/2"
+          animate={{
+            scale: isAnimating ? [1, 1.2, 1] : 1
+          }}
+          transition={{
+            duration: 0.6,
+            ease: "easeInOut"
+          }}
+        >
+          <div className="flex items-center justify-center w-5 h-5 
+                       bg-white rounded-full border-2 border-[#FFB976]
+                       shadow-lg">
+            <span className="text-[10px] font-bold text-[#FF9F43]
+                           transition-all duration-300 hover:text-orange-600">
+              {Math.floor(progress.currentPoints)}
+            </span>
+          </div>
+        </motion.div>
+      </motion.div>
+    </div>
+  );
 
-    setIsAnimating(true);
-    setScale(0);
-
-    const timeouts = [];
-    
-    // First timeout: Start the progress animation
-    timeouts.push(setTimeout(() => {
-        console.log('🎬 Starting progress animation');
-        setScale(100);
-    }, 100));
-
-    // Second timeout: Reset animation state and fetch updated data
-    timeouts.push(setTimeout(() => {
-        console.log('✨ Completing animation');
-        setIsAnimating(false);
-        fetchRewardsData();
-    }, ANIMATION_DURATION + 100));
-
-    animationTimeoutRef.current = timeouts;
-  }, [fetchRewardsData]);
+  // Update the points display component
+  const PointsDisplay = () => (
+    <motion.span 
+      key={rewardsData.cumulativePoints}
+      className="text-lg font-semibold text-gray-800"
+      initial={{ scale: 0.95, opacity: 0.5 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ type: "spring", stiffness: 300, damping: 15 }}
+    >
+      {REWARDS_CONFIG.formatPoints(rewardsData.cumulativePoints)}
+    </motion.span>
+  );
 
   useEffect(() => {
     if (status !== 'authenticated') return;
@@ -128,24 +276,32 @@ const HeaderProgress = memo(function HeaderProgress() {
     const handlePaymentCompleted = (data) => {
       if (!mountedRef.current) return;
       logEvent('PAYMENT_COMPLETED', data);
-      handleAnimation(data);
+      
+      // Prevent duplicate processing
+      if (lastProcessedPaymentRef.current === data.paymentIntentId) {
+        logEvent('DUPLICATE_PAYMENT_SKIPPED', data.paymentIntentId);
+        return;
+      }
+      
+      lastProcessedPaymentRef.current = data.paymentIntentId;
+      handleAnimation(data.amount);
     };
 
     // Initial fetch only when authenticated
     fetchRewardsData();
 
     // Set up event listeners
-    eventEmitter.on('POINTS_UPDATED', handlePointsUpdate);
-    eventEmitter.on('PAYMENT_COMPLETED', handlePaymentCompleted);
+    eventEmitter.on(Events.POINTS_UPDATED, handlePointsUpdate);
+    eventEmitter.on(Events.PAYMENT_COMPLETED, handlePaymentCompleted);
 
     return () => {
       mountedRef.current = false;
       if (animationTimeoutRef.current) {
         animationTimeoutRef.current.forEach(clearTimeout);
       }
-      eventEmitter.off('POINTS_UPDATED', handlePointsUpdate);
-      eventEmitter.off('PAYMENT_COMPLETED', handlePaymentCompleted);
-      debouncedFetchRef.cancel();
+      eventEmitter.off(Events.POINTS_UPDATED, handlePointsUpdate);
+      eventEmitter.off(Events.PAYMENT_COMPLETED, handlePaymentCompleted);
+      debouncedFetchRef.current?.cancel();
     };
   }, [fetchRewardsData, handleAnimation, status]);
 
@@ -156,7 +312,6 @@ const HeaderProgress = memo(function HeaderProgress() {
   }, [rewardsData?.availableVivaBucks]);
 
   const currentVivaBucks = Math.floor(rewardsData?.rewardPoints || 0);
-  const progress = RewardsUtils.calculateProgress(currentVivaBucks);
   const tierInfo = RewardsUtils.getMembershipTier(rewardsData?.cumulativePoints || 0);
   const availableReward = progress.availableReward;
   const tierColor = REWARDS_CONFIG.MEMBERSHIP_TIERS[rewardsData?.currentTier]?.color || 'text-gray-500';
@@ -225,6 +380,43 @@ const HeaderProgress = memo(function HeaderProgress() {
       }
     }
   }, [isAnimating, scale, progressPercentage]);
+
+  // Update the effect to handle payment events
+  useEffect(() => {
+    if (!session?.user?.id) return;
+
+    const handlePaymentCompleted = (data) => {
+      if (!mountedRef.current) return;
+      logEvent('PAYMENT_COMPLETED', data);
+      handleAnimation(data);
+    };
+
+    eventEmitter.on(Events.PAYMENT_COMPLETED, handlePaymentCompleted);
+    
+    return () => {
+      eventEmitter.off(Events.PAYMENT_COMPLETED, handlePaymentCompleted);
+    };
+  }, [session?.user?.id, handleAnimation]);
+
+  // Add cleanup effect
+  useEffect(() => {
+    return () => {
+      if (animationTimeoutRef.current) {
+        animationTimeoutRef.current.forEach(clearTimeout);
+      }
+    };
+  }, []);
+
+  // 5. Setup debounced fetch
+  useEffect(() => {
+    const debouncedFetch = debounce(fetchRewardsData, 300);
+    
+    debouncedFetchRef.current = debouncedFetch;
+
+    return () => {
+      debouncedFetchRef.current?.cancel();
+    };
+  }, [fetchRewardsData]);
 
   if (!session) {
     return (

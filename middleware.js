@@ -46,13 +46,20 @@ export default withAuth(
         return NextResponse.redirect(new URL('/', req.url));
       }
 
-      // Additional check for manager restrictions
+      // Update this section for manager redirects
       if (token.role === 'MANAGER') {
+        // If manager is accessing root admin page, redirect to products page
+        if (req.nextUrl.pathname === '/admin') {
+          return NextResponse.redirect(new URL('/admin/products', req.url));
+        }
+
         const allowedManagerPaths = [
           '/admin/products',
           '/admin/products/add',
           '/admin/products/edit'
         ];
+        
+        // Only redirect if not on an allowed path
         if (!allowedManagerPaths.some(path => req.nextUrl.pathname.startsWith(path))) {
           return NextResponse.redirect(new URL('/admin/products', req.url));
         }
@@ -81,7 +88,7 @@ export default withAuth(
 
     // Handle all protected routes that require authentication
     if (!req.nextauth?.token) {
-      const protectedRoutes = ['/checkout', '/profile', '/cart', '/admin'];
+      const protectedRoutes = ['/checkout', '/profile', '/admin'];
       if (protectedRoutes.some(route => req.nextUrl.pathname.startsWith(route))) {
         return NextResponse.redirect(
           new URL(
@@ -179,8 +186,7 @@ export default withAuth(
         if (req.nextUrl.pathname.startsWith('/profile') ||
             req.nextUrl.pathname.startsWith('/admin') ||
             req.nextUrl.pathname.startsWith('/api/user') ||
-            req.nextUrl.pathname.startsWith('/checkout') ||
-            req.nextUrl.pathname.startsWith('/cart')) {
+            req.nextUrl.pathname.startsWith('/checkout')) {
           return !!token;
         }
 
@@ -206,7 +212,6 @@ export const config = {
     '/admin/:path*',
     '/api/products/:path*',
     '/checkout/:path*',
-    '/cart/:path*',
     '/reset-password/:path*'
   ],
 };

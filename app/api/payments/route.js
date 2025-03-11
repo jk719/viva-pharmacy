@@ -8,6 +8,10 @@ import eventEmitter, { Events } from '@/lib/eventEmitter';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+// Add at the top of the file
+const PAYMENT_INTENT_CACHE = new Map();
+const CACHE_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+
 // Add this helper function at the top
 const createCompactCartMetadata = (cartItems) => {
     return JSON.stringify(cartItems.map(item => ({
@@ -16,6 +20,16 @@ const createCompactCartMetadata = (cartItems) => {
         p: parseFloat(item.price),
         q: parseInt(item.quantity) || 1
     })));
+};
+
+// Add this function after imports
+const cleanupCache = () => {
+  const now = Date.now();
+  for (const [key, value] of PAYMENT_INTENT_CACHE.entries()) {
+    if (now - value.timestamp > CACHE_TIMEOUT) {
+      PAYMENT_INTENT_CACHE.delete(key);
+    }
+  }
 };
 
 async function getOrCreateStripeCustomer(userId, email) {
@@ -114,6 +128,19 @@ export async function POST(request) {
                 });
             }
 
+            // Clean up old cache entries
+            cleanupCache();
+
+            // Check cache first
+            const cacheKey = `${session.user.id}-${requestId}`;
+            const cachedIntent = PAYMENT_INTENT_CACHE.get(cacheKey);
+            if (cachedIntent) {
+                console.log('⚡ Returning cached payment intent:', cachedIntent.id);
+                return NextResponse.json({
+                    clientSecret: cachedIntent.clientSecret
+                });
+            }
+
             // Create new payment intent with customer ID
             const paymentIntent = await stripe.paymentIntents.create({
                 amount: amountInCents,
@@ -153,6 +180,13 @@ export async function POST(request) {
                 id: paymentIntent.id,
                 customerId,
                 amountInCents
+            });
+
+            // Cache the new intent
+            PAYMENT_INTENT_CACHE.set(cacheKey, {
+                id: paymentIntent.id,
+                clientSecret: paymentIntent.client_secret,
+                timestamp: Date.now()
             });
 
             return NextResponse.json({

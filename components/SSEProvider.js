@@ -1,19 +1,33 @@
 'use client';
 
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import sseManager from '@/lib/sseManager';
 import { useRewardsStore } from '@/lib/stores/rewardsStore';
 import eventEmitter, { Events } from '@/lib/eventEmitter';
+
+// Dynamically import sseManager to avoid SSR issues
+let sseManager;
 
 export default function SSEProvider({ children }) {
   const { data: session, status } = useSession();
   const { clearActiveReward } = useRewardsStore();
+  const [isClient, setIsClient] = useState(false);
   const mountedRef = useRef(false);
   const eventTimeoutsRef = useRef(new Map());
   const connectionRef = useRef(null);
   const retryTimeoutRef = useRef(null);
   const initializingRef = useRef(false);
+
+  // Initialize sseManager on client side only
+  useEffect(() => {
+    const initSSE = async () => {
+      if (!sseManager) {
+        sseManager = (await import('@/lib/sseManager')).default;
+      }
+      setIsClient(true);
+    };
+    initSSE();
+  }, []);
 
   const clearEventTimeout = useCallback((key) => {
     if (eventTimeoutsRef.current.has(key)) {
@@ -23,39 +37,41 @@ export default function SSEProvider({ children }) {
   }, []);
 
   const handleSSEMessage = useCallback((data) => {
-    if (!mountedRef.current) return;
-    
-    // Don't log heartbeat, ping, or connected messages
-    if (!['HEARTBEAT', 'PING', 'CONNECTED'].includes(data.type)) {
-      console.log('📨 SSE message received:', data);
-    }
+    if (!mountedRef.current || !isClient) return;
     
     const timeoutKey = `${data.type}_${data.userId}`;
     clearEventTimeout(timeoutKey);
     
     switch (data.type) {
-      case 'CONNECTED':
-        // Handle connection confirmation silently
-        break;
-        
-      case 'POINTS_UPDATED':
-        const timeout = setTimeout(() => {
-          console.log('📊 Emitting points update from SSE:', data);
-          eventEmitter.emit(Events.POINTS_UPDATED, {
-            ...data,
-            animate: true,
-            timestamp: new Date().toISOString()
-          });
-        }, data.afterPayment ? 800 : 300);
-        eventTimeoutsRef.current.set(timeoutKey, timeout);
-        break;
-        
       case 'PAYMENT_COMPLETED':
+        // Emit payment completed first
         eventEmitter.emit(Events.PAYMENT_COMPLETED, {
           ...data,
           animate: true,
           timestamp: new Date().toISOString()
         });
+        
+        // Then schedule points update after a delay
+        const timeout = setTimeout(() => {
+          eventEmitter.emit(Events.POINTS_UPDATED, {
+            ...data,
+            animate: true,
+            timestamp: new Date().toISOString()
+          });
+        }, 1000); // Wait 1 second before points update
+        
+        eventTimeoutsRef.current.set(timeoutKey, timeout);
+        break;
+        
+      case 'POINTS_UPDATED':
+        // Only emit points update if it's not from a payment
+        if (!data.fromPayment) {
+          eventEmitter.emit(Events.POINTS_UPDATED, {
+            ...data,
+            animate: true,
+            timestamp: new Date().toISOString()
+          });
+        }
         break;
         
       case 'REWARD_REDEEMED':
@@ -71,11 +87,11 @@ export default function SSEProvider({ children }) {
       default:
         console.log('Unhandled event type:', data.type);
     }
-  }, [clearEventTimeout]);
+  }, [clearEventTimeout, isClient]);
 
   const initializeSSE = useCallback(async () => {
     if (!mountedRef.current || initializingRef.current || 
-        status !== 'authenticated' || !session?.user?.id) {
+        !isClient || status !== 'authenticated' || !session?.user?.id || !sseManager) {
       return;
     }
 
@@ -106,25 +122,34 @@ export default function SSEProvider({ children }) {
     } finally {
       initializingRef.current = false;
     }
-  }, [session?.user?.id, status, handleSSEMessage]);
+  }, [session?.user?.id, status, handleSSEMessage, isClient]);
 
   useEffect(() => {
     mountedRef.current = true;
-    let connectionTimeout;
     let cleanup;
 
-    if (status === 'authenticated' && session?.user?.id) {
-      connectionTimeout = setTimeout(async () => {
+    if (isClient && status === 'authenticated' && session?.user?.id && sseManager) {
+      const connectionTimeout = setTimeout(async () => {
         cleanup = await initializeSSE();
       }, 2000);
+
+      return () => {
+        clearTimeout(connectionTimeout);
+        if (cleanup) cleanup();
+      };
     }
 
     return () => {
-      mountedRef.current = false;
-      clearTimeout(connectionTimeout);
-      clearTimeout(retryTimeoutRef.current);
       if (cleanup) cleanup();
-      if (connectionRef.current) {
+    };
+  }, [status, session?.user?.id, initializeSSE, isClient]);
+
+  // Handle cleanup
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+      clearTimeout(retryTimeoutRef.current);
+      if (connectionRef.current && sseManager) {
         sseManager.cleanup();
         connectionRef.current = null;
       }
@@ -132,18 +157,21 @@ export default function SSEProvider({ children }) {
       eventTimeoutsRef.current.clear();
       initializingRef.current = false;
     };
-  }, [status, session?.user?.id, initializeSSE]);
+  }, []);
 
   // Handle sign-out cleanup
   useEffect(() => {
-    if (!session) {
+    if (!session && sseManager) {
       clearActiveReward();
       sseManager.cleanup();
-      // Clear all timeouts
       eventTimeoutsRef.current.forEach(clearTimeout);
       eventTimeoutsRef.current.clear();
     }
   }, [session, clearActiveReward]);
+
+  if (!isClient) {
+    return children;
+  }
 
   return children;
 }
