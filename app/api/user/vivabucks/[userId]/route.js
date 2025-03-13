@@ -13,87 +13,52 @@ let processing = false;
 
 export async function GET(request) {
   try {
-    if (!rateLimit.check(request, 60)) {
-      return new Response(
-        JSON.stringify({ error: 'Too many requests' }),
-        { 
-          status: 429,
-          headers: {
-            'Retry-After': '60',
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    if (processing) {
-      return NextResponse.json(
-        { error: 'Request in progress' },
-        { status: 429 }
-      );
+    const userId = request.url.split('/').pop();
+    if (!userId || userId !== session.user.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
-    
-    processing = true;
-    
-    const session = await getServerSession(authOptions);
-    
-    if (!session) {
-      processing = false;
-      return NextResponse.json(
-        { error: 'Not authenticated' },
-        { status: 401 }
-      );
+
+    // Rate limit check with user ID
+    const rateLimitResult = await rateLimit.check(request, 120, 60000, 'vivabucks');
+    if (!rateLimitResult.success) {
+      return NextResponse.json({
+        error: 'Too many requests',
+        retryAfter: rateLimitResult.retryAfter
+      }, { 
+        status: 429,
+        headers: {
+          'Retry-After': String(rateLimitResult.retryAfter)
+        }
+      });
     }
 
     await dbConnect();
-    const userId = request.url.split('/').pop();
-    
-    if (userId !== session.user.id) {
-      processing = false;
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 403 }
-      );
-    }
-
-    const user = await User.findById(userId);
+    const user = await User.findById(userId)
+      .select('vivaBucks rewardPoints cumulativePoints currentTier pointsMultiplier nextRewardMilestone')
+      .lean();
     
     if (!user) {
-      processing = false;
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    processing = false;
-    return NextResponse.json({
-      vivaBucks: user.vivaBucks || 0,
-      rewardPoints: user.rewardPoints || 0,
-      cumulativePoints: user.cumulativePoints || 0,
-      currentTier: user.currentTier || 'Standard',
-      pointsMultiplier: user.pointsMultiplier || 1,
-      nextRewardMilestone: user.nextRewardMilestone || 100
-    });
+    // Calculate rewards data
+    const rewardsData = {
+      ...user,
+      availableReward: REWARDS_CONFIG.getRewardAmount(user.rewardPoints || 0),
+      progress: REWARDS_CONFIG.calculateProgress(user.rewardPoints || 0),
+      tierProgress: REWARDS_CONFIG.getProgressToNextTier(user.cumulativePoints || 0)
+    };
+
+    return NextResponse.json(rewardsData);
+
   } catch (error) {
-    if (error.status === 429) {
-      return new Response(
-        JSON.stringify({ error: 'Too many requests' }),
-        { 
-          status: 429,
-          headers: {
-            'Retry-After': '5',
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-    }
-    processing = false;
     console.error('Error fetching VivaBucks:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -103,6 +68,12 @@ export async function POST(request) {
   mongoSession.startTransaction();
   
   try {
+    const headersList = headers();
+    const userId = request.url.split('/').pop();
+    
+    // Add user ID to headers for rate limiting
+    headersList.set('x-user-id', userId);
+    
     if (!rateLimit.check(request, 60)) {
       return new Response(
         JSON.stringify({ error: 'Too many requests' }),
@@ -125,7 +96,6 @@ export async function POST(request) {
     }
 
     await dbConnect();
-    const userId = request.url.split('/').pop();
     const data = await request.json();
     console.log('Request Data:', data);
 

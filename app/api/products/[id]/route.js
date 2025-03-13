@@ -84,16 +84,9 @@ export async function GET(request, context) {
         const productData = product.toObject();
         
         // Handle image URL
-        let imageUrl;
-        if (productData.cloudinaryPublicId) {
-            imageUrl = getCloudinaryUrl(productData.cloudinaryPublicId);
-        } else if (productData.imageKey) {
-            imageUrl = getCloudinaryUrl(productData.imageKey);
-        } else if (productData.imageUrl?.includes('res.cloudinary.com')) {
-            imageUrl = productData.imageUrl;
-        } else {
-            imageUrl = FALLBACK_IMAGE;
-        }
+        let imageUrl = product.cloudinaryPublicId 
+            ? getCloudinaryUrl(product.cloudinaryPublicId)
+            : product.imageUrl || FALLBACK_IMAGE;
 
         // Update the product data with the resolved image URL
         productData.imageUrl = imageUrl;

@@ -138,10 +138,7 @@ export default function ClientProductView({ product }) {
               className="relative w-full h-full flex items-center justify-center"
             >
               <Image
-                src={imgError ? FALLBACK_IMAGE : (
-                  product.imageUrl || 
-                  (product.cloudinaryPublicId ? getCloudinaryUrl(product.cloudinaryPublicId) : FALLBACK_IMAGE)
-                )}
+                src={imgError ? FALLBACK_IMAGE : getCloudinaryUrl(product)}
                 alt={product.name}
                 width={300}
                 height={300}

@@ -5,6 +5,7 @@ import getProductModel from '@/models/Product';
 import { authOptions } from '@/lib/auth';
 import { categories } from '@/data/categories';
 import rateLimit from '@/lib/rateLimit';
+import { getCloudinaryUrl } from '@/lib/cloudinary';
 
 const FALLBACK_IMAGE = '/images/placeholder.png';
 
@@ -68,13 +69,20 @@ export async function GET(request) {
   try {
     console.log('Products API: Starting request');
     
-    // Rate limit check
-    if (!rateLimit.check(request)) {
+    // Rate limit check with await
+    const rateLimitResult = await rateLimit.check(request);
+    if (!rateLimitResult.success) {
       console.log('Products API: Rate limit exceeded');
       return NextResponse.json({
         success: false,
-        message: 'Too many requests'
-      }, { status: 429 });
+        message: 'Too many requests',
+        retryAfter: rateLimitResult.retryAfter
+      }, { 
+        status: 429,
+        headers: {
+          'Retry-After': String(rateLimitResult.retryAfter)
+        }
+      });
     }
 
     // Connect to database
@@ -85,7 +93,7 @@ export async function GET(request) {
     console.log('Products API: Executing database query...');
     const products = await Product.find({})
       .lean()
-      .select('name description shortDescription price imageUrl category stock isNewProduct activeIngredients dosageForm slug item itemSlug isFeatured')
+      .select('name description shortDescription price imageUrl cloudinaryPublicId imageKey category stock isNewProduct activeIngredients dosageForm slug item itemSlug isFeatured')
       .sort({ createdAt: -1 });
 
     console.log('Products API: Database query complete', {
@@ -96,28 +104,29 @@ export async function GET(request) {
       } : null
     });
 
-    const mappedProducts = products.map(product => ({
-      _id: product._id.toString(),
-      name: product.name,
-      description: product.description,
-      shortDescription: product.shortDescription,
-      price: product.price,
-      image: product.imageUrl || '/images/placeholder.png',
-      imageUrl: product.imageUrl,
-      category: product.category,
-      categoryTagline: categories.find(cat => 
-        cat.name.toLowerCase() === product.category.toLowerCase()
-      )?.tagline || product.category,
-      stock: product.stock,
-      isInStock: product.stock > 0,
-      isNew: product.isNewProduct || false,
-      activeIngredients: product.activeIngredients || [],
-      dosageForm: product.dosageForm,
-      slug: product.slug,
-      item: product.item,
-      itemSlug: product.itemSlug,
-      isFeatured: product.isFeatured
-    }));
+    const mappedProducts = products.map(product => {
+      const imageUrl = getCloudinaryUrl(product);
+
+      return {
+        ...product,
+        _id: product._id.toString(),
+        imageUrl,
+        image: imageUrl, // For backward compatibility
+        category: product.category,
+        categoryTagline: categories.find(cat => 
+          cat.name.toLowerCase() === product.category.toLowerCase()
+        )?.tagline || product.category,
+        stock: product.stock,
+        isInStock: product.stock > 0,
+        isNew: product.isNewProduct || false,
+        activeIngredients: product.activeIngredients || [],
+        dosageForm: product.dosageForm,
+        slug: product.slug,
+        item: product.item,
+        itemSlug: product.itemSlug,
+        isFeatured: product.isFeatured
+      };
+    });
 
     console.log('Products API: Response ready', {
       success: true,
@@ -211,16 +220,17 @@ export async function POST(request) {
 
 export async function PUT(request) {
   try {
-    if (!rateLimit.check(request, 15)) {
+    const rateLimitResult = await rateLimit.check(request, 15);
+    if (!rateLimitResult.success) {
       return NextResponse.json({
         success: false,
         message: 'Too many requests. Please try again later.'
       }, { 
         status: 429,
         headers: {
-          'Retry-After': '60',
+          'Retry-After': String(rateLimitResult.retryAfter),
           'X-RateLimit-Limit': '15',
-          'X-RateLimit-Remaining': '0'
+          'X-RateLimit-Remaining': String(rateLimitResult.remaining || 0)
         }
       });
     }
@@ -376,16 +386,17 @@ function generateSEOData(product, category, item) {
 
 export async function DELETE(request) {
   try {
-    if (!rateLimit.check(request, 10)) { // Stricter limit for DELETE
+    const rateLimitResult = await rateLimit.check(request, 10);
+    if (!rateLimitResult.success) {
       return NextResponse.json({
         success: false,
         message: 'Too many requests. Please try again later.'
       }, { 
         status: 429,
         headers: {
-          'Retry-After': '60',
+          'Retry-After': String(rateLimitResult.retryAfter),
           'X-RateLimit-Limit': '10',
-          'X-RateLimit-Remaining': '0'
+          'X-RateLimit-Remaining': String(rateLimitResult.remaining || 0)
         }
       });
     }

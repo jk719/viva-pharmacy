@@ -21,16 +21,21 @@ async function listCloudinaryUrls() {
   try {
     console.log('Fetching Cloudinary resources...');
     
-    // Get all resources in the viva-pharmacy folder
+    // Get all resources in both the root and viva-pharmacy folder
     const result = await cloudinary.search
-      .expression('folder:viva-pharmacy/*')
+      .expression('folder:viva-pharmacy/* OR resource_type:image')
       .max_results(500)
+      .with_field('context')
+      .with_field('tags')
       .execute();
 
     const urls = result.resources.map(resource => ({
       public_id: resource.public_id,
       url: resource.secure_url,
-      filename: path.basename(resource.public_id)
+      filename: path.basename(resource.public_id),
+      original_filename: resource.filename,
+      format: resource.format,
+      folder: path.dirname(resource.public_id)
     }));
 
     // Print to console

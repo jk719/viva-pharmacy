@@ -29,6 +29,8 @@ export default function VivaBucksDashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [progressAnimation, setProgressAnimation] = useState(0);
+  const [retryCount, setRetryCount] = useState(0);
+  const maxRetries = 3;
 
   const refreshData = () => {
     setRefreshTrigger(prev => prev + 1);
@@ -46,13 +48,28 @@ export default function VivaBucksDashboard() {
             credentials: 'include'
           });
           
+          if (response.status === 429) {
+            const retryAfter = response.headers.get('Retry-After') || 60;
+            const backoffTime = Math.min(retryAfter * (2 ** retryCount), 300); // Max 5 minutes
+            
+            if (retryCount < maxRetries) {
+              setRetryCount(prev => prev + 1);
+              setTimeout(() => {
+                refreshData();
+              }, backoffTime * 1000);
+            } else {
+              toast.error('Unable to fetch rewards data. Please try again later.');
+            }
+            return;
+          }
+          
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
           }
           
           const data = await response.json();
-          console.log('Fetched rewards data:', data);
           setRewardsData(data);
+          setRetryCount(0); // Reset retry count on success
         } catch (error) {
           console.error('Error fetching rewards data:', error);
           toast.error('Failed to load rewards data');

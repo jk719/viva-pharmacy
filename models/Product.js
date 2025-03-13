@@ -32,8 +32,7 @@ const productSchema = new mongoose.Schema({
   // Image and Category Info
   imageKey: {
     type: String,
-    required: [true, 'Image key is required'],
-    trim: true
+    required: false  // Change to false since we're migrating to cloudinaryPublicId
   },
   category: {
     type: String,
@@ -185,11 +184,11 @@ const productSchema = new mongoose.Schema({
   // Add these fields to your productSchema
   imageUrl: {
     type: String,
-    required: false  // Make it false initially for migration
+    required: false
   },
   cloudinaryPublicId: {
     type: String,
-    required: false  // Make it false initially for migration
+    required: false
   },
 }, {
   timestamps: true

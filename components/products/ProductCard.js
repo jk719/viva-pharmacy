@@ -50,21 +50,8 @@ const ProductCard = memo(({ product }) => {
 
   const imageUrl = useMemo(() => {
     if (imageError) return FALLBACK_IMAGE;
-    
-    try {
-      if (product.imageUrl) {
-        return getCloudinaryUrl(product.imageUrl, {
-          width: 800,
-          quality: 'auto',
-          format: 'auto'
-        });
-      }
-      return FALLBACK_IMAGE;
-    } catch (error) {
-      console.error('Error generating image URL:', error);
-      return FALLBACK_IMAGE;
-    }
-  }, [product.imageUrl, imageError]);
+    return getCloudinaryUrl(product);
+  }, [product, imageError]);
 
   // Move QuantityControls outside of the main component
   const QuantityControls = memo(() => (
