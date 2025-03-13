@@ -10,7 +10,7 @@ import {
   PlusCircleIcon,
   MinusCircleIcon
 } from '@heroicons/react/24/outline';
-import { uploadToCloudinary } from '@/lib/cloudinary';
+import { uploadToCloudinary, getCloudinaryUrl } from '@/lib/cloudinary';
 import { categories } from '@/data/categories';
 
 export default function BaseProductForm({ 
@@ -42,8 +42,12 @@ export default function BaseProductForm({
     if (initialData && Object.keys(initialData).length > 0) {
       console.log('Initializing form with data:', initialData);
       
-      // Update image preview when initialData changes
-      setImagePreview(initialData.imageUrl || initialData.image || null);
+      // Update image preview with proper URL resolution
+      const imageUrl = initialData.imageUrl || 
+                      getCloudinaryUrl(initialData) || 
+                      initialData.image || 
+                      null;
+      setImagePreview(imageUrl);
       
       // Find the matching category
       const categorySlug = initialData.categorySlug || 

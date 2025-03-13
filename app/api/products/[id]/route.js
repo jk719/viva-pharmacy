@@ -84,19 +84,14 @@ export async function GET(request, context) {
         const productData = product.toObject();
         
         // Handle image URL
-        let imageUrl = product.cloudinaryPublicId 
-            ? getCloudinaryUrl(product.cloudinaryPublicId)
-            : product.imageUrl || FALLBACK_IMAGE;
-
-        // Update the product data with the resolved image URL
-        productData.imageUrl = imageUrl;
+        productData.imageUrl = getCloudinaryUrl(product);
 
         // Generate or use existing SEO data
         const seoData = product.seo || generateSEOData(product, category, item);
 
         // Update image in SEO data
         if (seoData.structuredData) {
-            seoData.structuredData.image = imageUrl;
+            seoData.structuredData.image = productData.imageUrl;
         }
 
         productData.seo = seoData;

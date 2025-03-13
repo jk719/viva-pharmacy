@@ -3,6 +3,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { FiPlus, FiEdit2, FiTrash2, FiSearch } from 'react-icons/fi';
+import Image from 'next/image';
+import { getCloudinaryUrl } from '@/lib/cloudinary';
 
 export default function ProductManagement() {
   const { data: session } = useSession();
@@ -137,6 +139,9 @@ export default function ProductManagement() {
               <thead>
                 <tr className="bg-gray-100">
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Image
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Name
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -156,6 +161,22 @@ export default function ProductManagement() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredProducts.map((product) => (
                   <tr key={product._id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="relative w-12 h-12">
+                        <Image
+                          src={product.imageUrl || '/images/placeholder.png'}
+                          alt={product.name}
+                          fill
+                          className="object-contain rounded-md"
+                          sizes="48px"
+                          priority={false}
+                          onError={(e) => {
+                            e.currentTarget.src = '/images/placeholder.png';
+                          }}
+                          loading="lazy"
+                        />
+                      </div>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">{product.name}</td>
                     <td className="px-6 py-4 whitespace-nowrap">{product.category}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -194,26 +215,43 @@ export default function ProductManagement() {
           <div className="md:hidden space-y-4">
             {filteredProducts.map((product) => (
               <div key={product._id} className="bg-white rounded-lg shadow p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <h3 className="font-medium text-gray-900">{product.name}</h3>
-                    <p className="text-sm text-gray-500">{product.category}</p>
+                <div className="flex gap-4">
+                  <div className="relative w-16 h-16 flex-shrink-0">
+                    <Image
+                      src={product.imageUrl || '/images/placeholder.png'}
+                      alt={product.name}
+                      fill
+                      className="object-contain rounded-md"
+                      sizes="64px"
+                      priority={false}
+                      onError={(e) => {
+                        e.currentTarget.src = '/images/placeholder.png';
+                      }}
+                      loading="lazy"
+                    />
                   </div>
-                  <span className="text-lg font-semibold text-gray-900">
-                    ${product.price.toFixed(2)}
-                  </span>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <h3 className="font-medium text-gray-900">{product.name}</h3>
+                        <p className="text-sm text-gray-500">{product.category}</p>
+                      </div>
+                      <span className="text-lg font-semibold text-gray-900">
+                        ${product.price.toFixed(2)}
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        product.isFeatured 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {product.isFeatured ? 'Featured' : 'Not Featured'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                
-                <div className="flex items-center gap-2 mb-3">
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                    product.isFeatured 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {product.isFeatured ? 'Featured' : 'Not Featured'}
-                  </span>
-                </div>
-
                 <div className="flex gap-2">
                   <Link
                     href={`/admin/products/edit/${product._id}`}
