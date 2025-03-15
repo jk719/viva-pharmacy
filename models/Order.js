@@ -45,8 +45,29 @@ const OrderSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['Pending', 'Processing', 'Shipped', 'Delivered', 'Completed'],
+        enum: ['Pending', 'Processing', 'Shipped', 'Delivered', 'Completed', 'Refunded', 'Cancelled'],
         default: 'Pending'
+    },
+    refundStatus: {
+        type: String,
+        enum: ['None', 'Requested', 'Approved', 'Rejected', 'Processed'],
+        default: 'None'
+    },
+    refundDetails: {
+        requestDate: Date,
+        processedDate: Date,
+        amount: Number,
+        reason: String,
+        items: [{
+            itemId: String,
+            quantity: Number,
+            amount: Number
+        }],
+        refundId: String,
+        processedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        }
     },
     deliveryMethod: {
         type: String,
@@ -102,7 +123,26 @@ const OrderSchema = new mongoose.Schema({
     lastEmailAttempt: {
         type: Date,
         default: null
-    }
+    },
+    notes: [{
+        content: {
+            type: String,
+            required: true
+        },
+        author: {
+            type: String,
+            required: true
+        },
+        type: {
+            type: String,
+            enum: ['internal', 'email', 'system'],
+            default: 'internal'
+        },
+        createdAt: {
+            type: Date,
+            default: Date.now
+        }
+    }]
 }, {
     timestamps: true,
     toJSON: {

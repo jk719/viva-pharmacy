@@ -86,7 +86,7 @@ const nextConfig = {
       allowedOrigins: ['localhost:3000'],
       bodySizeLimit: '2mb'
     },
-    scrollRestoration: true,
+    scrollRestoration: true
   },
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',

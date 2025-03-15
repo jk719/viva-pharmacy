@@ -420,3 +420,27 @@ body {
     display: block;
   }
 }
+
+/* Add these print styles at the end of your file */
+@media print {
+  @page {
+    margin: 0.5cm;
+  }
+
+  body {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-break-inside-avoid {
+    break-inside: avoid;
+  }
+
+  .print-break-before-page {
+    break-before: page;
+  }
+}

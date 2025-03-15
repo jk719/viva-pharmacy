@@ -7,6 +7,9 @@ import { FiPackage, FiUsers, FiShoppingCart, FiSettings, FiMenu } from "react-ic
 import { useState, useEffect } from "react";
 import Image from 'next/image'
 import ManagerManagement from '@/components/admin/ManagerManagement';
+import OrderManagement from '@/components/admin/OrderManagement';
+import OrderStats from '@/components/admin/OrderStats';
+import OrderAnalytics from '@/components/admin/OrderAnalytics';
 
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
@@ -155,7 +158,16 @@ export default function AdminDashboard() {
           className="bg-white rounded-xl shadow-sm p-4 md:p-6"
         >
           {activeTab === 'products' && <ProductManagement />}
-          {activeTab === 'orders' && <div>Orders Management (Coming Soon)</div>}
+          {activeTab === 'orders' && (
+            <div className="space-y-6">
+              <div className="mb-8">
+                <h2 className="text-2xl font-semibold mb-6">Order Analytics</h2>
+                <OrderAnalytics />
+              </div>
+              <OrderStats />
+              <OrderManagement />
+            </div>
+          )}
           {activeTab === 'users' && session.user.role === 'ADMIN' && <ManagerManagement />}
           {activeTab === 'settings' && <div>Settings (Coming Soon)</div>}
         </motion.div>
