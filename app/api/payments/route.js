@@ -43,9 +43,19 @@ async function getOrCreateStripeCustomer(userId, email) {
             return user.stripeCustomerId;
         }
 
+        // Ensure user has a name
+        const customerName = user.name || `${user.firstName} ${user.lastName}` || email.split('@')[0];
+        
+        // Update user's name if not set
+        if (!user.name) {
+            user.name = customerName;
+            await user.save();
+        }
+
         // Create new Stripe customer
         const customer = await stripe.customers.create({
             email: email,
+            name: customerName,
             metadata: {
                 userId: userId
             }

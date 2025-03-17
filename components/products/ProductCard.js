@@ -7,6 +7,7 @@ import { useState, useRef, useEffect, useCallback, memo, useMemo } from 'react';
 import { getCloudinaryUrl, FALLBACK_IMAGE } from '@/lib/cloudinary';
 import { HiMinus, HiPlus } from 'react-icons/hi';
 import { debounce } from 'lodash';
+import QuantityControls from '@/components/common/QuantityControls';
 
 const ProductCard = memo(({ product }) => {
   const { addToCart, updateItemQuantity, items } = useCart();
@@ -31,15 +32,19 @@ const ProductCard = memo(({ product }) => {
   );
 
   const handleAddToCart = useCallback((e) => {
-    e.preventDefault();
-    e.stopPropagation();
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     
     if (isAdding) return;
     setIsAdding(true);
     
-    console.log('Adding to cart:', product.name);
-    debouncedAddToCart(product);
-  }, [product, debouncedAddToCart, isAdding]);
+    addToCart(product);
+    
+    // Reset loading state after a short delay for UX
+    setTimeout(() => setIsAdding(false), 300);
+  }, [product, addToCart, isAdding]);
 
   // Cleanup debounce on unmount
   useEffect(() => {
@@ -52,50 +57,6 @@ const ProductCard = memo(({ product }) => {
     if (imageError) return FALLBACK_IMAGE;
     return getCloudinaryUrl(product);
   }, [product, imageError]);
-
-  // Move QuantityControls outside of the main component
-  const QuantityControls = memo(() => (
-    <div className="absolute top-2 right-2 z-20" onClick={e => e.stopPropagation()}>
-      {quantity === 0 ? (
-        <button 
-          ref={addButtonRef}
-          onClick={handleAddToCart}
-          className="px-4 py-2 bg-primary text-white rounded-full hover:bg-primary-dark transition-colors duration-200"
-          disabled={!product.isInStock || isAdding}
-        >
-          <HiPlus className="w-5 h-5" /> Add
-        </button>
-      ) : (
-        <div className="flex items-center bg-white rounded-lg shadow-md">
-          <button 
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              if (quantity > 0) {
-                updateItemQuantity(product._id, quantity - 1);
-              }
-            }}
-            className="p-2 text-red-500 hover:bg-red-50"
-          >
-            <HiMinus className="w-5 h-5" />
-          </button>
-          <span className="px-3 font-medium">{quantity}</span>
-          <button 
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              updateItemQuantity(product._id, quantity + 1);
-            }}
-            className="p-2 text-green-500 hover:bg-green-50"
-          >
-            <HiPlus className="w-5 h-5" />
-          </button>
-        </div>
-      )}
-    </div>
-  ));
-
-  QuantityControls.displayName = 'QuantityControls';
 
   return (
     <div className="relative group bg-white">
@@ -147,7 +108,22 @@ const ProductCard = memo(({ product }) => {
           </div>
         </div>
       </Link>
-      <QuantityControls key={`controls-${product._id}`} />
+      <QuantityControls
+        quantity={quantity}
+        onAdd={handleAddToCart}
+        onRemove={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (quantity > 0) {
+            updateItemQuantity(product._id, quantity - 1);
+          }
+        }}
+        isInStock={product.isInStock}
+        isLoading={isAdding}
+        variant="card"
+        size="small"
+        className="absolute top-2 right-2 z-20"
+      />
     </div>
   );
 });

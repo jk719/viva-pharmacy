@@ -78,9 +78,14 @@ export async function PUT(req) {
       });
     }
 
+    // Update user's basic information
+    const fullName = `${data.firstName} ${data.lastName}`.trim();
+    user.name = fullName; // Set the required name field
+    user.phoneNumber = formattedPhone;
+
     // Create or update the default address
     const addressData = {
-      fullName: `${data.firstName} ${data.lastName}`,
+      fullName: fullName,
       street: data.address.street,
       city: data.address.city,
       state: data.address.state,
@@ -102,15 +107,13 @@ export async function PUT(req) {
       user.addresses.push(addressData);
     }
 
-    // Update user's phone number
-    user.phoneNumber = formattedPhone;
-
     // Save the user
     await user.save();
 
     console.log('✅ User updated successfully:', {
       id: user._id,
       email: user.email,
+      name: user.name, // Log the name as well
       phoneNumber: user.phoneNumber,
       addresses: user.addresses
     });

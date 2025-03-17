@@ -6,9 +6,10 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { IoArrowBack, IoAdd } from 'react-icons/io5';
 import { HiMinusSm, HiPlusSm } from 'react-icons/hi';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { categories } from '@/data/categories';
 import { getCloudinaryUrl, FALLBACK_IMAGE } from '@/lib/cloudinary';
+import QuantityControls from '@/components/common/QuantityControls';
 
 // Moved outside component to prevent recreation on each render
 const getCategoryContent = (product) => ({
@@ -28,39 +29,33 @@ export default function ClientProductView({ product }) {
   const router = useRouter();
   const [expandedSection, setExpandedSection] = useState('Details');
   const [imgError, setImgError] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
   
-  // Memoize the quantity calculation
-  const getItemQuantity = useCallback((productId) => {
-    if (!items?.length) return 0;
-    const item = items.find(item => item?.id === productId || item?._id === productId);
-    return item?.quantity || 0;
-  }, [items]);
-
-  const quantity = product ? getItemQuantity(product._id) : 0;
+  // Fix the quantity calculation to use productId
+  const quantity = useMemo(() => {
+    if (!product || !items?.length) return 0;
+    const cartItem = items.find(item => item.productId === product._id);
+    return cartItem?.quantity || 0;
+  }, [items, product]);
 
   const handleBack = () => {
     router.back();
   };
 
-  const handleAddToCart = () => {
-    if (!product) return;
+  const handleAddToCart = useCallback(() => {
+    if (!product || isAdding) return;
+    setIsAdding(true);
     
-    // Normalize product data for cart
-    const cartItem = {
-      id: product._id,
-      name: product.name,
-      price: parseFloat(product.price),
-      image: product.image,
-      quantity: 1
-    };
+    addToCart(product);
+    
+    // Reset loading state after a short delay for UX
+    setTimeout(() => setIsAdding(false), 300);
+  }, [product, addToCart, isAdding]);
 
-    addToCart(cartItem);
-  };
-
-  const handleDecrement = () => {
+  const handleDecrement = useCallback(() => {
     if (!product?._id) return;
     decrement(product._id);
-  };
+  }, [product, decrement]);
 
   const toggleSection = (section) => {
     setExpandedSection(prev => prev === section ? null : section);
@@ -182,48 +177,17 @@ export default function ClientProductView({ product }) {
               </p>
 
               {/* Add to Cart Button */}
-              <div className="py-1 md:py-2">
-                {quantity === 0 ? (
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={handleAddToCart}
-                    className="w-full bg-primary text-white py-2 md:py-2.5 px-4 md:px-6 
-                             rounded-full flex items-center justify-center gap-2 
-                             hover:opacity-90 text-sm md:text-base
-                             shadow-lg hover:shadow-xl transition-all duration-300"
-                  >
-                    <IoAdd className="text-lg md:text-xl" />
-                    <span className="font-medium">Add to Cart</span>
-                  </motion.button>
-                ) : (
-                  <div className="flex items-center justify-center gap-2 md:gap-3 
-                               bg-gray-100 rounded-full p-1 md:p-1.5 shadow-inner">
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={handleDecrement}
-                      className="w-8 h-8 flex items-center justify-center bg-white 
-                               rounded-full text-red-500 hover:bg-red-50 shadow-sm 
-                               hover:shadow-md transition-all duration-300"
-                    >
-                      <HiMinusSm className="text-lg" />
-                    </motion.button>
-                    <span className="w-10 text-center text-lg font-medium">
-                      {quantity}
-                    </span>
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={handleAddToCart}
-                      className="w-8 h-8 flex items-center justify-center bg-white 
-                               rounded-full text-green-500 hover:bg-green-50 shadow-sm 
-                               hover:shadow-md transition-all duration-300"
-                    >
-                      <HiPlusSm className="text-lg" />
-                    </motion.button>
-                  </div>
-                )}
+              <div className="">
+                <QuantityControls
+                  quantity={quantity}
+                  onAdd={handleAddToCart}
+                  onRemove={handleDecrement}
+                  isInStock={true}
+                  isLoading={isAdding}
+                  variant="modal"
+                  size="default"
+                  className="w-full"
+                />
               </div>
 
               {/* Product Information */}
