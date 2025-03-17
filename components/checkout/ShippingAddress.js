@@ -211,12 +211,27 @@ export default function ShippingAddress({ onAddressSelect }) {
       {/* New Address Form Modal */}
       {showNewAddressForm && (
         <div 
-          className="absolute inset-0 bg-black/50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[100]"
           role="dialog"
           aria-modal="true"
           aria-labelledby="new-address-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowNewAddressForm(false);
+            }
+          }}
         >
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+          <div 
+            className="bg-white rounded-lg p-6 max-w-md w-full relative"
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setShowNewAddressForm(false)}
+              className="absolute -top-2 -right-2 w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200"
+              aria-label="Close modal"
+            >
+              ×
+            </button>
             <h3 id="new-address-title" className="text-lg font-medium mb-4">
               Add New Address
             </h3>
