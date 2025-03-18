@@ -7,8 +7,6 @@ import { FaInstagram, FaFacebook, FaTiktok } from "react-icons/fa";
 import { Providers } from './providers';
 import { Toaster } from 'react-hot-toast';
 import "./globals.css";
-import HeaderProgress from '@/components/HeaderProgress';
-import RewardAlert from '@/components/RewardAlert';
 import { headers } from 'next/headers';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from '@/lib/auth';
@@ -76,7 +74,7 @@ export default async function RootLayout({ children }) {
             }}
           />
           <SiteHeader />
-          <div className="h-[100px] md:h-[140px]" aria-hidden="true" />
+          <div className="h-[60px] md:h-[80px]" aria-hidden="true" />
           <main className="min-h-screen w-full flex-grow">
             <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
               <Suspense fallback={<LoadingSpinner />}>
@@ -84,7 +82,6 @@ export default async function RootLayout({ children }) {
               </Suspense>
             </div>
           </main>
-          <RewardAlert />
           <SiteFooter />
           <div id="modal-root" className="relative z-50" />
         </Providers>
@@ -99,9 +96,6 @@ function SiteHeader() {
       <header className="fixed top-0 left-0 right-0 w-full bg-white z-50">
         <div className="w-full">
           <Navbar />
-        </div>
-        <div className="bg-white border-b">
-          <HeaderProgress />
         </div>
       </header>
     </>

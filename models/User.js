@@ -1,7 +1,6 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-import { REWARDS_CONFIG } from '../lib/rewards/config.js';
 
 // Add address schema
 const addressSchema = new mongoose.Schema({
@@ -54,37 +53,6 @@ const addressSchema = new mongoose.Schema({
   }
 });
 
-// Update the rewardHistory schema
-const rewardHistorySchema = new mongoose.Schema({
-  type: {
-    type: String,
-    required: true,
-    enum: [
-      'POINTS_EARNED',
-      'REWARD_REDEEMED',
-      'TIER_CHANGED',
-      'REWARD_RESTORED'
-    ]
-  },
-  timestamp: {
-    type: Date,
-    default: Date.now
-  },
-  // Optional fields based on type
-  points: Number,         // For POINTS_EARNED
-  adjustedPoints: Number, // For POINTS_EARNED
-  multiplier: Number,     // For POINTS_EARNED
-  amount: Number,         // For REWARD_REDEEMED and REWARD_RESTORED
-  pointsUsed: Number,     // For REWARD_REDEEMED
-  pointsRestored: Number, // Add this for REWARD_RESTORED
-  oldTier: String,        // For TIER_CHANGED
-  newTier: String,        // For TIER_CHANGED
-  tier: String,           // Current tier at time of action
-  source: String         // Source of points/reward
-}, { 
-  timestamps: true 
-});
-
 const userSchema = new mongoose.Schema({
   email: {
     type: String,
@@ -107,7 +75,6 @@ const userSchema = new mongoose.Schema({
   password: {
     type: String,
     required: function() {
-      // Password is not required during initial creation or verification
       if (this.role === 'MANAGER' && (!this.isVerified || this.mustChangePassword)) {
         return false;
       }
@@ -127,7 +94,7 @@ const userSchema = new mongoose.Schema({
     trim: true,
     validate: {
       validator: function(v) {
-        if (!v) return true; // Allow empty phone number
+        if (!v) return true;
         return /^\+?[\d\s-]{10,}$/.test(v);
       },
       message: props => `${props.value} is not a valid phone number!`
@@ -159,34 +126,7 @@ const userSchema = new mongoose.Schema({
     sparse: true,
     unique: true
   },
-  // Add addresses array
-  addresses: [addressSchema],
-  // Add reward history to user schema
-  rewardHistory: [rewardHistorySchema],
-  vivaBucks: {
-    type: Number,
-    default: 0
-  },
-  rewardPoints: {
-    type: Number,
-    default: 0
-  },
-  cumulativePoints: {
-    type: Number,
-    default: 0
-  },
-  currentTier: {
-    type: String,
-    default: 'Standard'
-  },
-  pointsMultiplier: {
-    type: Number,
-    default: 1
-  },
-  nextRewardMilestone: {
-    type: Number,
-    default: 100  // First milestone
-  }
+  addresses: [addressSchema]
 });
 
 // Update timestamps
@@ -198,10 +138,9 @@ userSchema.pre('save', function(next) {
   next();
 });
 
-// Update the password hashing middleware to handle optional passwords
+// Update the password hashing middleware
 userSchema.pre('save', async function(next) {
   try {
-    // Skip if password isn't modified or doesn't exist
     if (!this.isModified('password') || !this.password) {
       return next();
     }
@@ -222,10 +161,9 @@ userSchema.pre('save', async function(next) {
   }
 });
 
-// Update comparePassword to handle missing passwords
+// Password comparison method
 userSchema.methods.comparePassword = async function(candidatePassword) {
   try {
-    // If no password is set, comparison fails
     if (!this.password) return false;
 
     console.log('Comparing passwords for user:', this.email);
@@ -242,13 +180,13 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
   }
 };
 
-// Generate verification token
+// Verification token methods
 userSchema.methods.generateVerificationToken = async function() {
   console.log('Generating verification token for:', this.email);
   
   const token = crypto.randomBytes(32).toString('hex');
   this.verificationToken = token;
-  this.verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+  this.verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
   this.lastVerificationSent = new Date();
   this.isVerified = false;
   
@@ -261,26 +199,22 @@ userSchema.methods.generateVerificationToken = async function() {
   return token;
 };
 
-// Check if verification token is valid
 userSchema.methods.isVerificationTokenValid = function() {
   return this.verificationToken && 
          this.verificationExpires && 
          this.verificationExpires > Date.now();
 };
 
-// Mark user as verified
 userSchema.methods.markAsVerified = function() {
   this.isVerified = true;
   this.clearVerificationToken();
 };
 
-// Clear verification tokens
 userSchema.methods.clearVerificationToken = function() {
   this.verificationToken = undefined;
   this.verificationExpires = undefined;
 };
 
-// Static method to find user by verification token
 userSchema.statics.findByVerificationToken = function(token) {
   return this.findOne({
     verificationToken: token,
@@ -288,7 +222,7 @@ userSchema.statics.findByVerificationToken = function(token) {
   });
 };
 
-// Ensure we don't return sensitive data in JSON
+// JSON transform
 userSchema.set('toJSON', {
   transform: function(doc, ret, opt) {
     delete ret.password;
@@ -298,12 +232,10 @@ userSchema.set('toJSON', {
   }
 });
 
-// Add method to handle default addresses
+// Address management
 userSchema.methods.setDefaultAddress = async function(addressId) {
-  // First, set all addresses to non-default
   this.addresses.forEach(addr => addr.isDefault = false);
   
-  // Then set the specified address as default
   const address = this.addresses.id(addressId);
   if (address) {
     address.isDefault = true;
@@ -319,172 +251,6 @@ userSchema.pre('findOneAndUpdate', function() {
   console.log('📝 Update query:', JSON.stringify(this.getQuery(), null, 2));
   console.log('📝 Update data:', JSON.stringify(this.getUpdate(), null, 2));
 });
-
-// Add new methods for the rewards system
-userSchema.methods.calculateTier = function() {
-  const tierInfo = REWARDS_CONFIG.getMembershipTier(this.cumulativePoints);
-  this.currentTier = tierInfo?.name || 'STANDARD';
-  this.pointsMultiplier = tierInfo?.multiplier || 1.0;
-};
-
-userSchema.methods.calculateNextReward = async function() {
-    const session = await mongoose.startSession();
-    try {
-        session.startTransaction();
-        
-        // Use findOneAndUpdate with optimistic concurrency control
-        const result = await this.constructor.findOneAndUpdate(
-            { 
-                _id: this._id,
-                rewardPoints: this.rewardPoints // Optimistic concurrency check
-            },
-            {
-                $set: {
-                    nextRewardMilestone: this.calculateNextMilestone()
-                }
-            },
-            { 
-                session,
-                new: true,
-                runValidators: true
-            }
-        );
-
-        if (!result) {
-            throw new Error('Concurrent update detected');
-        }
-
-        await session.commitTransaction();
-        return result.nextRewardMilestone;
-
-    } catch (error) {
-        if (session.inTransaction()) {
-            await session.abortTransaction();
-        }
-        // Add retry logic
-        if (error.message === 'Concurrent update detected' && !this._retryCount) {
-            this._retryCount = (this._retryCount || 0) + 1;
-            if (this._retryCount < 3) {
-                return this.calculateNextReward();
-            }
-        }
-        throw error;
-    } finally {
-        await session.endSession();
-    }
-};
-
-// Add helper method
-userSchema.methods.calculateNextMilestone = function() {
-    const pointsNeeded = REWARDS_CONFIG.REWARD_RATE.POINTS_NEEDED;
-    const currentPoints = this.rewardPoints || 0;
-    const nextMilestone = Math.ceil(currentPoints / pointsNeeded) * pointsNeeded;
-    return Math.min(
-        Math.max(pointsNeeded, nextMilestone),
-        REWARDS_CONFIG.MAX_MILESTONE
-    );
-};
-
-userSchema.methods.getRewardAmount = function() {
-  return REWARDS_CONFIG.getRewardAmount(this.rewardPoints);
-};
-
-// Update the addPoints method to handle both regular and test points
-userSchema.methods.addPoints = async function(points, isTest = false) {
-  try {
-    console.log(`🎯 Adding ${isTest ? 'test' : ''} points:`, points);
-    
-    const tierInfo = REWARDS_CONFIG.getMembershipTier(this.cumulativePoints);
-    const multiplier = tierInfo?.multiplier || 1.0;
-    const adjustedPoints = Math.floor(points * multiplier);
-    
-    // Update points
-    this.rewardPoints += adjustedPoints;
-    this.cumulativePoints += adjustedPoints;
-    
-    // Only add to history if not a test
-    if (!isTest) {
-      // Add points history entry
-      this.rewardHistory.push({
-        type: 'POINTS_EARNED',
-        points: points,
-        adjustedPoints: adjustedPoints,
-        multiplier: multiplier,
-        tier: this.currentTier,
-        source: isTest ? 'test' : 'purchase'
-      });
-    }
-    
-    // Check for tier change
-    const newTierInfo = REWARDS_CONFIG.getMembershipTier(this.cumulativePoints);
-    if (newTierInfo?.name !== this.currentTier) {
-      if (!isTest) {
-        this.rewardHistory.push({
-          type: 'TIER_CHANGED',
-          oldTier: this.currentTier,
-          newTier: newTierInfo.name,
-          tier: newTierInfo.name
-        });
-      }
-      this.currentTier = newTierInfo.name;
-      this.pointsMultiplier = newTierInfo.multiplier;
-    }
-    
-    this.calculateNextReward();
-    await this.save();
-    
-    return {
-      adjustedPoints,
-      vivaBucks: this.vivaBucks,
-      rewardPoints: this.rewardPoints,
-      currentTier: this.currentTier,
-      nextMilestone: this.nextRewardMilestone,
-      multiplier
-    };
-  } catch (error) {
-    console.error('❌ Error adding points:', error);
-    throw error;
-  }
-};
-
-// Update the redeemReward method to use the new schema
-userSchema.methods.redeemReward = async function() {
-  try {
-    const pointsNeeded = REWARDS_CONFIG.REWARD_RATE.POINTS_NEEDED;
-    const rewardAmount = this.getRewardAmount();
-    
-    if (rewardAmount === 0) {
-      return {
-        success: false,
-        message: "Not enough points to redeem"
-      };
-    }
-
-    // Add redemption history entry
-    this.rewardHistory.push({
-      type: 'REWARD_REDEEMED',
-      amount: rewardAmount,
-      pointsUsed: pointsNeeded,
-      tier: this.currentTier
-    });
-
-    this.vivaBucks += rewardAmount;
-    this.rewardPoints -= pointsNeeded;
-    this.calculateNextReward();
-    
-    await this.save();
-
-    return {
-      success: true,
-      rewardAmount,
-      remainingPoints: this.rewardPoints,
-      message: `Successfully redeemed $${rewardAmount} for ${pointsNeeded} points`
-    };
-  } catch (error) {
-    console.error('❌ Error redeeming reward:', error);
-    throw error;
-  }
-};
 
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 export default User;

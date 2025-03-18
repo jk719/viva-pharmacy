@@ -6,8 +6,6 @@ import User from '@/models/User';
 import Order from '@/models/Order';
 import { generateOrderConfirmationEmail } from '@/lib/email-templates/order-confirmation';
 import { sendOrderConfirmationEmail } from '@/lib/email/sendEmail';
-import { REWARDS_CONFIG } from '@/lib/rewards/config';
-import { RewardsUtils } from '@/lib/rewards/utils';
 import mongoose from 'mongoose';
 import { paymentTracker } from '@/lib/stripe/paymentTracker';
 import eventEmitter, { Events } from '@/lib/eventEmitter';
@@ -123,56 +121,6 @@ const createOrder = async (paymentIntent, retryCount = 0) => {
     }
 };
 
-const processRewards = async (order, userId) => {
-    let session;
-    try {
-        session = await mongoose.startSession();
-        session.startTransaction();
-        
-        const user = await User.findById(userId).session(session);
-        if (!user) {
-            throw new Error(`User not found: ${userId}`);
-        }
-
-        // Verify order hasn't been processed already
-        const existingOrder = await Order.findById(order._id)
-            .session(session)
-            .select('rewardsProcessed');
-            
-        if (existingOrder?.rewardsProcessed) {
-            console.log(`Order ${order._id} already processed`);
-            return null;
-        }
-
-        const basePoints = Math.floor(order.total * REWARDS_CONFIG.POINTS_PER_DOLLAR);
-        const result = await user.addPoints(basePoints, session);
-        
-        await Order.findByIdAndUpdate(
-            order._id,
-            {
-                rewardsProcessed: true,
-                pointsAwarded: result.adjustedPoints,
-                rewardsProcessedAt: new Date()
-            },
-            { session, new: true }
-        );
-
-        await session.commitTransaction();
-        return result;
-
-    } catch (error) {
-        console.error('Error processing rewards:', error);
-        if (session?.inTransaction()) {
-            await session.abortTransaction();
-        }
-        throw error;
-    } finally {
-        if (session) {
-            await session.endSession();
-        }
-    }
-};
-
 const emitEvent = async (type, data) => {
     console.log(`🚀 Emitting ${type} event:`, data);
     try {
@@ -217,33 +165,18 @@ export async function POST(req) {
       try {
         // First emit payment completion
         await emitEvent(Events.PAYMENT_COMPLETED, {
-            paymentIntentId: paymentIntent.id,
             userId,
-            amount
+            paymentIntentId: paymentIntent.id,
+            amount: paymentIntent.amount / 100
         });
 
         // Process the order
         const order = await createOrder(paymentIntent);
         console.log('📦 Order created:', order._id);
 
-        // Process rewards
-        const rewardsResult = await processRewards(order, userId);
-        console.log('🎁 Rewards processed:', rewardsResult);
-
-        // Then emit points update with a flag
-        await emitEvent(Events.POINTS_UPDATED, {
-            userId,
-            amount,
-            points: rewardsResult?.adjustedPoints || 0,
-            animate: true,
-            afterPayment: true,
-            timestamp: new Date().toISOString()
-        });
-
         return NextResponse.json({ 
             received: true,
-            orderId: order._id,
-            rewardsProcessed: true
+            orderId: order._id
         });
       } catch (error) {
         console.error('Error processing payment success:', error);

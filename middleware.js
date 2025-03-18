@@ -100,8 +100,7 @@ export default withAuth(
     }
 
     // Special handling for SSE connections
-    if (req.nextUrl.pathname.includes('/api/user/vivabucks') && 
-        req.nextUrl.pathname.endsWith('/events')) {
+    if (req.nextUrl.pathname.includes('/api/user/events')) {
       req.timeoutMs = 0;
       return NextResponse.next();
     }
@@ -169,8 +168,7 @@ export default withAuth(
         }
 
         // Allow SSE connections with valid session
-        if (req.nextUrl.pathname.includes('/api/user/vivabucks') && 
-            req.nextUrl.pathname.endsWith('/events')) {
+        if (req.nextUrl.pathname.includes('/api/user/events')) {
           return !!token;
         }
 
@@ -212,6 +210,7 @@ export const config = {
     '/admin/:path*',
     '/api/products/:path*',
     '/checkout/:path*',
-    '/reset-password/:path*'
+    '/reset-password/:path*',
+    '/api/user/events',
   ],
 };

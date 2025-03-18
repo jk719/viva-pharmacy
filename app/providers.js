@@ -3,15 +3,9 @@
 import { SessionProvider } from "next-auth/react";
 import { CartProvider } from "../context/CartContext";
 import { CategoryProvider } from "../context/CategoryContext";
-import { Toaster } from 'react-hot-toast';
+import { AnnouncementProvider } from "../components/context/AnnouncementContext";
 import { SWRConfig } from 'swr';
-import dynamic from 'next/dynamic';
-
-// Dynamically import SSEProvider with no SSR
-const SSEProvider = dynamic(() => import('@/components/SSEProvider'), {
-  ssr: false,
-  loading: () => null
-});
+import SSEProvider from '@/components/SSEProvider';
 
 const fetcher = async (url) => {
   const res = await fetch(url);
@@ -30,13 +24,15 @@ export function Providers({ children, session }) {
         revalidateOnReconnect: false,
         shouldRetryOnError: false
       }}>
-        <CategoryProvider>
-          <CartProvider>
-            <SSEProvider>
-              {children}
-            </SSEProvider>
-          </CartProvider>
-        </CategoryProvider>
+        <AnnouncementProvider>
+          <CategoryProvider>
+            <CartProvider>
+              <SSEProvider>
+                {children}
+              </SSEProvider>
+            </CartProvider>
+          </CategoryProvider>
+        </AnnouncementProvider>
       </SWRConfig>
     </SessionProvider>
   );

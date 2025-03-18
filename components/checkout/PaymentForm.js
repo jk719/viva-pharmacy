@@ -107,22 +107,12 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
           // Send order confirmation
           await handleOrderConfirmation(paymentIntent);
 
-          // Emit payment completed event
-          eventEmitter.emit(Events.PAYMENT_COMPLETED, {
-            userId: session?.user?.id,
-            paymentIntentId: paymentIntent.id,
-            amount: parseFloat(amountDetails.total),
-            animate: true,
-            timestamp: new Date().toISOString()
-          });
-
           // Wait for animations
           await new Promise(resolve => setTimeout(resolve, ANIMATION_DURATION));
 
           // Clear cart and redirect
           await clearCart();
           router.replace('/checkout/success');
-
         } catch (err) {
           console.error('Post-payment error:', err);
           setTimeout(() => router.replace('/checkout/success'), REDIRECT_DELAY);

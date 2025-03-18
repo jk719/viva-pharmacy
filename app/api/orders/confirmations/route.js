@@ -28,8 +28,6 @@ export async function POST(request) {
       shippingAddress: data.shippingAddress,
       deliveryMethod: data.deliveryMethod,
       selectedTime: data.selectedTime,
-      vivaBucksEarned: parseFloat(data.vivaBucksEarned || 0).toFixed(2),
-      rewardPointsEarned: parseInt(data.rewardPointsEarned || 0),
       customerName: data.customerName || session?.user?.name || 'Valued Customer'
     };
 
@@ -78,9 +76,7 @@ export async function POST(request) {
       data: {
         subtotal: parseFloat(formattedData.subtotal),
         tax: parseFloat(formattedData.tax),
-        total: parseFloat(formattedData.total),
-        vivaBucksEarned: parseFloat(formattedData.vivaBucksEarned),
-        rewardPointsEarned: formattedData.rewardPointsEarned
+        total: parseFloat(formattedData.total)
       }
     });
 
