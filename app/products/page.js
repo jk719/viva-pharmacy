@@ -15,7 +15,6 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useProducts } from '@/lib/api';
 import { IoGridOutline, IoListOutline } from 'react-icons/io5';
-import RewardsBanner from '@/components/RewardsBanner';
 
 // Add this helper function at the top of the file
 const groupProductsByCategory = (products) => {
@@ -146,7 +145,6 @@ export default function ProductsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <RewardsBanner variant="compact" />
       <div className="sticky top-0 z-10 bg-white border-b shadow-sm">
         <ProductFilter 
           categories={categories}
