@@ -14,10 +14,10 @@
   --button-red: #dc3545;
   --button-green: #28a745;
   --placeholder-color: #6b7280;
-  --navbar-height: 60px;
-  --navbar-height-md: 80px;
-  --loyalty-banner-height: 40px;
-  --loyalty-banner-height-md: 44px;
+  --navbar-height: 64px;
+  --navbar-height-md: 84px;
+  --loyalty-banner-height: 160px;
+  --loyalty-banner-height-md: 80px;
   --total-header-height: calc(var(--navbar-height) + var(--loyalty-banner-height));
   --total-header-height-md: calc(var(--navbar-height-md) + var(--loyalty-banner-height-md));
 }
@@ -538,4 +538,15 @@ body {
 
 .animate-shimmer {
   animation: shimmer 2s infinite linear;
+}
+
+/* Optional debug styles */
+.loyalty-banner {
+  min-height: var(--loyalty-banner-height);
+}
+
+@media (min-width: 768px) {
+  .loyalty-banner {
+    min-height: var(--loyalty-banner-height-md);
+  }
 }

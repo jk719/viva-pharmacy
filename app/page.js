@@ -151,7 +151,13 @@ export default function Home() {
       </div>
 
       {/* Category Filter Buttons with Horizontal Scroll */}
-      <div className="sticky top-[120px] z-40 bg-white border-y border-gray-100">
+      <div 
+        className="sticky z-40 bg-white border-y border-gray-100"
+        style={{
+          top: 'var(--total-header-height)',
+          marginTop: 0
+        }}
+      >
         <div className="container mx-auto">
           <div className="relative flex items-center overflow-x-auto scrollbar-hide">
             {/* All Products Button - Fixed Width */}

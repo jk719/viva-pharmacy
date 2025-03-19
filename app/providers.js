@@ -6,6 +6,7 @@ import { CategoryProvider } from "../context/CategoryContext";
 import { AnnouncementProvider } from "../components/context/AnnouncementContext";
 import { SWRConfig } from 'swr';
 import SSEProvider from '@/components/SSEProvider';
+import HeaderHeightAdjuster from '@/components/HeaderHeightAdjuster';
 
 const fetcher = async (url) => {
   const res = await fetch(url);
@@ -34,6 +35,7 @@ export function Providers({ children, session }) {
           </CategoryProvider>
         </AnnouncementProvider>
       </SWRConfig>
+      <HeaderHeightAdjuster />
     </SessionProvider>
   );
 } 

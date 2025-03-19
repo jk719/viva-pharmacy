@@ -1,4 +1,5 @@
 // src/app/layout.js
+// Keep this as a server component (no 'use client' directive)
 
 import { Suspense } from "react";
 import Navbar from "../components/Navbar";
@@ -7,7 +8,6 @@ import { FaInstagram, FaFacebook, FaTiktok } from "react-icons/fa";
 import { Providers } from './providers';
 import { Toaster } from 'react-hot-toast';
 import "./globals.css";
-import { headers } from 'next/headers';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from '@/lib/auth';
 import { eventEmitter } from '@/lib/eventEmitter';
@@ -45,7 +45,7 @@ export default async function RootLayout({ children }) {
         <Providers session={session}>
           <Toaster />
           <SiteHeader />
-          <main className="min-h-screen w-full flex-grow main-content-with-banner pt-[100px] md:pt-[124px]">
+          <main className="min-h-screen w-full flex-grow pt-[calc(var(--navbar-height)+var(--loyalty-banner-height))] md:pt-[calc(var(--navbar-height-md)+var(--loyalty-banner-height-md))]">
             <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
               <Suspense fallback={<LoadingSpinner />}>
                 {children}
