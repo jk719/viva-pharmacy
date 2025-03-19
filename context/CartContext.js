@@ -58,6 +58,13 @@ export function CartProvider({ children }) {
         error: null
     });
 
+    // Add new state for loyalty redemption
+    const [loyaltyState, setLoyaltyState] = useState({
+        redemptionApplied: false,
+        pointsRedeemed: 0,
+        discountAmount: 0
+    });
+
     // Memoize cart calculations
     const cartCalculations = useMemo(() => {
         if (!cartState.initialized || cartState.loading) return null;
@@ -71,15 +78,20 @@ export function CartProvider({ children }) {
             ? DELIVERY_FEES[deliveryState.deliverySpeed]
             : 0;
         
-        const tax = (subtotal + deliveryFee) * 0.08875;
+        // Apply loyalty discount before tax calculation
+        const loyaltyDiscount = loyaltyState.redemptionApplied ? loyaltyState.discountAmount : 0;
+        const discountedSubtotal = Math.max(subtotal - loyaltyDiscount, 0);
+        
+        const tax = (discountedSubtotal + deliveryFee) * 0.08875;
         
         return {
             subtotal,
             deliveryFee,
             tax,
-            total: subtotal + deliveryFee + tax
+            loyaltyDiscount,
+            total: discountedSubtotal + deliveryFee + tax
         };
-    }, [cartState.items, cartState.initialized, cartState.loading, deliveryState.option, deliveryState.deliverySpeed]);
+    }, [cartState.items, cartState.initialized, cartState.loading, deliveryState.option, deliveryState.deliverySpeed, loyaltyState]);
 
     useEffect(() => {
         if (cartCalculations) {
@@ -354,6 +366,46 @@ export function CartProvider({ children }) {
         });
     }, [getProductId]);
 
+    // Add function to apply loyalty redemption
+    const applyLoyaltyRedemption = useCallback(async (points = 100) => {
+        try {
+            const response = await fetch('/api/loyalty/points/redeem', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amount: points })
+            });
+
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to redeem points');
+            }
+
+            // Convert points to dollars (10 points = $1)
+            const discountAmount = parseFloat(data.discount);
+            
+            setLoyaltyState({
+                redemptionApplied: true,
+                pointsRedeemed: points,
+                discountAmount: discountAmount
+            });
+
+            return { success: true, discount: discountAmount };
+        } catch (error) {
+            console.error('Error applying loyalty redemption:', error);
+            return { success: false, error: error.message };
+        }
+    }, []);
+
+    // Add function to cancel loyalty redemption
+    const cancelLoyaltyRedemption = useCallback(() => {
+        setLoyaltyState({
+            redemptionApplied: false,
+            pointsRedeemed: 0,
+            discountAmount: 0
+        });
+    }, []);
+
     const value = {
         items: cartState.items,
         total: cartState.total,
@@ -386,7 +438,12 @@ export function CartProvider({ children }) {
             deliverySpeed: speed,
             selectedTime: ''
         })),
-        DELIVERY_FEES
+        DELIVERY_FEES,
+        loyaltyDiscount: loyaltyState.discountAmount,
+        redemptionApplied: loyaltyState.redemptionApplied,
+        pointsRedeemed: loyaltyState.pointsRedeemed,
+        applyLoyaltyRedemption,
+        cancelLoyaltyRedemption
     };
 
     return (

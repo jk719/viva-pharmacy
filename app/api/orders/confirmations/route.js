@@ -4,6 +4,9 @@ import { sendOrderConfirmationEmail } from '@/lib/email/sendEmail';
 import { eventEmitter, Events, paymentTracker } from '@/lib/eventEmitter';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { LoyaltyCheckoutService } from '@/lib/checkout/loyaltyCheckoutService';
+import User from '@/models/User';
+import { calculateTierFromPoints, TIER_CONFIG } from '@/lib/loyalty/loyaltyService';
 
 export async function POST(request) {
   try {
@@ -57,18 +60,93 @@ export async function POST(request) {
 
     await sendOrderConfirmationEmail(formattedData.email, emailData);
 
-    // Emit events with formatted numbers
+    // Calculate and apply loyalty benefits
     if (session?.user?.id) {
-      const amount = parseFloat(formattedData.total);
-      if (amount > 0) {
+      try {
+        const user = await User.findById(session.user.id);
+        if (!user) throw new Error('User not found');
+
+        // Use LoyaltyCheckoutService to calculate benefits
+        const amount = parseFloat(formattedData.total);
+        const loyaltyBenefits = await LoyaltyCheckoutService.calculateLoyaltyBenefits(
+          user,
+          amount
+        );
+
+        // Initialize fields if they don't exist
+        user.vivaBucks = user.vivaBucks || 0;
+        user.cumulativePoints = user.cumulativePoints || 0;
+        user.currentTier = user.currentTier || 'BRONZE';
+        user.pointsMultiplier = user.pointsMultiplier || 1;
+        user.rewardHistory = user.rewardHistory || [];
+
+        // Update points
+        const oldPoints = user.vivaBucks;
+        const oldLifetimePoints = user.cumulativePoints;
+        
+        user.vivaBucks += loyaltyBenefits.totalPoints;
+        user.cumulativePoints += loyaltyBenefits.totalPoints;
+
+        // Add points earned entry
+        user.rewardHistory.push({
+          type: 'POINTS_EARNED',  // This matches the enum in User model
+          points: loyaltyBenefits.basePoints,
+          adjustedPoints: loyaltyBenefits.totalPoints,
+          multiplier: loyaltyBenefits.tierMultiplier,
+          tier: user.currentTier,
+          source: 'purchase',
+          appliedEvents: loyaltyBenefits.appliedEvents || [],
+          timestamp: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+
+        // Check for tier upgrade
+        const newTier = calculateTierFromPoints(user.cumulativePoints);
+        if (newTier !== user.currentTier) {
+          const oldTier = user.currentTier;
+          user.currentTier = newTier;
+          user.pointsMultiplier = TIER_CONFIG[newTier]?.multiplier || 1;
+
+          // Add tier change entry
+          user.rewardHistory.push({
+            type: 'TIER_CHANGED',  // This matches the enum in User model
+            oldTier: oldTier,
+            newTier: newTier,
+            timestamp: new Date(),
+            createdAt: new Date(),
+            updatedAt: new Date()
+          });
+        }
+
+        await user.save();
+
+        // Emit the event for real-time updates
         eventEmitter.emit(Events.PAYMENT_COMPLETED, {
-          userId: session.user.id,
+          userId: user._id,
           paymentIntentId: formattedData.orderNumber,
-          amount,
+          amount: amount,
           animate: true,
+          loyaltyBenefits: {
+            ...loyaltyBenefits,
+            currentPoints: user.vivaBucks,
+            lifetimePoints: user.cumulativePoints,
+            currentTier: user.currentTier,
+            oldPoints,
+            oldLifetimePoints
+          },
           timestamp: new Date().toISOString()
         });
+
+      } catch (loyaltyError) {
+        console.error('Error processing loyalty benefits:', loyaltyError);
+        // Don't throw the error, continue with order confirmation
       }
+    }
+
+    // Add this to ensure the loyalty redemption is cleared on order completion
+    if (data.loyaltyRedemption && session?.user?.id) {
+      console.log('✅ Loyalty redemption confirmed:', data.loyaltyRedemption);
     }
 
     return NextResponse.json({
@@ -76,7 +154,8 @@ export async function POST(request) {
       data: {
         subtotal: parseFloat(formattedData.subtotal),
         tax: parseFloat(formattedData.tax),
-        total: parseFloat(formattedData.total)
+        total: parseFloat(formattedData.total),
+        loyaltyRedemption: data.loyaltyRedemption
       }
     });
 

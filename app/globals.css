@@ -14,6 +14,12 @@
   --button-red: #dc3545;
   --button-green: #28a745;
   --placeholder-color: #6b7280;
+  --navbar-height: 60px;
+  --navbar-height-md: 80px;
+  --loyalty-banner-height: 40px;
+  --loyalty-banner-height-md: 44px;
+  --total-header-height: calc(var(--navbar-height) + var(--loyalty-banner-height));
+  --total-header-height-md: calc(var(--navbar-height-md) + var(--loyalty-banner-height-md));
 }
 
 /* Base Styles */
@@ -443,4 +449,93 @@ body {
   .print-break-before-page {
     break-before: page;
   }
+}
+
+/* Add this class for the main content adjustment */
+.main-content-with-banner {
+  padding-top: var(--total-header-height);
+}
+
+@media (min-width: 768px) {
+  .main-content-with-banner {
+    padding-top: var(--total-header-height-md);
+  }
+}
+
+/* Add this to your existing CSS */
+.loyalty-banner-content {
+  height: var(--loyalty-banner-height);
+  display: flex;
+  align-items: center;
+}
+
+@media (min-width: 768px) {
+  .loyalty-banner-content {
+    height: var(--loyalty-banner-height-md);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.animate-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: shimmer 1.5s infinite;
+}
+
+/* Add these new animations */
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-25%); }
+}
+
+.animate-bounce {
+  animation: bounce 1s infinite;
+}
+
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.02);
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Update the shimmer animation */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite linear;
 }

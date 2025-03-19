@@ -19,7 +19,9 @@ export async function GET(req) {
     await dbConnect();
     console.log('✅ Database connected');
 
-    const user = await User.findOne({ email: session.user.email }).lean();
+    const user = await User.findOne({ email: session.user.email })
+      .select('email name phoneNumber addresses vivaBucks cumulativePoints currentTier pointsMultiplier rewardHistory')
+      .lean();
 
     if (!user) {
       console.log('❌ User not found');
@@ -28,14 +30,26 @@ export async function GET(req) {
       });
     }
 
-    console.log('✅ User fetched successfully:', {
-      id: user._id,
-      email: user.email,
-      phoneNumber: user.phoneNumber,
-      addresses: user.addresses
+    // Initialize loyalty fields if they don't exist
+    const userData = {
+      ...user,
+      vivaBucks: user.vivaBucks || 0,
+      cumulativePoints: user.cumulativePoints || 0,
+      currentTier: user.currentTier || 'BRONZE',
+      pointsMultiplier: user.pointsMultiplier || 1,
+      rewardHistory: user.rewardHistory || []
+    };
+
+    // Log loyalty data
+    console.log('✅ User loyalty data:', {
+      vivaBucks: userData.vivaBucks,
+      cumulativePoints: userData.cumulativePoints,
+      currentTier: userData.currentTier,
+      pointsMultiplier: userData.pointsMultiplier,
+      rewardHistoryCount: userData.rewardHistory.length
     });
 
-    return new Response(JSON.stringify(user), {
+    return new Response(JSON.stringify(userData), {
       status: 200,
     });
   } catch (error) {

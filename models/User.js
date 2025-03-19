@@ -126,7 +126,85 @@ const userSchema = new mongoose.Schema({
     sparse: true,
     unique: true
   },
-  addresses: [addressSchema]
+  addresses: [addressSchema],
+  vivaBucks: {
+    type: Number,
+    default: 0
+  },
+  cumulativePoints: {
+    type: Number,
+    default: 0
+  },
+  currentTier: {
+    type: String,
+    enum: ['BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'SAPPHIRE', 'DIAMOND', 'LEGEND'],
+    default: 'BRONZE'
+  },
+  pointsMultiplier: {
+    type: Number,
+    default: 1
+  },
+  rewardHistory: [{
+    type: {
+      type: String,
+      enum: ['POINTS_EARNED', 'POINTS_REDEEMED', 'TIER_CHANGED', 'REWARD_REDEEMED'],
+      required: true
+    },
+    points: Number,
+    adjustedPoints: Number,
+    multiplier: Number,
+    tier: String,
+    source: String,
+    appliedEvents: [{
+      eventId: mongoose.Schema.Types.ObjectId,
+      name: String,
+      multiplier: Number,
+      bonusPoints: Number
+    }],
+    timestamp: {
+      type: Date,
+      default: Date.now
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    },
+    updatedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  coupons: [{
+    amount: Number,
+    code: String,
+    expiryDate: Date,
+    isUsed: {
+      type: Boolean,
+      default: false
+    }
+  }],
+  emailPreferences: {
+    pointsNotifications: {
+      type: Boolean,
+      default: true
+    },
+    tierUpdates: {
+      type: Boolean,
+      default: true
+    },
+    specialEvents: {
+      type: Boolean,
+      default: true
+    },
+    birthdayRewards: {
+      type: Boolean,
+      default: true
+    },
+    promotionalEmails: {
+      type: Boolean,
+      default: true
+    }
+  }
 });
 
 // Update timestamps

@@ -4,11 +4,11 @@ import { SWRConfig } from 'swr';
 
 const swrConfig = {
   provider: () => new Map(),
-  revalidateIfStale: false,
+  revalidateIfStale: true,
   revalidateOnFocus: false,
-  revalidateOnReconnect: false,
-  dedupingInterval: 60000, // 1 minute
-  shouldRetryOnError: false,
+  revalidateOnReconnect: true,
+  dedupingInterval: 30000, // Reduced to 30 seconds
+  shouldRetryOnError: true,
   fetcher: async (resource, init) => {
     const res = await fetch(resource, init);
     if (!res.ok) {

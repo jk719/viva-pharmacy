@@ -10,8 +10,9 @@ import "./globals.css";
 import { headers } from 'next/headers';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from '@/lib/auth';
-import eventEmitter from '../lib/eventEmitter';
+import { eventEmitter } from '@/lib/eventEmitter';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
+import LoyaltyBanner from '@/components/loyalty/LoyaltyBanner';
 
 // Metadata can be exported as a constant
 const siteConfig = {
@@ -42,40 +43,9 @@ export default async function RootLayout({ children }) {
       </head>
       <body className="bg-white text-primary-color">
         <Providers session={session}>
-          <Toaster 
-            position="top-center"
-            reverseOrder={false}
-            toastOptions={{
-              duration: 3000,
-              style: {
-                maxWidth: '90vw',
-                margin: '0 auto',
-              },
-              // Customize different types of toasts
-              success: {
-                style: {
-                  background: '#10B981',
-                  color: 'white',
-                },
-              },
-              error: {
-                style: {
-                  background: '#EF4444',
-                  color: 'white',
-                },
-                duration: 4000,
-              },
-              loading: {
-                style: {
-                  background: '#3B82F6',
-                  color: 'white',
-                },
-              },
-            }}
-          />
+          <Toaster />
           <SiteHeader />
-          <div className="h-[60px] md:h-[80px]" aria-hidden="true" />
-          <main className="min-h-screen w-full flex-grow">
+          <main className="min-h-screen w-full flex-grow main-content-with-banner pt-[100px] md:pt-[124px]">
             <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
               <Suspense fallback={<LoadingSpinner />}>
                 {children}
@@ -92,13 +62,12 @@ export default async function RootLayout({ children }) {
 
 function SiteHeader() {
   return (
-    <>
-      <header className="fixed top-0 left-0 right-0 w-full bg-white z-50">
-        <div className="w-full">
-          <Navbar />
-        </div>
-      </header>
-    </>
+    <header className="fixed top-0 left-0 right-0 w-full bg-white z-50">
+      <div className="w-full">
+        <Navbar />
+        <LoyaltyBanner />
+      </div>
+    </header>
   );
 }
 

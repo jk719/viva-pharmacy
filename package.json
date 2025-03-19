@@ -38,7 +38,11 @@
     "update:cloudinary": "node scripts/updateProductsWithCloudinaryUrls.js",
     "list:missing": "node scripts/listMissingImages.js",
     "sync:cloudinary": "node scripts/syncCloudinaryToMongo.js",
-    "list:all-cloudinary": "node scripts/listAllCloudinaryResources.js"
+    "list:all-cloudinary": "node scripts/listAllCloudinaryResources.js",
+    "test:integration": "jest --config jest.config.js --testMatch \"**/__tests__/integration/**/*.test.js\"",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "migrate:loyalty": "node scripts/migrateLoyaltySchema.mjs"
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^6.6.0",
@@ -73,9 +77,10 @@
     "react-dom": "^19.0.0",
     "react-dropzone": "^14.3.5",
     "react-hot-toast": "^2.5.2",
-    "react-icons": "^5.4.0",
+    "react-icons": "^5.5.0",
     "react-intersection-observer": "^9.15.1",
     "react-places-autocomplete": "^7.3.0",
+    "react-spinners": "^0.15.0",
     "recharts": "^2.15.1",
     "slugify": "^1.6.6",
     "stripe": "^17.4.0",

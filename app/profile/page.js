@@ -1,100 +1,131 @@
-'use client';
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+import LoyaltyProgram from "@/components/profile/LoyaltyProgram";
+import { redirect } from "next/navigation";
+import User from "@/models/User";
+import dbConnect from "@/lib/dbConnect";
+import { FaUser, FaGift, FaCrown } from 'react-icons/fa'; // Import icons
 
-import { useSession } from 'next-auth/react';
-import { useState, useEffect } from 'react';
-import ProfileInfo from '@/components/profile/ProfileInfo';
-import OrderHistory from '@/components/profile/OrderHistory';
-
-export default function ProfilePage() {
-  const { data: session } = useSession();
-  const [activeTab, setActiveTab] = useState('info');
-  const [userData, setUserData] = useState(null);
-
-  useEffect(() => {
-    async function fetchUserData() {
-      if (session?.user?.email) {
-        try {
-          const response = await fetch('/api/user/profile');
-          if (response.ok) {
-            const data = await response.json();
-            setUserData(data);
-          }
-        } catch (error) {
-          console.error('Error fetching user data:', error);
-        }
-      }
-    }
-
-    fetchUserData();
-  }, [session]);
+export default async function ProfilePage() {
+  const session = await getServerSession(authOptions);
 
   if (!session) {
-    return (
-      <div className="min-h-screen bg-[#f0f4f8] flex items-center justify-center">
-        <div className="bg-white p-8 rounded-lg shadow-md">
-          <p className="text-[#003366] text-xl">Please sign in to view your profile</p>
-        </div>
-      </div>
-    );
+    redirect("/login");
   }
 
-  return (
-    <div className="min-h-screen bg-[#f0f4f8] py-8">
-      <div className="max-w-4xl mx-auto px-4">
-        {/* Welcome Section */}
-        <div className="text-center mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold text-[#003366] mb-2">
-            Welcome, {userData?.firstName || session.user.email}
-          </h1>
-          <p className="text-sm md:text-base text-[#4d6580]">Manage your account and view your orders</p>
-        </div>
+  try {
+    await dbConnect();
+    const user = await User.findById(session.user.id)
+      .select('loyaltyProgram email name')
+      .lean();
 
-        {/* Updated Tab Navigation - Mobile Responsive */}
-        <div className="flex justify-center mb-6 overflow-x-auto">
-          <div className="bg-white rounded-lg shadow-md p-2 inline-flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 w-full md:w-auto">
-            <button
-              onClick={() => setActiveTab('info')}
-              className={`px-4 md:px-6 py-3 rounded-lg font-medium transition-all duration-200 w-full md:w-auto ${
-                activeTab === 'info'
-                  ? 'bg-[#003366] text-white shadow-md'
-                  : 'text-[#003366] hover:bg-[#e6eef5]'
-              }`}
-            >
-              <div className="flex items-center justify-center md:justify-start space-x-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                <span className="text-sm md:text-base">Profile</span>
+    if (!user) {
+      redirect("/login");
+    }
+
+    // Convert MongoDB document to plain object and transform _id
+    const serializedUser = {
+      ...user,
+      _id: user._id.toString(),
+      loyaltyProgram: user.loyaltyProgram ? {
+        ...user.loyaltyProgram,
+        transactions: user.loyaltyProgram.transactions?.map(tx => ({
+          ...tx,
+          _id: tx._id.toString(),
+          orderId: tx.orderId?.toString()
+        })) || [],
+        coupons: user.loyaltyProgram.coupons?.map(coupon => ({
+          ...coupon,
+          _id: coupon._id.toString()
+        })) || []
+      } : null
+    };
+
+    return (
+      <div className="min-h-screen bg-secondary">
+        {/* Hero Section */}
+        <div className="bg-primary">
+          <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center space-x-4">
+              <div className="bg-white/10 p-3 rounded-full">
+                <FaUser className="h-8 w-8 text-white" />
               </div>
-            </button>
-            <button
-              onClick={() => setActiveTab('orders')}
-              className={`px-4 md:px-6 py-3 rounded-lg font-medium transition-all duration-200 w-full md:w-auto ${
-                activeTab === 'orders'
-                  ? 'bg-[#003366] text-white shadow-md'
-                  : 'text-[#003366] hover:bg-[#e6eef5]'
-              }`}
-            >
-              <div className="flex items-center justify-center md:justify-start space-x-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                </svg>
-                <span className="text-sm md:text-base">Orders</span>
+              <div>
+                <h1 className="text-3xl font-bold text-white">{serializedUser.name}</h1>
+                <p className="mt-1 text-primary-light/80">{serializedUser.email}</p>
               </div>
-            </button>
+            </div>
           </div>
         </div>
 
-        {/* Content Section */}
-        <div className="bg-white rounded-xl shadow-lg p-4 md:p-6 border border-[#e6eef5]">
-          {activeTab === 'info' && (
-            <ProfileInfo user={userData || session.user} />
-          )}
-          {activeTab === 'orders' && (
-            <OrderHistory userId={session.user.id} />
-          )}
+        {/* Main Content */}
+        <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Loyalty Program Section */}
+            <div className="lg:col-span-2">
+              <div className="bg-white rounded-lg-xl shadow-sm border border-form-input-border overflow-hidden animate-scaleSpring">
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center space-x-3">
+                      <FaCrown className="h-6 w-6 text-accent-yellow" />
+                      <h2 className="text-xl font-semibold text-text-primary">VivaBucks Rewards</h2>
+                    </div>
+                    <span className="px-4 py-1.5 bg-secondary text-primary rounded-full text-sm font-medium">
+                      {serializedUser.loyaltyProgram?.tier || 'BRONZE'}
+                    </span>
+                  </div>
+                  <LoyaltyProgram user={serializedUser} />
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="lg:col-span-1 space-y-6">
+              <div className="bg-white rounded-lg-xl shadow-sm border border-form-input-border p-6 animate-slideUp">
+                <h2 className="text-lg font-semibold text-text-primary mb-4">Quick Actions</h2>
+                <div className="space-y-3">
+                  <button className="w-full flex items-center justify-between px-4 py-3 bg-secondary hover:bg-secondary/80 rounded-xl transition-colors">
+                    <div className="flex items-center space-x-3">
+                      <FaGift className="h-5 w-5 text-accent-blue" />
+                      <span className="font-medium text-text-primary">Available Rewards</span>
+                    </div>
+                    <span className="text-sm text-text-secondary">
+                      {serializedUser.loyaltyProgram?.coupons?.filter(c => !c.isUsed).length || 0}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Recent Activity */}
+              <div className="bg-white rounded-lg-xl shadow-sm border border-form-input-border p-6 animate-slideUp">
+                <h2 className="text-lg font-semibold text-text-primary mb-4">Recent Activity</h2>
+                <div className="space-y-4">
+                  {serializedUser.loyaltyProgram?.transactions?.slice(0, 3).map((tx, index) => (
+                    <div key={tx._id} className="flex items-center justify-between py-2">
+                      <div>
+                        <p className="text-sm font-medium text-text-primary">
+                          {tx.type === 'earn' ? 'Earned Points' : 'Redeemed Points'}
+                        </p>
+                        <p className="text-xs text-text-secondary">
+                          {new Date(tx.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <span className={`text-sm font-medium ${
+                        tx.type === 'earn' ? 'text-form-input-success' : 'text-form-input-error'
+                      }`}>
+                        {tx.type === 'earn' ? '+' : '-'}{tx.points}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  } catch (error) {
+    console.error("Error fetching user profile:", error);
+    redirect("/login");
+  }
 } 
