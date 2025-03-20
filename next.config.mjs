@@ -71,6 +71,27 @@ const nextConfig = {
       topLevelAwait: true,
     };
 
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        dns: false,
+        path: false,
+        http: false,
+        https: false,
+        stream: false,
+        crypto: false,
+        zlib: false,
+        querystring: false,
+        buffer: false,
+        child_process: false,
+        os: false,
+        module: false,
+      };
+    }
+
     if (dev) {
       config.optimization = {
         ...config.optimization,

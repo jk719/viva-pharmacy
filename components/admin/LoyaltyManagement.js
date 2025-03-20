@@ -1,7 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { TIER_CONFIG } from '@/lib/loyalty/loyaltyService';
+// Import TIER_CONFIG directly, but don't import from emailService
+// This line is problematic and causes Node.js modules to be bundled:
+// import { TIER_CONFIG } from '@/lib/loyalty/loyaltyService';
+
+// Instead, declare TIER_CONFIG directly or fetch it from an API
+const TIER_CONFIG = {
+  BRONZE: { points: 0, discount: 0 },
+  SILVER: { points: 500, discount: 0.05 },
+  GOLD: { points: 1000, discount: 0.1 },
+  PLATINUM: { points: 2500, discount: 0.15 },
+  SAPPHIRE: { points: 5000, discount: 0.2 },
+  DIAMOND: { points: 10000, discount: 0.25 },
+  LEGEND: { points: 25000, discount: 0.3 }
+};
 
 export default function LoyaltyManagement() {
   const [users, setUsers] = useState([]);
