@@ -6,6 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { FaBox, FaShoppingBag, FaTruck, FaCheck, FaSpinner, FaExclamationCircle, FaClock, FaImage } from 'react-icons/fa';
 import { getCloudinaryUrl, FALLBACK_IMAGE } from '@/lib/cloudinary';
+import ProductImage from '@/components/ProductImage';
 
 // Status icons and colors mapping
 const STATUS_CONFIG = {
@@ -24,68 +25,6 @@ function normalizeProductName(name) {
     .replace(/[^a-z0-9\s-]/g, '')  // Remove special characters
     .replace(/\s+/g, '-')          // Replace spaces with hyphens
     .trim();
-}
-
-/**
- * ProductImage - A resilient image component that handles missing URLs
- * 
- * IMPORTANT: Do not revert to the old validateImageUrl approach which caused 404 errors.
- * This component properly handles missing image URLs by:
- * 1. Using provided URLs when available
- * 2. Generating URLs based on product names when needed
- * 3. Trying multiple Cloudinary URL patterns
- * 4. Falling back to placeholders when all else fails
- */
-function ProductImage({ src, name, alt }) {
-  const [hasError, setHasError] = useState(false);
-  const [imageUrl, setImageUrl] = useState(src || '/images/placeholder.png');
-
-  // Generate a product-name based URL when component mounts if src is empty
-  useEffect(() => {
-    if (!src && name) {
-      const normalized = normalizeProductName(name);
-      // Try a URL format seen in your mapping file
-      const generatedUrl = `https://res.cloudinary.com/dv3cd1aoy/image/upload/${normalized}_bbq4sy.png`;
-      setImageUrl(generatedUrl);
-    }
-  }, [src, name]);
-  
-  if (hasError) {
-    return (
-      <Image 
-        src="/images/placeholder.png"
-        alt={alt || "Product placeholder"} 
-        fill
-        className="object-contain rounded-md p-1"
-        sizes="(max-width: 64px) 100vw, 64px"
-      />
-    );
-  }
-
-  return (
-    <Image
-      src={imageUrl}
-      alt={alt || "Product"}
-      fill
-      className="object-contain rounded-md p-1"
-      sizes="(max-width: 64px) 100vw, 64px"
-      onError={(e) => {
-        console.log('Image error for:', name, 'URL:', imageUrl);
-        
-        // If we get an error and haven't tried a fallback format yet, try a different one
-        if (imageUrl !== src && !hasError) {
-          // Try a different URL pattern, based on viva-pharmacy/products path
-          const normalized = normalizeProductName(name);
-          const alternateUrl = `https://res.cloudinary.com/dv3cd1aoy/image/upload/viva-pharmacy/products/${normalized}.png`;
-          console.log('Trying alternate URL:', alternateUrl);
-          setImageUrl(alternateUrl);
-        } else {
-          // If we've already tried alternatives or the original was custom, go to placeholder
-          setHasError(true);
-        }
-      }}
-    />
-  );
 }
 
 export default function OrderHistory({ userId, limit }) {
@@ -283,11 +222,14 @@ export default function OrderHistory({ userId, limit }) {
                 order.items.map((item, index) => (
                   <div key={item._id || item.id || index} className="p-4 flex gap-4">
                     <div className="relative h-16 w-16 flex-shrink-0 bg-gray-50 rounded-md">
-                      {/* Use the updated ProductImage component */}
+                      {/* Use the imported ProductImage component */}
                       <ProductImage 
-                        src={item.image} 
-                        name={item.name}
-                        alt={item.name || "Product"} 
+                        src={item.image}
+                        productName={item.name}
+                        alt={item.name || "Product"}
+                        fill
+                        className="object-contain rounded-md p-1"
+                        sizes="(max-width: 64px) 100vw, 64px"
                       />
                     </div>
 

@@ -72,6 +72,29 @@ export default function SSEProvider({ children }) {
   useEffect(() => {
     const handlePaymentCompleted = (data) => {
       console.log('💰 Payment completed:', data);
+      
+      // Add these lines to ensure mobile devices get notified
+      try {
+        // Set localStorage item to notify other tabs/windows (helps on mobile)
+        localStorage.setItem('viva_payment_completed', JSON.stringify({
+          timestamp: new Date().toISOString(),
+          ...data
+        }));
+        
+        // Directly call the global refresh function if available
+        if (typeof window.refreshLoyaltyData === 'function') {
+          console.log('📱 Directly calling refreshLoyaltyData');
+          window.refreshLoyaltyData();
+        }
+        
+        // Dispatch a custom event for other components to listen for
+        const customEvent = new CustomEvent('viva:payment:completed', { 
+          detail: data 
+        });
+        window.dispatchEvent(customEvent);
+      } catch (e) {
+        console.error('Error handling payment completion on mobile:', e);
+      }
     };
 
     eventEmitter.on(Events.PAYMENT_COMPLETED, handlePaymentCompleted);

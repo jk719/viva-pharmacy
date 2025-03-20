@@ -242,17 +242,13 @@ const AuthButtons = ({ isMobile = false }) => {
           aria-expanded={showLogin}
           aria-haspopup="true"
           className={`${buttonStyles.base} ${buttonStyles.signIn} ${isMobile ? buttonStyles.mobile : buttonStyles.desktop}
-                     animate-pulse-slow whitespace-nowrap`}
+                     whitespace-nowrap`}
         >
           <FiUser 
             className={`${isMobile ? 'w-3.5 h-3.5 mr-1' : 'w-4 h-4 mr-2'}`}
           />
           <span className="relative truncate max-w-[150px]">
             {formatEmailForDisplay(session.user.email, isMobile)}
-            <span className="absolute -top-1 -right-1 flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF9F43] opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#FF9F43]"></span>
-            </span>
           </span>
         </button>
 
@@ -319,7 +315,7 @@ const AuthButtons = ({ isMobile = false }) => {
           ${buttonStyles.base}
           ${buttonStyles.signIn}
           ${isMobile ? buttonStyles.mobile : buttonStyles.desktop}
-          animate-pulse-slow whitespace-nowrap
+          whitespace-nowrap
         `}
       >
         <FiUser 
@@ -327,12 +323,6 @@ const AuthButtons = ({ isMobile = false }) => {
         />
         <span className="relative whitespace-nowrap">
           Sign In
-          {!isMobile && (
-            <span className="absolute -top-1 -right-1 flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF9F43] opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#FF9F43]"></span>
-            </span>
-          )}
         </span>
       </button>
 
