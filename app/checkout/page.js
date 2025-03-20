@@ -100,6 +100,9 @@ function CheckoutContent() {
     address: false
   });
 
+  // Add new state for prescriptions
+  const [isPrescriptionOrder, setIsPrescriptionOrder] = useState(false);
+
   useEffect(() => {
     if (!session) {
       router.push('/?showLogin=true&redirect=/checkout');
@@ -201,6 +204,10 @@ function CheckoutContent() {
         return;
       }
       
+      // Check if any item is a prescription
+      const hasPrescription = items.some(item => item.isPrescription);
+      setIsPrescriptionOrder(hasPrescription);
+      
       const newSubtotal = items.reduce((sum, item) => {
         return sum + (parseFloat(item.price) * parseInt(item.quantity));
       }, 0);
@@ -226,7 +233,8 @@ function CheckoutContent() {
       deliveryMethod: !deliveryMethod,
       deliverySpeed: deliveryMethod === 'delivery' && !deliverySpeed,
       time: !selectedTime,
-      address: deliveryMethod === 'delivery' && !shippingAddress
+      address: deliveryMethod === 'delivery' && !shippingAddress,
+      prescription: isPrescriptionOrder && !shippingAddress, // Prescriptions must be delivered
     };
     
     setValidationErrors(errors);
@@ -300,24 +308,37 @@ function CheckoutContent() {
         <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
           <FaBox className="text-primary" />
           Delivery Method
-          {!deliveryMethod && (
-            <span className="text-sm font-normal text-red-500 ml-2">
-              (Required)
+          {isPrescriptionOrder && (
+            <span className="text-sm text-primary ml-2">
+              (Prescription orders must be delivered)
             </span>
           )}
         </h2>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[
-            { id: 'delivery', icon: FaTruck, title: 'Home Delivery', desc: 'Delivered to your address' },
-            { id: 'pickup', icon: FaStore, title: 'Store Pickup', desc: 'Pick up at our location' }
+            { 
+              id: 'delivery', 
+              icon: FaTruck, 
+              title: 'Home Delivery', 
+              desc: 'Delivered to your address',
+              disabled: false
+            },
+            { 
+              id: 'pickup', 
+              icon: FaStore, 
+              title: 'Store Pickup', 
+              desc: 'Pick up at our location',
+              disabled: isPrescriptionOrder
+            }
           ].map((option) => (
             <motion.button
               key={option.id}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setDeliveryMethod(option.id)}
+              whileHover={{ scale: option.disabled ? 1 : 1.02 }}
+              whileTap={{ scale: option.disabled ? 1 : 0.98 }}
+              onClick={() => !option.disabled && setDeliveryMethod(option.id)}
               className={`relative p-6 rounded-xl border-2 transition-all ${
+                option.disabled ? 'opacity-50 cursor-not-allowed' :
                 deliveryMethod === option.id
                   ? 'border-primary bg-primary/5 shadow-lg'
                   : 'border-gray-200 hover:border-gray-300'

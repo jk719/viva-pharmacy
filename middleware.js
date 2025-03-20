@@ -88,7 +88,7 @@ export default withAuth(
 
     // Handle all protected routes that require authentication
     if (!req.nextauth?.token) {
-      const protectedRoutes = ['/checkout', '/profile', '/admin'];
+      const protectedRoutes = ['/checkout', '/profile', '/admin', '/prescriptions', '/rx'];
       if (protectedRoutes.some(route => req.nextUrl.pathname.startsWith(route))) {
         return NextResponse.redirect(
           new URL(
@@ -150,6 +150,47 @@ export default withAuth(
       }
     }
 
+    // Add prescription routes handling
+    if (req.nextUrl.pathname.startsWith('/rx') || req.nextUrl.pathname.startsWith('/prescriptions')) {
+      // Require authentication for all prescription routes
+      if (!token) {
+        return NextResponse.redirect(
+          new URL(
+            `/?showLogin=true&callbackUrl=${encodeURIComponent(req.nextUrl.pathname)}`,
+            req.url
+          )
+        );
+      }
+
+      // Special handling for admin prescription verification routes
+      if (req.nextUrl.pathname.startsWith('/admin/prescriptions')) {
+        if (!['ADMIN', 'PHARMACIST'].includes(token.role)) {
+          return NextResponse.redirect(new URL('/', req.url));
+        }
+      }
+    }
+
+    // Add prescription API route protection
+    const isPrescriptionApiRoute = req.nextUrl.pathname.startsWith('/api/prescriptions');
+    if (isPrescriptionApiRoute) {
+      if (!token) {
+        return new NextResponse(
+          JSON.stringify({ message: "Unauthorized" }), 
+          { status: 401 }
+        );
+      }
+
+      // Verify/process prescriptions requires special roles
+      if (req.nextUrl.pathname.includes('/verify') || req.nextUrl.pathname.includes('/process')) {
+        if (!['ADMIN', 'PHARMACIST'].includes(token.role)) {
+          return new NextResponse(
+            JSON.stringify({ message: "Access denied" }), 
+            { status: 403 }
+          );
+        }
+      }
+    }
+
     return NextResponse.next();
   },
   {
@@ -188,6 +229,18 @@ export default withAuth(
           return !!token;
         }
 
+        // Add prescription routes to protected paths
+        if (req.nextUrl.pathname.startsWith('/rx') || 
+            req.nextUrl.pathname.startsWith('/prescriptions') ||
+            req.nextUrl.pathname.startsWith('/api/prescriptions')) {
+          return !!token;
+        }
+
+        // Add admin prescription routes to admin-only paths
+        if (req.nextUrl.pathname.startsWith('/admin/prescriptions')) {
+          return !!token && ['ADMIN', 'PHARMACIST'].includes(token.role);
+        }
+
         return true;
       },
     },
@@ -212,5 +265,9 @@ export const config = {
     '/checkout/:path*',
     '/reset-password/:path*',
     '/api/user/events',
+    '/rx/:path*',
+    '/prescriptions/:path*',
+    '/api/prescriptions/:path*',
+    '/admin/prescriptions/:path*',
   ],
 };

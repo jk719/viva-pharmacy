@@ -1,41 +1,51 @@
 "use client";
 
 import { useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 
 export default function HeaderSpacer() {
+  const { data: session } = useSession();
+  const isAuthenticated = !!session?.user;
+  
   useEffect(() => {
-    // Fix for mobile space issue by directly adjusting CSS variables
-    const fixMobileSpacing = () => {
-      // Check if we're on mobile
-      const isMobile = window.innerWidth < 768;
-      
-      if (isMobile) {
-        // Reduce the loyalty banner height to fix spacing
-        document.documentElement.style.setProperty('--loyalty-banner-height', '60px');
-        
-        // Recalculate total header height
-        const navbarHeight = parseFloat(getComputedStyle(document.documentElement)
-          .getPropertyValue('--navbar-height').trim());
-        const loyaltyHeight = 60; // Our new fixed height
-        
-        document.documentElement.style.setProperty(
-          '--total-header-height', 
-          `${navbarHeight + loyaltyHeight}px`
-        );
+    // Make the header spacer use the correct height based on authentication status
+    if (typeof window !== 'undefined') {
+      const spacer = document.querySelector('.header-spacer');
+      if (spacer) {
+        // For non-authenticated users, only account for the navbar
+        if (!isAuthenticated) {
+          spacer.style.height = 'var(--navbar-height)';
+          
+          // For desktop
+          const mediaQuery = window.matchMedia('(min-width: 768px)');
+          if (mediaQuery.matches) {
+            spacer.style.height = 'var(--navbar-height-md)';
+          }
+          
+          // Listen for media query changes
+          const handleMediaChange = (e) => {
+            spacer.style.height = e.matches ? 
+              'var(--navbar-height-md)' : 
+              'var(--navbar-height)';
+          };
+          
+          mediaQuery.addEventListener('change', handleMediaChange);
+          return () => mediaQuery.removeEventListener('change', handleMediaChange);
+        }
       }
-    };
-
-    // Run immediately
-    fixMobileSpacing();
-    
-    // Also run on resize
-    window.addEventListener('resize', fixMobileSpacing);
-    
-    // Cleanup
-    return () => {
-      window.removeEventListener('resize', fixMobileSpacing);
-    };
-  }, []);
-
-  return null; // This component doesn't render anything
+    }
+  }, [isAuthenticated]);
+  
+  // Use the total header height from CSS variables
+  return (
+    <div 
+      className="header-spacer w-full"
+      style={{ 
+        height: isAuthenticated ? 
+          'var(--total-header-height)' : 
+          'var(--navbar-height)'
+      }}
+      aria-hidden="true"
+    />
+  );
 } 

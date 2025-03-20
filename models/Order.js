@@ -142,7 +142,22 @@ const OrderSchema = new mongoose.Schema({
             type: Date,
             default: Date.now
         }
-    }]
+    }],
+    isPrescriptionOrder: {
+        type: Boolean,
+        default: false
+    },
+    prescriptionDetails: {
+        verificationStatus: {
+            type: String,
+            enum: ['Pending', 'Verified', 'Rejected'],
+            default: 'Pending'
+        },
+        verifiedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        }
+    }
 }, {
     timestamps: true,
     toJSON: {
@@ -163,6 +178,22 @@ OrderSchema.index({
 }, { 
     unique: true, 
     partialFilterExpression: { orderNumber: { $type: "string" } } 
+});
+
+OrderSchema.index({ 
+    isPrescriptionOrder: 1, 
+    'prescriptionDetails.verificationStatus': 1 
+});
+
+OrderSchema.index({ 
+    userId: 1, 
+    isPrescriptionOrder: 1, 
+    createdAt: -1 
+});
+
+OrderSchema.index({ 
+    'prescriptionDetails.verifiedBy': 1, 
+    createdAt: -1 
 });
 
 OrderSchema.methods.getStatusColor = function() {

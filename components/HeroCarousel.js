@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 import CarouselEngine from './CarouselEngine';
 import DeliverySlide from './slides/DeliverySlide';
 import TylaSlide from './slides/TylaSlide';
-import HeaderSpacer from './HeaderSpacer';
 
 // Define vector graphics highlighting delivery timeframes with pricing
 const vectorGraphics = {
@@ -125,6 +126,34 @@ const slides = [
 ];
 
 export default function HeroCarousel() {
+  const { data: session } = useSession();
+  const [loyaltyBannerVisible, setLoyaltyBannerVisible] = useState(false);
+  const isMobile = useMediaQuery('(max-width: 640px)');
+  
+  // Check if user is authenticated
+  const isAuthenticated = !!session?.user;
+  
+  // Check for loyalty banner visibility and get position
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const checkBannerVisibility = () => {
+      const loyaltyBanner = document.querySelector('.loyalty-banner');
+      setLoyaltyBannerVisible(!!loyaltyBanner && loyaltyBanner.offsetHeight > 0);
+    };
+    
+    checkBannerVisibility();
+    const timer = setTimeout(checkBannerVisibility, 500);
+    
+    const observer = new MutationObserver(checkBannerVisibility);
+    observer.observe(document.body, { childList: true, subtree: true });
+    
+    return () => {
+      clearTimeout(timer);
+      observer.disconnect();
+    };
+  }, [session]);
+
   // Animation CSS for gradient backgrounds and SVG animations
   useEffect(() => {
     // Only add animations if user doesn't prefer reduced motion
@@ -187,23 +216,23 @@ export default function HeroCarousel() {
     
     return (
       <div className="relative pt-6 sm:pt-10">
-        {/* Move vectors below the heading content and above the highlight cards */}
-        <div className="w-full relative h-16 mb-3 sm:mb-5">
-          {/* Main vector graphic positioned above the highlights */}
-          <div className="absolute left-1/2 -translate-x-1/2 top-0 w-16 h-16 sm:w-24 sm:h-24 flex items-center justify-center floating z-10">
+        {/* Center the main vector graphic above the highlight cards */}
+        <div className="w-full flex justify-center items-center mb-4 sm:mb-6">
+          {/* Main vector graphic - centered for both mobile and desktop */}
+          <div className="relative w-16 h-16 sm:w-24 sm:h-24 flex items-center justify-center floating z-10">
             <div className="p-2 bg-white/20 backdrop-blur-md rounded-full shadow-lg">
               <div className="w-full h-full">
                 {slide.vectors.main}
               </div>
             </div>
-          </div>
-          
-          {/* Small decorative circles positioned to not overlap */}
-          <div className="absolute left-1/3 top-4 w-4 h-4 rounded-full bg-white/10 floating" 
-            style={{ animationDelay: "1.5s" }}>
-          </div>
-          <div className="absolute left-2/3 top-6 w-3 h-3 rounded-full bg-white/5 floating" 
-            style={{ animationDelay: "0.8s" }}>
+            
+            {/* Small decorative circles positioned around the main icon */}
+            <div className="absolute -left-4 top-2 w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-white/10 floating" 
+              style={{ animationDelay: "1.5s" }}>
+            </div>
+            <div className="absolute -right-4 top-4 w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-white/5 floating" 
+              style={{ animationDelay: "0.8s" }}>
+            </div>
           </div>
         </div>
         
@@ -307,14 +336,57 @@ export default function HeroCarousel() {
 
   return (
     <div className="mx-auto max-w-[1000px]">
-      <HeaderSpacer />
+      {/* Applied fixed spacing below any header elements */}
+      <div 
+        className="header-carousel-spacing w-full"
+        style={{ 
+          height: '12px',
+          background: 'transparent' 
+        }}
+        aria-hidden="true"
+      ></div>
+      
       <CarouselEngine 
         slides={slides}
         interval={6000}
         renderSlide={renderSlide}
-        className="shadow-lg"
+        className="shadow-lg carousel-container"
         compact={true}
       />
+      
+      {/* Add global styles to fix positioning */}
+      <style jsx global>{`
+        /* Reset main content padding */
+        main {
+          padding-top: 0 !important;
+        }
+        
+        /* Position carousel with correct spacing */
+        .carousel-container {
+          position: relative;
+          margin-top: ${isAuthenticated ? 
+            `calc(var(--navbar-height${isMobile ? '' : '-md'}) + var(--loyalty-banner-height${isMobile ? '' : '-md'}))` : 
+            `var(--navbar-height${isMobile ? '' : '-md'})`};
+          z-index: 10;
+        }
+        
+        /* Ensure consistency across browsers */
+        @media (max-width: 768px) {
+          .carousel-container {
+            margin-top: ${isAuthenticated ? 
+              'calc(var(--navbar-height) + var(--loyalty-banner-height))' : 
+              'var(--navbar-height)'};
+          }
+        }
+        
+        @media (min-width: 769px) {
+          .carousel-container {
+            margin-top: ${isAuthenticated ? 
+              'calc(var(--navbar-height-md) + var(--loyalty-banner-height-md))' : 
+              'var(--navbar-height-md)'};
+          }
+        }
+      `}</style>
     </div>
   );
 } 

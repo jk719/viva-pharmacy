@@ -20,6 +20,22 @@ const nextConfig = {
         hostname: 'res.cloudinary.com',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: process.env.S3_BUCKET_DOMAIN || 'vivapharmacy.s3.amazonaws.com',
+        pathname: '/prescriptions/**',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '3000',
+        pathname: '/**',
+      }
+    ],
+    domains: [
+      'res.cloudinary.com',
+      process.env.S3_BUCKET_DOMAIN || 'vivapharmacy.s3.amazonaws.com',
+      'localhost'
     ],
   },
   env: {
@@ -33,10 +49,14 @@ const nextConfig = {
         headers: [
           { key: 'Access-Control-Allow-Origin', value: '*' },
           { key: 'Access-Control-Allow-Methods', value: 'GET,DELETE,PATCH,POST,PUT,OPTIONS' },
-          { key: 'Access-Control-Allow-Headers', value: 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, stripe-signature' },
+          { key: 'Access-Control-Allow-Headers', value: 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, stripe-signature, X-Payment-Request-ID' },
           { key: 'Connection', value: 'keep-alive' },
           { key: 'Cache-Control', value: 'no-cache, no-transform' },
-          { key: 'X-Accel-Buffering', value: 'no' }
+          { key: 'X-Accel-Buffering', value: 'no' },
+          {
+            key: 'Access-Control-Max-Age',
+            value: '86400'
+          }
         ],
       },
       {
@@ -46,6 +66,19 @@ const nextConfig = {
             key: 'Cache-Control',
             value: 'public, max-age=31536000, immutable',
           },
+        ],
+      },
+      {
+        source: '/api/prescriptions/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, must-revalidate',
+          },
+          {
+            key: 'Content-Security-Policy',
+            value: "default-src 'self'; img-src 'self' https: data:;",
+          }
         ],
       },
     ];
@@ -111,6 +144,22 @@ const nextConfig = {
   },
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/rx/:path*',
+        destination: '/prescriptions/:path*',
+      },
+      {
+        source: '/prescriptions/verify/:id',
+        destination: '/api/prescriptions/verify/:id',
+      },
+      {
+        source: '/prescriptions/upload',
+        destination: '/api/prescriptions/upload',
+      }
+    ];
   },
 };
 

@@ -432,80 +432,36 @@ const useLoyaltyData = (session) => {
   };
 };
 
-// Replace the TierPointsDisplay component with this updated version
-const TierPointsDisplay = ({ currentTier, currentVivaBucks, animatePoints }) => (
-  <div className="flex items-center space-x-4 md:space-x-5 flex-1 z-10">
-    {/* Tier icon */}
-    <div className="flex md:flex items-center justify-center w-14 h-14 rounded-full relative shadow-sm">
-      <div className={`absolute inset-0 rounded-full bg-gradient-to-br ${TIER_COLORS[currentTier]?.bg || TIER_COLORS.BRONZE.bg} opacity-60`}></div>
-      <div className="relative z-20 scale-110">
-        {TIER_ICONS[currentTier] || TIER_ICONS.BRONZE}
-      </div>
-    </div>
-    
-    {/* Tier and points info */}
-    <div>
-      <motion.div 
-        className="flex items-center space-x-2"
-        animate={{ 
-          color: animatePoints ? '#FF6B00' : '#4B5563'
-        }}
-        transition={{ duration: 0.5 }}
-      >
-        <h3 className="text-sm md:text-base font-bold tracking-wider uppercase">
-          {currentTier}
-        </h3>
-        <span className="text-xs md:text-sm px-2 py-0.5 rounded-full text-white font-semibold"
-              style={{
-                background: "linear-gradient(135deg, #FF6B00, #FF9F43)"
-              }}>
-          {TIER_CONFIG[currentTier]?.multiplier || 1}x
-        </span>
-      </motion.div>
-      
-      {/* VivaBucks display with counter animation */}
-      <div className="flex items-baseline space-x-2 mt-1">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={`counter-${currentVivaBucks}`}
-            initial={{ opacity: 0.7, y: -5 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex items-center"
-          >
-            <div className="relative mr-1.5">
-              <FaCoins className={`h-5 w-5 ${animatePoints ? 'text-[#FFD700]' : 'text-[#FF6B00]'}`} />
-            </div>
-            <span className={`text-xl md:text-2xl font-extrabold transition-all duration-500 ${animatePoints ? 'text-[#FF6B00] scale-110' : 'text-gray-800'}`}>
-              <CounterAnimation value={currentVivaBucks} duration={1500} />
-            </span>
-          </motion.div>
-        </AnimatePresence>
-        <span className="text-xs text-gray-500">Points</span>
-      </div>
-    </div>
-  </div>
-);
-
-// Updated ProgressBar component to indicate what points are towards
-
-const ProgressBar = ({ nextTierName, progressPercent, pointsNeeded, progressBarRef, animatePoints }) => {
-  const currentPoints = useRef(0);
-  const totalPointsRef = useRef(0);
+// Update the ProgressBar component to use VivaBucks terminology
+const ProgressBar = ({ 
+  nextTierName, 
+  progressPercent, 
+  pointsNeeded, 
+  progressBarRef, 
+  animatePoints, 
+  isMobile,
+  currentPoints,
+  currentTier
+}) => {
   const [showLabels, setShowLabels] = useState(false);
+  const totalPointsRef = useRef(0);
+  const startingPointsRef = useRef(0);
   
-  // Calculate current points and total points needed for next tier
+  // Calculate tier thresholds
   useEffect(() => {
     if (pointsNeeded > 0) {
-      // If this isn't top tier, calculate points earned so far
-      const totalPointsForNextTier = Math.round(pointsNeeded / (1 - progressPercent / 100));
-      currentPoints.current = Math.round(totalPointsForNextTier - pointsNeeded);
-      totalPointsRef.current = totalPointsForNextTier;
+      // Calculate total points needed for next tier
+      const totalForNextTier = TIER_CONFIG[nextTierName]?.points || 0;
+      totalPointsRef.current = totalForNextTier;
+      
+      // Calculate starting points for current tier
+      startingPointsRef.current = TIER_CONFIG[currentTier]?.points || 0;
     } else {
-      // For max tier, just show they have enough points
-      currentPoints.current = "MAX";
-      totalPointsRef.current = currentPoints.current;
+      // For max tier, use the tier threshold
+      startingPointsRef.current = TIER_CONFIG[currentTier]?.points || 0;
+      totalPointsRef.current = startingPointsRef.current;
     }
-  }, [progressPercent, pointsNeeded]);
+  }, [pointsNeeded, nextTierName, currentTier]);
 
   // Show labels after a short delay to ensure smooth animations
   useEffect(() => {
@@ -521,15 +477,14 @@ const ProgressBar = ({ nextTierName, progressPercent, pointsNeeded, progressBarR
   const displayProgress = Math.max(progressPercent, (minProgressWidth / progressBarRef?.current?.offsetWidth || 300) * 100);
   
   return (
-    <div className="mt-2 md:mt-0 w-full md:w-auto md:flex-1 md:mx-6 max-w-md px-1 md:px-3 z-10">
-      {/* Header with Next tier label */}
-      <div className="flex justify-between items-center text-xs mb-1.5 text-gray-600">
-        <div className="flex items-center space-x-1.5">
-          <FaArrowUp className="text-[#FF6B00]" size={10} />
+    <div className={`${isMobile ? 'mt-1 w-full' : 'mt-2 md:mt-0 px-1 md:px-3 md:flex-1 md:mx-6'} max-w-md z-10`}>
+      {/* Header with Next tier and points needed info */}
+      <div className={`flex justify-between items-center ${isMobile ? 'mb-1 text-[9px]' : 'mb-1.5 text-xs'} text-gray-600`}>
+        <div className="flex items-center space-x-1">
+          <FaArrowUp className="text-[#FF6B00]" size={isMobile ? 8 : 10} />
           <span className="font-medium">Next: {nextTierName}</span>
         </div>
         
-        {/* Clearly indicate what points are towards */}
         <div className="text-gray-700 font-medium">
           {pointsNeeded > 0 ? (
             <span className="whitespace-nowrap flex items-center">
@@ -543,62 +498,141 @@ const ProgressBar = ({ nextTierName, progressPercent, pointsNeeded, progressBarR
         </div>
       </div>
       
-      {/* Modern progress bar container */}
+      {/* Progress bar container */}
       <div className="relative">
         {/* Start/End labels above progress bar */}
         {showLabels && (
-          <div className="flex justify-between items-center mb-1 px-1 text-xs">
-            <span className="text-gray-500">0</span>
-            <span className="text-gray-500">
+          <div className={`flex justify-between items-center ${isMobile ? 'mb-0.5 px-1' : 'mb-1 px-1'}`}>
+            <span className={`${isMobile ? 'text-[8px]' : 'text-xs'} text-gray-500`}>
+              {startingPointsRef.current.toLocaleString()}
+            </span>
+            <span className={`${isMobile ? 'text-[8px]' : 'text-xs'} text-gray-500`}>
               {typeof totalPointsRef.current === 'number' ? 
                 totalPointsRef.current.toLocaleString() : 'MAX'}
             </span>
           </div>
         )}
         
-        {/* Progress bar */}
+        {/* Progress bar - THICKER on mobile */}
         <div 
           ref={progressBarRef}
-          className="w-full bg-gray-100 rounded-full h-7 shadow-inner relative overflow-hidden border border-gray-200"
+          className={`w-full bg-gray-100 rounded-full ${isMobile ? 'h-6' : 'h-5'} shadow-md relative overflow-hidden border border-gray-200`}
+          style={isMobile ? { boxShadow: '0 2px 4px rgba(0,0,0,0.1)' } : {}}
         >
-          {/* Progress fill with gradient */}
+          {/* Progress fill with gradient - bolder gradient on mobile */}
           <div
             className="h-full rounded-full transition-all duration-700 relative"
             style={{
               width: `${Math.min(Math.max(displayProgress, 0), 100)}%`,
-              background: "linear-gradient(90deg, #FF8036, #FF6B00)",
+              background: isMobile 
+                ? "linear-gradient(90deg, #FF8036, #FF6B00)" 
+                : "linear-gradient(90deg, #FF8036, #FF6B00)",
+              boxShadow: isMobile ? 'inset 0 0 10px rgba(255,107,0,0.3)' : 'none'
             }}
           >
-            {/* Right-aligned point display inside orange area */}
+            {/* Right-aligned VivaBucks display inside orange area - larger on mobile */}
             {showLabels && (
-              <div className="absolute inset-y-0 right-0 flex items-center mr-3">
+              <div className={`absolute inset-y-0 right-0 flex items-center ${isMobile ? 'mr-2' : 'mr-3'}`}>
                 <div className="flex items-center">
-                  <span className="text-white font-bold text-sm">
-                    {typeof currentPoints.current === 'number' ? 
-                      <CounterAnimation value={currentPoints.current} duration={1500} /> :
-                      currentPoints.current
-                    }
+                  <span className={`text-white font-bold ${isMobile ? 'text-sm' : 'text-xs'}`}>
+                    {currentPoints.toLocaleString()}
                   </span>
                 </div>
               </div>
             )}
           </div>
           
-          {/* Add subtle tick marks for a modern design */}
+          {/* Tick marks - make more visible on mobile */}
           <div className="absolute inset-0 pointer-events-none">
-            <div className="h-full w-full flex justify-between px-6 opacity-20">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="h-full w-px bg-black"></div>
+            <div className={`h-full w-full flex justify-between px-6 ${isMobile ? 'opacity-30' : 'opacity-20'}`}>
+              {[...Array(isMobile ? 3 : 5)].map((_, i) => (
+                <div key={i} className={`h-full ${isMobile ? 'w-0.5' : 'w-px'} bg-black`}></div>
               ))}
             </div>
           </div>
         </div>
       </div>
+      
+      {/* Lifetime VivaBucks display - make more apparent on mobile */}
+      <div className={`flex justify-end ${isMobile ? 'mt-1 text-[9px] font-medium' : 'mt-1 text-xs'} ${isMobile ? 'text-gray-600' : 'text-gray-500'}`}>
+        <span>Lifetime: <span className={`${isMobile ? 'font-bold' : 'font-medium'}`}>{currentPoints.toLocaleString()}</span> VivaBucks</span>
+      </div>
     </div>
   );
 };
 
-// Loading component
+// Update TierPointsDisplay to show VivaBucks instead of Points and double the size with badges
+const TierPointsDisplay = ({ currentTier, currentVivaBucks, lifetimeVivaBucks, animatePoints, isMobile }) => (
+  <div className="flex items-center space-x-2 md:space-x-4 flex-1 z-10 scale-[2] origin-left transform mr-4 md:mr-8">
+    {/* Tier icon with larger size */}
+    <div className={`flex items-center justify-center ${isMobile ? 'w-8 h-8' : 'w-12 h-12'} rounded-full relative shadow-sm`}>
+      <div className={`absolute inset-0 rounded-full bg-gradient-to-br ${TIER_COLORS[currentTier]?.bg || TIER_COLORS.BRONZE.bg} opacity-60`}></div>
+      <div className={`relative z-20 ${isMobile ? 'scale-90' : 'scale-110'}`}>
+        {TIER_ICONS[currentTier] || TIER_ICONS.BRONZE}
+      </div>
+    </div>
+    
+    {/* Tier and VivaBucks info */}
+    <div>
+      <motion.div 
+        className="flex items-center space-x-1 md:space-x-2"
+        animate={{ color: animatePoints ? '#FF6B00' : '#4B5563' }}
+        transition={{ duration: 0.5 }}
+      >
+        <h3 className={`${isMobile ? 'text-xs' : 'text-sm md:text-base'} font-bold tracking-wider uppercase`}>
+          {currentTier}
+        </h3>
+        <span className={`${isMobile ? 'text-[10px] px-1.5 py-0.5' : 'text-xs md:text-sm px-2 py-0.5'} rounded-full text-white font-semibold`}
+              style={{ background: "linear-gradient(135deg, #FF6B00, #FF9F43)" }}>
+          {TIER_CONFIG[currentTier]?.multiplier || 1}x
+        </span>
+      </motion.div>
+      
+      {/* VivaBucks display with counter animation */}
+      <div className="flex items-baseline space-x-1 md:space-x-2 mt-0.5 md:mt-1">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={`counter-${currentVivaBucks}`}
+            initial={{ opacity: 0.7, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center"
+          >
+            <div className="relative mr-1 md:mr-1.5">
+              <FaCoins className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'} ${animatePoints ? 'text-[#FFD700]' : 'text-[#FF6B00]'}`} />
+            </div>
+            <span className={`${isMobile ? 'text-sm' : 'text-base md:text-xl'} font-extrabold transition-all duration-500 ${animatePoints ? 'text-[#FF6B00] scale-110' : 'text-gray-800'}`}>
+              <CounterAnimation value={currentVivaBucks} duration={1500} />
+            </span>
+          </motion.div>
+        </AnimatePresence>
+        <span className={`${isMobile ? 'text-[8px]' : 'text-xs'} text-gray-500`}>VivaBucks</span>
+      </div>
+
+      {/* Achievement Badges Row */}
+      <div className="flex space-x-1 md:space-x-2 mt-1 md:mt-2">
+        {/* First Purchase Badge */}
+        <div className={`${isMobile ? 'text-[6px] px-1 py-0.5' : 'text-[8px] px-1.5 py-0.5'} rounded-full bg-gradient-to-r from-green-400 to-green-500 text-white font-medium flex items-center`}>
+          <FaGift className={`${isMobile ? 'h-1.5 w-1.5' : 'h-2 w-2'} mr-0.5`} />
+          <span>First Purchase</span>
+        </div>
+        
+        {/* Loyal Customer Badge */}
+        <div className={`${isMobile ? 'text-[6px] px-1 py-0.5' : 'text-[8px] px-1.5 py-0.5'} rounded-full bg-gradient-to-r from-blue-400 to-blue-500 text-white font-medium flex items-center`}>
+          <IoMdStar className={`${isMobile ? 'h-1.5 w-1.5' : 'h-2 w-2'} mr-0.5`} />
+          <span>Loyal Customer</span>
+        </div>
+        
+        {/* Referral Badge */}
+        <div className={`${isMobile ? 'text-[6px] px-1 py-0.5' : 'text-[8px] px-1.5 py-0.5'} rounded-full bg-gradient-to-r from-purple-400 to-purple-500 text-white font-medium flex items-center`}>
+          <FaArrowUp className={`${isMobile ? 'h-1.5 w-1.5' : 'h-2 w-2'} mr-0.5`} />
+          <span>Referral Pro</span>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+// Update LoadingState to use VivaBucks
 const LoadingState = () => (
   <div className="text-center w-full py-2 flex flex-col justify-center items-center z-10">
     <motion.div
@@ -613,11 +647,11 @@ const LoadingState = () => (
     >
       <FaSpinner className="text-[#FF6B00] mb-2" size={28} />
     </motion.div>
-    <span className="text-xs text-gray-500">Loading rewards...</span>
+    <span className="text-xs text-gray-500">Loading VivaBucks rewards...</span>
   </div>
 );
 
-// Main component
+// Main component with reduced size for mobile
 export default function LoyaltyBanner() {
   const { data: session, status } = useSession();
   const [mounted, setMounted] = useState(false);
@@ -625,11 +659,7 @@ export default function LoyaltyBanner() {
   // Setup mounted state
   useEffect(() => {
     setMounted(true);
-    
-    // This helps with mobile initialization
-    return () => {
-      setMounted(false);
-    };
+    return () => setMounted(false);
   }, []);
 
   // Use our custom hook to manage loyalty data
@@ -665,46 +695,243 @@ export default function LoyaltyBanner() {
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className={`loyalty-banner py-3 px-4 md:px-6 flex flex-wrap justify-between items-center relative overflow-hidden ${isMobile ? 'h-auto pb-5' : 'md:h-[100px]'} border-b`}
+        className="loyalty-banner w-full py-1 md:py-2 px-2 md:px-6 relative overflow-hidden border-b"
         style={{
           background: "white",
           boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
-          borderBottom: "1px solid rgba(0,0,0,0.08)"
+          borderBottom: "1px solid rgba(0,0,0,0.08)",
+          minHeight: isMobile ? '70px' : '90px', // Reduced to ~75% on mobile
+          height: 'auto'
         }}
       >
         {/* Decorative background elements */}
-        <div className="absolute top-0 right-0 w-32 h-32 opacity-10 transform rotate-45 translate-x-12 -translate-y-12 z-0">
+        <div className={`absolute top-0 right-0 ${isMobile ? 'w-20 h-20' : 'w-32 h-32'} opacity-10 transform rotate-45 translate-x-12 -translate-y-12 z-0`}>
           <div className={`w-full h-full bg-gradient-to-br ${bannerAccentColor}`}></div>
         </div>
-        <div className="absolute bottom-0 left-0 w-24 h-24 opacity-10 transform -rotate-45 -translate-x-8 translate-y-8 z-0">
+        <div className={`absolute bottom-0 left-0 ${isMobile ? 'w-12 h-12' : 'w-24 h-24'} opacity-10 transform -rotate-45 -translate-x-8 translate-y-8 z-0`}>
           <div className={`w-full h-full bg-gradient-to-br ${bannerAccentColor}`}></div>
         </div>
 
         {userData ? (
-          <>
-            {/* Left section - Tier info and points */}
-            <TierPointsDisplay 
-              currentTier={currentTier}
-              currentVivaBucks={currentVivaBucks}
-              animatePoints={animatePoints}
-            />
+          <div className={`flex ${isMobile ? 'flex-col' : 'flex-row flex-wrap'} justify-between z-10 ${isMobile ? 'items-start' : 'items-center'}`}>
+            {/* Tier info section with smaller icon on mobile */}
+            <div className={`${isMobile ? 'w-full pb-1.5' : 'w-auto pr-4'}`}>
+              {/* Display tier and VivaBucks info */}
+              <div className="flex items-center">
+                {/* Tier icon - SMALLER on mobile */}
+                <div className={`flex items-center justify-center ${isMobile ? 'w-8 h-8' : 'w-14 h-14'} rounded-full relative shadow-sm ${isMobile ? 'mr-2' : 'mr-3'}`}>
+                  <div className={`absolute inset-0 rounded-full bg-gradient-to-br ${TIER_COLORS[currentTier]?.bg || TIER_COLORS.BRONZE.bg} opacity-60`}></div>
+                  <div className={`relative z-20 ${isMobile ? 'scale-75' : 'scale-110'}`}>
+                    {TIER_ICONS[currentTier] || TIER_ICONS.BRONZE}
+                  </div>
+                </div>
+                
+                {/* Tier and VivaBucks info - Compact on mobile */}
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <h3 className={`${isMobile ? 'text-xs' : 'text-base'} font-bold tracking-wider uppercase text-gray-700`}>
+                      {currentTier}
+                    </h3>
+                    <span className={`${isMobile ? 'text-[9px] px-1.5 py-0.5' : 'text-xs px-2 py-0.5'} rounded-full text-white font-semibold`}
+                          style={{ background: "linear-gradient(135deg, #FF6B00, #FF9F43)" }}>
+                      {TIER_CONFIG[currentTier]?.multiplier || 1}x
+                    </span>
+                  </div>
+                  
+                  {/* VivaBucks display - Smaller on mobile */}
+                  <div className="flex items-baseline space-x-2 mt-0.5">
+                    <div className="flex items-center">
+                      <div className="relative mr-1">
+                        <FaCoins className={`${isMobile ? 'h-3 w-3' : 'h-5 w-5'} text-[#FF6B00]`} />
+                      </div>
+                      <span className={`${isMobile ? 'text-base' : 'text-xl'} font-extrabold text-gray-800`}>
+                        <CounterAnimation value={currentVivaBucks} duration={1500} />
+                      </span>
+                    </div>
+                    <span className={`${isMobile ? 'text-[9px]' : 'text-xs'} text-gray-500`}>VivaBucks</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Horizontal Achievement Badges Row - More compact on mobile */}
+              <div className={`badges-container ${isMobile ? 'mt-1 ml-10' : 'mt-2 ml-15'}`}>
+                {/* Badge with Vector SVG: First Purchase */}
+                <div className="badge-container">
+                  <svg width="16" height="16" viewBox="0 0 24 24" className="badge-svg">
+                    <defs>
+                      <linearGradient id="badge1-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#4ade80" />
+                        <stop offset="100%" stopColor="#22c55e" />
+                      </linearGradient>
+                    </defs>
+                    <circle cx="12" cy="12" r="11" fill="url(#badge1-gradient)" />
+                    <path d="M12,6 L9,12 L5,12 L8,16 L7,20 L12,17 L17,20 L16,16 L19,12 L15,12 Z" 
+                         fill="white" stroke="white" strokeWidth="0.5" />
+                  </svg>
+                  <div className="badge-text">First Buy</div>
+                </div>
+                
+                {/* Badge with Vector SVG: Loyal Customer */}
+                <div className="badge-container">
+                  <svg width="16" height="16" viewBox="0 0 24 24" className="badge-svg">
+                    <defs>
+                      <linearGradient id="badge2-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#60a5fa" />
+                        <stop offset="100%" stopColor="#3b82f6" />
+                      </linearGradient>
+                    </defs>
+                    <circle cx="12" cy="12" r="11" fill="url(#badge2-gradient)" />
+                    <path d="M12,4 L14,10 L20,10 L15,14 L17,20 L12,16 L7,20 L9,14 L4,10 L10,10 Z" 
+                         fill="white" stroke="white" strokeWidth="0.5" />
+                  </svg>
+                  <div className="badge-text">Loyal</div>
+                </div>
+                
+                {/* Badge with Vector SVG: Referral Pro */}
+                <div className="badge-container">
+                  <svg width="16" height="16" viewBox="0 0 24 24" className="badge-svg">
+                    <defs>
+                      <linearGradient id="badge3-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#c084fc" />
+                        <stop offset="100%" stopColor="#a855f7" />
+                      </linearGradient>
+                    </defs>
+                    <circle cx="12" cy="12" r="11" fill="url(#badge3-gradient)" />
+                    <path d="M12,4 L12,16 M7,9 L12,4 L17,9" 
+                         fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                  <div className="badge-text">Referrer</div>
+                </div>
+              </div>
+            </div>
 
-            {/* Middle section - Progress bar */}
+            {/* Progress bar section - Reduced height on mobile */}
             {progressInfo && (
-              <ProgressBar 
-                nextTierName={nextTierName}
-                progressPercent={progressPercent}
-                pointsNeeded={pointsNeeded}
-                progressBarRef={progressBarRef}
-                animatePoints={animatePoints}
-              />
+              <div className={`${isMobile ? 'w-full' : 'flex-1 max-w-md'}`}>
+                {/* Compact progress bar header on mobile */}
+                <div className={`flex justify-between items-center ${isMobile ? 'text-[8px] mb-0.5' : 'text-xs mb-1.5'} text-gray-600`}>
+                  <div className="flex items-center space-x-1">
+                    <FaArrowUp className="text-[#FF6B00]" size={isMobile ? 8 : 12} />
+                    <span className="font-medium">Next: {nextTierName}</span>
+                  </div>
+                  
+                  <div className="text-gray-700 font-medium">
+                    {pointsNeeded > 0 ? (
+                      <span className="whitespace-nowrap flex items-center">
+                        <span>{pointsNeeded.toLocaleString()}</span>
+                        <span className="mx-1">more to</span>
+                        <span className="text-[#FF6B00] font-semibold">{nextTierName}</span>
+                      </span>
+                    ) : (
+                      <span className="text-[#FF6B00]">Max tier reached!</span>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="relative">
+                  {/* Smaller labels on mobile */}
+                  <div className={`flex justify-between items-center ${isMobile ? 'mb-0.5 px-1' : 'mb-1 px-1'}`}>
+                    <span className={`${isMobile ? 'text-[7px]' : 'text-xs'} text-gray-500`}>
+                      {TIER_CONFIG[currentTier]?.points.toLocaleString()}
+                    </span>
+                    <span className={`${isMobile ? 'text-[7px]' : 'text-xs'} text-gray-500`}>
+                      {TIER_CONFIG[nextTierName]?.points.toLocaleString() || 'MAX'}
+                    </span>
+                  </div>
+                  
+                  {/* Shorter progress bar on mobile */}
+                  <div 
+                    ref={progressBarRef}
+                    className={`w-full bg-gray-100 rounded-full ${isMobile ? 'h-4' : 'h-5'} shadow-md relative overflow-hidden border border-gray-200`}
+                    style={{ boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
+                  >
+                    <div
+                      className="h-full rounded-full transition-all duration-700 relative"
+                      style={{
+                        width: `${Math.min(Math.max(progressPercent, 0), 100)}%`,
+                        background: "linear-gradient(90deg, #FF8036, #FF6B00)",
+                        boxShadow: 'inset 0 0 10px rgba(255,107,0,0.3)'
+                      }}
+                    >
+                      <div className={`absolute inset-y-0 right-0 flex items-center ${isMobile ? 'mr-1.5' : 'mr-2'}`}>
+                        <div className="flex items-center">
+                          <span className={`text-white font-bold ${isMobile ? 'text-xs' : 'text-sm'}`}>
+                            {lifetimeVivaBucks.toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="absolute inset-0 pointer-events-none">
+                      <div className="h-full w-full flex justify-between px-6 opacity-30">
+                        {[...Array(5)].map((_, i) => (
+                          <div key={i} className="h-full w-0.5 bg-black"></div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* More compact lifetime display on mobile */}
+                <div className={`flex justify-end ${isMobile ? 'mt-0.5 text-[8px]' : 'mt-1 text-xs'} font-medium text-gray-600`}>
+                  <span>Lifetime: <span className="font-bold">{lifetimeVivaBucks.toLocaleString()}</span> VivaBucks</span>
+                </div>
+              </div>
             )}
-          </>
+          </div>
         ) : (
           <LoadingState />
         )}
       </motion.div>
       <HeaderHeightAdjuster />
+      
+      {/* Add the CSS for badges */}
+      <style jsx>{`
+        .badges-container {
+          display: flex;
+          flex-direction: row;
+          gap: 8px;
+        }
+        
+        .badge-container {
+          display: flex;
+          align-items: center;
+          background: rgba(255, 255, 255, 0.9);
+          border-radius: 12px;
+          padding: 2px 6px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          font-size: 9px;
+          font-weight: 500;
+          color: #4B5563;
+          white-space: nowrap;
+        }
+        
+        .badge-svg {
+          margin-right: 4px;
+          filter: drop-shadow(0 1px 1px rgba(0,0,0,0.1));
+        }
+        
+        .badge-text {
+          line-height: 1;
+        }
+        
+        @media (max-width: 768px) {
+          .badges-container {
+            gap: 4px;
+          }
+          
+          .badge-container {
+            padding: 1px 3px;
+            font-size: 7px;
+          }
+          
+          .badge-svg {
+            width: 12px;
+            height: 12px;
+            margin-right: 2px;
+          }
+        }
+      `}</style>
     </>
   );
 } 
