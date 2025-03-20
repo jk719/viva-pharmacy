@@ -8,7 +8,7 @@ import { useCategory } from '../context/CategoryContext';
 import { motion } from 'framer-motion';
 import { fetchProducts } from '@/lib/api';
 import toast from 'react-hot-toast';
-import SearchBar from '@/components/SearchBar';
+import HeroCarousel from '@/components/HeroCarousel';
 import { categories as categoryData } from '@/data/categories';
 
 export const dynamic = 'force-dynamic';
@@ -128,40 +128,17 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Hero Section with Search */}
-      <div className="relative bg-gradient-to-br from-blue-900 to-blue-700 py-12 sm:py-16">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.h1 
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4 text-white"
-          >
-            Your Health, Our Priority
-          </motion.h1>
-          <motion.p 
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="text-xl text-white/90 mb-8"
-          >
-            Browse our wide selection of pharmaceuticals and health products
-          </motion.p>
-          <SearchBar />
-        </div>
-      </div>
+      {/* New Hero Carousel - replacing the old hero section */}
+      <HeroCarousel />
 
       {/* Category Filter Buttons with Horizontal Scroll */}
       <div 
-        className="sticky z-40 bg-white border-y border-gray-100"
-        style={{
-          top: 'var(--total-header-height)',
-          marginTop: 0
-        }}
+        className="bg-white border-y border-gray-100"
       >
         <div className="container mx-auto">
           <div className="relative flex items-center overflow-x-auto scrollbar-hide">
             {/* All Products Button - Fixed Width */}
-            <div className="flex-none sticky left-0 z-10 bg-white/95 backdrop-blur-sm">
+            <div className="flex-none z-10 bg-white/95 backdrop-blur-sm">
               <button
                 key="all"
                 onClick={() => handleCategorySelect('all')}
@@ -170,7 +147,7 @@ export default function Home() {
                   text-sm font-medium
                   transition-all duration-200
                   ${selectedCategory === 'all'
-                    ? 'text-primary border-b-2 border-primary'
+                    ? 'text-primary sm:border-b-2 sm:border-primary bg-primary/5' 
                     : 'text-gray-600 hover:text-primary'
                   }
                 `}
@@ -190,7 +167,7 @@ export default function Home() {
                     text-sm font-medium
                     transition-all duration-200
                     ${selectedCategory === category.slug
-                      ? 'text-primary border-b-2 border-primary'
+                      ? 'text-primary sm:border-b-2 sm:border-primary bg-primary/5'
                       : 'text-gray-600 hover:text-primary'
                     }
                   `}

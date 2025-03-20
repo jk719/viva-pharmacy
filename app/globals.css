@@ -550,3 +550,16 @@ body {
     min-height: var(--loyalty-banner-height-md);
   }
 }
+
+/* Add this to the bottom of your globals.css file */
+.carousel-nav-dot {
+  width: 4px !important;
+  height: 4px !important;
+}
+
+@media (min-width: 640px) {
+  .carousel-nav-dot {
+    width: 6px !important;
+    height: 6px !important;
+  }
+}
