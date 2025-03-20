@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FaUpload, FaSpinner, FaCheck, FaCamera, FaUndo, FaCrop } from 'react-icons/fa';
+import { FaUpload, FaSpinner, FaCheck, FaCamera, FaUndo, FaCrop, FaMapMarkerAlt } from 'react-icons/fa';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
@@ -10,6 +10,7 @@ import { storage } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
 import { compressImage, validateImage, getCroppedImg } from '@/lib/imageUtils';
 import ImageEditor from './ImageEditor';
+import ShippingAddress from '@/components/checkout/ShippingAddress';
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 2000;
@@ -35,6 +36,30 @@ export default function PrescriptionUploadForm() {
   const [showImageEditor, setShowImageEditor] = useState(false);
   const [editingImage, setEditingImage] = useState(null);
   const [uploadController, setUploadController] = useState(null);
+  const [addressError, setAddressError] = useState(false);
+  const [selectedAddress, setSelectedAddress] = useState(null);
+  const [showAddressSelector, setShowAddressSelector] = useState(false);
+  const [addresses, setAddresses] = useState([]);
+
+  // Fetch user's addresses
+  useEffect(() => {
+    const fetchAddresses = async () => {
+      try {
+        const response = await fetch('/api/user/addresses');
+        const data = await response.json();
+        setAddresses(data.addresses || []);
+        
+        // If there's only one address, select it automatically
+        if (data.addresses?.length === 1) {
+          setSelectedAddress(data.addresses[0]);
+        }
+      } catch (error) {
+        console.error('Error fetching addresses:', error);
+      }
+    };
+
+    fetchAddresses();
+  }, []);
 
   const handleImageChange = async (e) => {
     const file = e.target.files[0];
@@ -146,23 +171,30 @@ export default function PrescriptionUploadForm() {
       return;
     }
 
+    if (!selectedAddress) {
+      toast.error('Please select a delivery address');
+      setShowAddressSelector(true);
+      return;
+    }
+
     setLoading(true);
     const loadingToast = toast.loading('Uploading prescription...');
 
     try {
-      // Upload to Firebase with retry logic
       const downloadURL = await uploadToFirebase(image);
 
-      // Send to your API
-      const response = await fetch('/api/prescriptions/upload', {
+      const formData = new FormData();
+      formData.append('prescriptionImage', downloadURL);
+      formData.append('details', JSON.stringify({
+        doctorName: prescriptionDetails.doctorName,
+        doctorContact: prescriptionDetails.doctorContact,
+        pharmacy: prescriptionDetails.pharmacy
+      }));
+
+      // Send to the correct endpoint
+      const response = await fetch('/api/prescriptions', {  // Changed back to original endpoint
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          prescriptionImage: downloadURL,
-          details: prescriptionDetails
-        })
+        body: formData // Use FormData instead of JSON
       });
 
       const data = await response.json();
@@ -206,6 +238,11 @@ export default function PrescriptionUploadForm() {
     }
   }, [uploadController]);
 
+  const handleAddressSelect = (address) => {
+    setSelectedAddress(address);
+    setShowAddressSelector(false);
+  };
+
   return (
     <motion.form
       onSubmit={handleSubmit}
@@ -213,6 +250,18 @@ export default function PrescriptionUploadForm() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
     >
+      {addressError && (
+        <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg">
+          <p>Please add a shipping address to your profile before uploading a prescription.</p>
+          <button
+            onClick={() => router.push('/profile/edit?redirect=prescriptions')}
+            className="text-red-700 underline mt-2"
+          >
+            Add Shipping Address
+          </button>
+        </div>
+      )}
+
       {/* Image Upload Section */}
       <div className="mb-6">
         <label className="block text-lg font-semibold mb-4">
@@ -297,6 +346,53 @@ export default function PrescriptionUploadForm() {
           </div>
         </div>
       )}
+
+      {/* Address Selection Section */}
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold mb-4">Delivery Address</h3>
+        
+        {selectedAddress ? (
+          <div className="border rounded-lg p-4 mb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-semibold">{selectedAddress.fullName}</p>
+                <p className="text-gray-600">{selectedAddress.street}</p>
+                <p className="text-gray-600">
+                  {selectedAddress.city}, {selectedAddress.state} {selectedAddress.zipCode}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddressSelector(true)}
+                className="text-primary hover:text-primary/80"
+              >
+                Change
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowAddressSelector(true)}
+            className="w-full py-2 px-4 border-2 border-dashed border-gray-300 rounded-lg
+                     hover:border-primary/60 transition-colors flex items-center justify-center gap-2"
+          >
+            <FaMapMarkerAlt />
+            Select Delivery Address
+          </button>
+        )}
+
+        {showAddressSelector && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <ShippingAddress
+                onAddressSelect={handleAddressSelect}
+                initialAddresses={addresses}
+              />
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Prescription Details */}
       <div className="space-y-4">

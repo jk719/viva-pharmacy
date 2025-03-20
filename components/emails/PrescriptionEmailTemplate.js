@@ -4,20 +4,23 @@ import {
   Container,
   Head,
   Heading,
+  Hr,
   Html,
   Link,
   Preview,
   Section,
-  Text
+  Text,
+  Img,
 } from '@react-email/components';
-import { format } from 'date-fns';
+import { Tailwind } from '@react-email/tailwind';
+
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
 export default function PrescriptionEmailTemplate({
   name,
   status,
   prescriptionId,
   note,
-  verifiedBy
 }) {
   const previewText = `Your prescription has been ${status}`;
 
@@ -25,115 +28,81 @@ export default function PrescriptionEmailTemplate({
     <Html>
       <Head />
       <Preview>{previewText}</Preview>
-      <Body style={styles.body}>
-        <Container style={styles.container}>
-          <Section style={styles.logoSection}>
-            <img
-              src={`${process.env.NEXT_PUBLIC_APP_URL}/images/viva-online-logo.png`}
-              alt="VIVA Pharmacy"
-              width="200"
-              height="50"
-            />
-          </Section>
+      <Tailwind>
+        <Body className="bg-gray-100 font-sans">
+          <Container className="mx-auto p-8 max-w-[600px]">
+            <Section className="bg-white rounded-xl shadow-sm p-8">
+              {/* Logo */}
+              <Img
+                src={`${baseUrl}/images/viva-online-logo.png`}
+                alt="VIVA Pharmacy"
+                width="200"
+                height="50"
+                className="mx-auto mb-8"
+              />
 
-          <Heading style={styles.heading}>
-            Prescription {status === 'verified' ? 'Approved' : 'Update Required'}
-          </Heading>
+              {/* Status Header */}
+              <Heading className="text-2xl font-bold text-gray-800 mb-4">
+                Prescription {status === 'verified' ? 'Approved' : 'Update Required'}
+              </Heading>
 
-          <Text style={styles.text}>
-            Hello {name},
-          </Text>
-
-          {status === 'verified' ? (
-            <>
-              <Text style={styles.text}>
-                Great news! Your prescription has been verified by our pharmacist.
-                You can now proceed with the checkout process to get your
-                medication delivered.
+              {/* Greeting */}
+              <Text className="text-gray-700 mb-4">
+                Hello {name},
               </Text>
 
-              <Button
-                href={`${process.env.NEXT_PUBLIC_APP_URL}/prescriptions/checkout/${prescriptionId}`}
-                style={styles.button}
-              >
-                Proceed to Checkout
-              </Button>
-            </>
-          ) : (
-            <Text style={styles.text}>
-              Our pharmacist has reviewed your prescription and requires some
-              additional information or clarification:
-              <br /><br />
-              {note}
-              <br /><br />
-              Please contact us at {process.env.PHARMACY_PHONE} or reply to this
-              email for assistance.
-            </Text>
-          )}
+              {/* Main Content */}
+              {status === 'verified' ? (
+                <>
+                  <Text className="text-gray-700 mb-6">
+                    Great news! Your prescription has been verified by our pharmacist.
+                    You can now proceed with the checkout process to get your
+                    medication delivered.
+                  </Text>
 
-          <Section style={styles.footer}>
-            <Text style={styles.footerText}>
-              If you have any questions, please don't hesitate to contact us:
-            </Text>
-            <Text style={styles.footerText}>
-              Phone: {process.env.PHARMACY_PHONE}
-              <br />
-              Email: {process.env.PHARMACY_EMAIL}
-            </Text>
-          </Section>
-        </Container>
-      </Body>
+                  <Button
+                    href={`${baseUrl}/prescriptions/checkout/${prescriptionId}`}
+                    className="bg-[#FF9F43] text-white px-6 py-3 rounded-lg font-semibold"
+                  >
+                    Proceed to Checkout
+                  </Button>
+                </>
+              ) : (
+                <Text className="text-gray-700 mb-6">
+                  Our pharmacist has reviewed your prescription and requires some
+                  additional information or clarification:
+                  <br /><br />
+                  {note}
+                  <br /><br />
+                  Please contact us at {process.env.PHARMACY_PHONE} or reply to this
+                  email for assistance.
+                </Text>
+              )}
+
+              {/* Footer */}
+              <Hr className="border-gray-200 my-8" />
+              
+              <Section className="text-gray-600 text-sm">
+                <Text className="mb-4">
+                  If you have any questions, please don't hesitate to contact us:
+                </Text>
+                <Text className="mb-2">
+                  Phone: {process.env.PHARMACY_PHONE}
+                </Text>
+                <Text className="mb-2">
+                  Email: {process.env.PHARMACY_EMAIL}
+                </Text>
+              </Section>
+
+              {/* Additional Info */}
+              <Text className="text-xs text-gray-500 mt-8">
+                This email was sent from VIVA Pharmacy. Please do not reply directly
+                to this email.
+              </Text>
+            </Section>
+          </Container>
+        </Body>
+      </Tailwind>
     </Html>
   );
-}
-
-const styles = {
-  body: {
-    backgroundColor: '#f6f9fc',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-  },
-  container: {
-    margin: '0 auto',
-    padding: '20px 0 48px',
-    maxWidth: '560px'
-  },
-  logoSection: {
-    padding: '20px 0'
-  },
-  heading: {
-    fontSize: '24px',
-    letterSpacing: '-0.5px',
-    lineHeight: '1.3',
-    fontWeight: '400',
-    color: '#484848',
-    padding: '17px 0 0'
-  },
-  text: {
-    margin: '0 0 10px',
-    color: '#484848',
-    fontSize: '16px',
-    lineHeight: '24px'
-  },
-  button: {
-    backgroundColor: '#FF9F43',
-    borderRadius: '5px',
-    color: '#fff',
-    fontSize: '16px',
-    fontWeight: 'bold',
-    textDecoration: 'none',
-    textAlign: 'center',
-    display: 'block',
-    padding: '12px 20px',
-    margin: '20px 0'
-  },
-  footer: {
-    borderTop: '1px solid #ddd',
-    marginTop: '20px',
-    paddingTop: '20px'
-  },
-  footerText: {
-    fontSize: '14px',
-    color: '#666',
-    margin: '0 0 10px'
-  }
-}; 
+} 
