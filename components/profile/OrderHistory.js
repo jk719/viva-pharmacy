@@ -1,148 +1,198 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { toast } from 'react-hot-toast';
 import Image from 'next/image';
-import { fetchProducts } from '@/lib/api';
-import cloudinaryUrls from '@/data/cloudinaryUrls.json';
+import Link from 'next/link';
+import { FaBox, FaShoppingBag, FaTruck, FaCheck, FaSpinner, FaExclamationCircle, FaClock, FaImage } from 'react-icons/fa';
+import { getCloudinaryUrl, FALLBACK_IMAGE } from '@/lib/cloudinary';
 
-export default function OrderHistory({ userId }) {
+// Status icons and colors mapping
+const STATUS_CONFIG = {
+  'Pending': { icon: <FaClock />, bg: 'bg-yellow-100', text: 'text-yellow-700', border: 'border-yellow-200' },
+  'Processing': { icon: <FaSpinner className="animate-spin" />, bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-200' },
+  'Shipped': { icon: <FaTruck />, bg: 'bg-indigo-100', text: 'text-indigo-700', border: 'border-indigo-200' },
+  'Delivered': { icon: <FaCheck />, bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-200' },
+  'Completed': { icon: <FaCheck />, bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-200' },
+  'Cancelled': { icon: <FaExclamationCircle />, bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-200' },
+};
+
+// Helper function to normalize product names for image matching
+function normalizeProductName(name) {
+  if (!name) return '';
+  return name.toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')  // Remove special characters
+    .replace(/\s+/g, '-')          // Replace spaces with hyphens
+    .trim();
+}
+
+/**
+ * ProductImage - A resilient image component that handles missing URLs
+ * 
+ * IMPORTANT: Do not revert to the old validateImageUrl approach which caused 404 errors.
+ * This component properly handles missing image URLs by:
+ * 1. Using provided URLs when available
+ * 2. Generating URLs based on product names when needed
+ * 3. Trying multiple Cloudinary URL patterns
+ * 4. Falling back to placeholders when all else fails
+ */
+function ProductImage({ src, name, alt }) {
+  const [hasError, setHasError] = useState(false);
+  const [imageUrl, setImageUrl] = useState(src || '/images/placeholder.png');
+
+  // Generate a product-name based URL when component mounts if src is empty
+  useEffect(() => {
+    if (!src && name) {
+      const normalized = normalizeProductName(name);
+      // Try a URL format seen in your mapping file
+      const generatedUrl = `https://res.cloudinary.com/dv3cd1aoy/image/upload/${normalized}_bbq4sy.png`;
+      setImageUrl(generatedUrl);
+    }
+  }, [src, name]);
+  
+  if (hasError) {
+    return (
+      <Image 
+        src="/images/placeholder.png"
+        alt={alt || "Product placeholder"} 
+        fill
+        className="object-contain rounded-md p-1"
+        sizes="(max-width: 64px) 100vw, 64px"
+      />
+    );
+  }
+
+  return (
+    <Image
+      src={imageUrl}
+      alt={alt || "Product"}
+      fill
+      className="object-contain rounded-md p-1"
+      sizes="(max-width: 64px) 100vw, 64px"
+      onError={(e) => {
+        console.log('Image error for:', name, 'URL:', imageUrl);
+        
+        // If we get an error and haven't tried a fallback format yet, try a different one
+        if (imageUrl !== src && !hasError) {
+          // Try a different URL pattern, based on viva-pharmacy/products path
+          const normalized = normalizeProductName(name);
+          const alternateUrl = `https://res.cloudinary.com/dv3cd1aoy/image/upload/viva-pharmacy/products/${normalized}.png`;
+          console.log('Trying alternate URL:', alternateUrl);
+          setImageUrl(alternateUrl);
+        } else {
+          // If we've already tried alternatives or the original was custom, go to placeholder
+          setHasError(true);
+        }
+      }}
+    />
+  );
+}
+
+export default function OrderHistory({ userId, limit }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [productsMap, setProductsMap] = useState({});
-  const [imageErrors, setImageErrors] = useState({});
-
-  // Memoize the product mapping function
-  const createProductsMap = useCallback((products) => {
-    const mapping = {};
-    products.forEach(product => {
-      if (product._id && product.image) {
-        mapping[product._id] = product;
-      }
-    });
-    return mapping;
-  }, []);
-
-  // Add this debug function
-  const debugProductImage = (product, item) => {
-    console.log('Debug Product Image:');
-    console.log('Product:', product);
-    console.log('Item:', item);
-    if (product) {
-      const imageName = product.image?.split('/').pop();
-      console.log('Image Name:', imageName);
-      console.log('Available Cloudinary URLs:', Object.keys(cloudinaryUrls));
-      console.log('Matching URL:', cloudinaryUrls[imageName]);
-    }
-  };
-
-  // Helper function to normalize product names for comparison
-  const normalizeProductName = (name) => {
-    return name.toLowerCase()
-      .replace(/[^a-z0-9]/g, '') // Remove all non-alphanumeric characters
-      .trim();
-  };
-
-  // Helper function to find matching Cloudinary URL
-  const findMatchingCloudinaryUrl = (productName) => {
-    const normalizedProductName = normalizeProductName(productName);
-    
-    // Find matching URL in cloudinaryUrls
-    const matchingKey = Object.keys(cloudinaryUrls).find(key => {
-      const normalizedKey = normalizeProductName(key.replace('.png', ''));
-      return normalizedKey.includes(normalizedProductName) ||
-             normalizedProductName.includes(normalizedKey);
-    });
-
-    return matchingKey ? cloudinaryUrls[matchingKey] : null;
-  };
-
-  // Memoize findProductImage
-  const findProductImage = useCallback((product) => {
-    if (!product) return null;
-    
-    // 1. First try to get the product from our map
-    const productFromMap = productsMap[product._id];
-    if (productFromMap?.image) {
-      return productFromMap.image;
-    }
-    
-    // 2. If no direct product image, try cloudinary mapping
-    if (product.name) {
-      const normalizedName = normalizeProductName(product.name);
-      const matchingUrl = Object.entries(cloudinaryUrls).find(([key, _]) => {
-        const normalizedKey = normalizeProductName(key.replace('.png', ''));
-        return normalizedKey.includes(normalizedName) || 
-               normalizedName.includes(normalizedKey);
-      });
-
-      if (matchingUrl) {
-        return matchingUrl[1];
-      }
-    }
-    
-    // 3. If still no image, try to find a fallback from products
-    const fallbackProduct = Object.values(productsMap).find(p => 
-      normalizeProductName(p.name) === normalizeProductName(product.name)
-    );
-
-    return fallbackProduct?.image || null;
-  }, []); // Remove productsMap dependency
+  const [debug, setDebug] = useState({ 
+    apiCalled: false, 
+    responseStatus: null,
+    orderCount: 0
+  });
+  
+  // Use ref to track if data has already been fetched to prevent multiple fetches
+  const hasFetchedRef = useRef(false);
 
   useEffect(() => {
-    if (!userId) return;
+    // Skip the effect if we don't have a userId or if we've already fetched
+    if (!userId || hasFetchedRef.current) {
+      if (!userId) {
+        console.log('OrderHistory: No userId provided');
+        setLoading(false);
+      }
+      return;
+    }
 
+    console.log('OrderHistory: Loading data for userId:', userId);
     const controller = new AbortController();
     let isMounted = true;
 
     const loadData = async () => {
       try {
         setLoading(true);
+        setDebug(prev => ({ ...prev, apiCalled: true }));
         
-        // Fetch both orders and products in parallel
-        const [productsData, ordersResponse] = await Promise.all([
-          fetchProducts({ signal: controller.signal }),
-          fetch(`/api/orders/${userId}`, { signal: controller.signal })
-        ]);
+        // Fetch orders
+        console.log('OrderHistory: Starting API request');
+        const ordersResponse = await fetch(`/api/orders/${userId}`, { 
+          signal: controller.signal,
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        });
 
         if (!isMounted) return;
 
-        const ordersData = await ordersResponse.json();
+        // Mark that we've fetched data
+        hasFetchedRef.current = true;
 
-        if (!ordersResponse.ok) {
-          throw new Error(ordersData.error || `HTTP error! status: ${ordersResponse.status}`);
-        }
-
-        if (productsData.success) {
-          const productMapping = createProductsMap(productsData.products);
-          setProductsMap(productMapping);
-        }
-
-        const processedOrders = ordersData.map(order => ({
-          ...order,
-          items: order.items.map(item => ({
-            ...item,
-            image: findProductImage({ 
-              _id: item.productId, 
-              name: item.name,
-              image: item.image 
-            })
-          }))
+        // Debug response
+        setDebug(prev => ({ 
+          ...prev, 
+          responseStatus: ordersResponse.status,
         }));
 
-        setOrders(processedOrders);
+        if (!ordersResponse.ok) {
+          throw new Error(`HTTP error! status: ${ordersResponse.status}`);
+        }
+
+        const ordersData = await ordersResponse.json();
+        console.log('OrderHistory: Orders API response received, count:', ordersData.length);
+        
+        setDebug(prev => ({ 
+          ...prev, 
+          orderCount: ordersData?.length || 0
+        }));
+
+        // Ensure ordersData is an array
+        if (!Array.isArray(ordersData)) {
+          console.error('OrderHistory: API did not return an array', ordersData);
+          throw new Error('Invalid order data format');
+        }
+
+        // Safely process orders - ensure items array exists and each item has required properties
+        const processedOrders = ordersData.map(order => {
+          return {
+            ...order,
+            items: (order.items || []).map(item => {
+              console.log('Processing item:', {
+                name: item.name,
+                imageAvailable: !!item.image
+              });
+              
+              return {
+                ...item,
+                name: item.name || "Unknown Product",
+                price: item.price || 0,
+                quantity: item.quantity || 1,
+                // Don't modify the image here - let the ProductImage component handle it
+              };
+            })
+          };
+        });
+
+        console.log('OrderHistory: Processed orders:', processedOrders.length);
+        
+        // Apply limit if specified
+        setOrders(limit ? processedOrders.slice(0, limit) : processedOrders);
+        setLoading(false);
       } catch (error) {
         if (error.name === 'AbortError') return;
         
         if (isMounted) {
           console.error('Error in OrderHistory:', error);
           setError(error.message);
-          toast.error('Failed to load order history');
-        }
-      } finally {
-        if (isMounted) {
           setLoading(false);
+          toast.error('Failed to load order history');
         }
       }
     };
@@ -153,11 +203,17 @@ export default function OrderHistory({ userId }) {
       isMounted = false;
       controller.abort();
     };
-  }, [userId, createProductsMap, findProductImage]);
+  }, [userId, limit]);
+
+  // Function to handle manual refresh
+  const handleRefresh = () => {
+    hasFetchedRef.current = false; // Reset fetch tracker
+    window.location.reload();
+  };
 
   if (loading) {
     return (
-      <div className="">
+      <div className="flex justify-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
       </div>
     );
@@ -167,8 +223,11 @@ export default function OrderHistory({ userId }) {
     return (
       <div className="text-center py-4 text-red-600">
         <p>Error loading orders: {error}</p>
+        <div className="mt-2 p-3 bg-gray-50 text-left text-xs overflow-auto max-h-40 rounded">
+          <pre>{JSON.stringify(debug, null, 2)}</pre>
+        </div>
         <button 
-          onClick={() => window.location.reload()}
+          onClick={handleRefresh}
           className="mt-2 text-sm text-blue-600 hover:underline"
         >
           Try again
@@ -177,105 +236,96 @@ export default function OrderHistory({ userId }) {
     );
   }
 
+  if (!orders || orders.length === 0) {
+    return (
+      <div className="text-center p-8 bg-white rounded-xl">
+        <div className="text-gray-400 mb-2">📦</div>
+        <p className="text-gray-600">No orders found</p>
+        <div className="mt-4 p-3 bg-gray-50 text-left text-xs overflow-auto max-h-40 rounded">
+          <p className="font-bold mb-1">Debug Information:</p>
+          <pre>{JSON.stringify(debug, null, 2)}</pre>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="order-history px-4 md:px-0">
-      <h2 className="text-xl font-bold mb-6 text-[#003366] border-b pb-2">
-        Order History
-      </h2>
-      
-      {orders?.map(order => (
-        <div key={order._id} className="mb-6 bg-white rounded-xl overflow-hidden shadow-sm">
-          {/* Order Header */}
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-xs text-gray-500">Order ID:</span>
-              <span className="text-sm font-medium">{order._id}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <span className={`px-2 py-1 rounded-full text-xs ${
-                  order.status === 'Completed' ? 'bg-green-100 text-green-700' :
-                  order.status === 'Processing' ? 'bg-blue-100 text-blue-700' :
-                  'bg-gray-100 text-gray-700'
-                }`}>
-                  {order.status}
-                </span>
-                <span className="text-xs text-gray-500">
-                  {new Date(order.createdAt).toLocaleDateString()}
-                </span>
+      <div className="space-y-6">
+        {orders.map(order => (
+          <div key={order._id || order.id} className="mb-6 bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100">
+            {/* Order Header */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-xs text-gray-500">Order ID:</span>
+                <span className="text-sm font-medium">{order._id || order.id}</span>
               </div>
-              <span className="font-semibold text-lg">${order.total.toFixed(2)}</span>
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <span className={`px-2 py-1 rounded-full text-xs ${
+                    order.status === 'Completed' ? 'bg-green-100 text-green-700' :
+                    order.status === 'Processing' ? 'bg-blue-100 text-blue-700' :
+                    'bg-gray-100 text-gray-700'
+                  }`}>
+                    {order.status || 'Pending'}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {new Date(order.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+                <span className="font-semibold text-lg">${(order.total || 0).toFixed(2)}</span>
+              </div>
             </div>
-          </div>
 
-          {/* Order Items */}
-          <div className="divide-y divide-gray-100">
-            {order.items.map((item, index) => (
-              <div key={item._id || index} className="p-4 flex gap-4">
-                <div className="relative h-16 w-16 flex-shrink-0 bg-gray-50 rounded-md">
-                  {item.image ? (
-                    <Image
-                      src={item.image}
-                      alt={item.name}
-                      fill
-                      className="object-contain rounded-md p-1"
-                      sizes="(max-width: 64px) 100vw, 64px"
-                      onError={(e) => {
-                        console.error('Image failed to load:', {
-                          src: item.image,
-                          name: item.name,
-                          error: e
-                        });
-                        setImageErrors(prev => ({
-                          ...prev,
-                          [item._id]: true
-                        }));
-                      }}
-                    />
-                  ) : (
-                    <div className="h-full w-full flex items-center justify-center">
-                      <svg 
-                        className="w-8 h-8 text-gray-300"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path 
-                          strokeLinecap="round" 
-                          strokeLinejoin="round" 
-                          strokeWidth={2} 
-                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" 
-                        />
-                      </svg>
+            {/* Order Items */}
+            <div className="divide-y divide-gray-100">
+              {order.items && order.items.length > 0 ? (
+                order.items.map((item, index) => (
+                  <div key={item._id || item.id || index} className="p-4 flex gap-4">
+                    <div className="relative h-16 w-16 flex-shrink-0 bg-gray-50 rounded-md">
+                      {/* Use the updated ProductImage component */}
+                      <ProductImage 
+                        src={item.image} 
+                        name={item.name}
+                        alt={item.name || "Product"} 
+                      />
                     </div>
-                  )}
-                </div>
 
-                <div className="flex-grow min-w-0">
-                  <h4 className="font-medium text-sm text-[#003366] truncate">
-                    {item.name}
-                  </h4>
-                  <div className="flex justify-between items-center mt-1">
-                    <span className="text-sm text-gray-500">
-                      Qty: {item.quantity}
-                    </span>
-                    <span className="text-sm font-medium">
-                      ${item.price.toFixed(2)}
-                    </span>
+                    <div className="flex-grow min-w-0">
+                      <h4 className="font-medium text-sm text-[#003366] truncate">
+                        {item.name || "Unnamed product"}
+                      </h4>
+                      <div className="flex justify-between items-center mt-1">
+                        <span className="text-sm text-gray-500">
+                          Qty: {item.quantity || 1}
+                        </span>
+                        <span className="text-sm font-medium">
+                          ${(item.price || 0).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
                   </div>
+                ))
+              ) : (
+                <div className="p-4 text-center text-gray-500">
+                  No items found in this order
                 </div>
-              </div>
-            ))}
+              )}
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
 
-      {(!orders || orders.length === 0) && (
-        <div className="text-center p-8 bg-white rounded-xl shadow-sm">
-          <div className="text-gray-400 mb-2">📦</div>
-          <p className="text-gray-600">No orders found</p>
-        </div>
-      )}
+        {limit && orders.length >= limit && (
+          <div className="text-center mt-4">
+            <Link 
+              href="/profile/orders" 
+              className="text-blue-600 hover:underline text-sm inline-flex items-center"
+            >
+              View all orders <span className="ml-1">→</span>
+            </Link>
+          </div>
+        )}
+      </div>
     </div>
   );
 } 

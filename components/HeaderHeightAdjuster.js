@@ -1,8 +1,13 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 export default function HeaderHeightAdjuster() {
+  // Store previous heights to compare and only log when they change
+  const prevHeightsRef = useRef({ navbarHeight: 0, loyaltyHeight: 0, totalHeight: 0 });
+  const observerRef = useRef(null);
+  const updateTimeoutRef = useRef(null);
+
   useEffect(() => {
     const updateHeights = () => {
       const navbar = document.querySelector('.viva-navbar');
@@ -14,37 +19,63 @@ export default function HeaderHeightAdjuster() {
       const loyaltyHeight = loyaltyBanner.offsetHeight;
       const totalHeight = navbarHeight + loyaltyHeight;
       
-      document.documentElement.style.setProperty('--navbar-height', `${navbarHeight}px`);
-      document.documentElement.style.setProperty('--loyalty-banner-height', `${loyaltyHeight}px`);
-      document.documentElement.style.setProperty('--total-header-height', `${totalHeight}px`);
+      // Get previous heights
+      const prevHeights = prevHeightsRef.current;
       
-      if (window.matchMedia('(min-width: 768px)').matches) {
-        document.documentElement.style.setProperty('--navbar-height-md', `${navbarHeight}px`);
-        document.documentElement.style.setProperty('--loyalty-banner-height-md', `${loyaltyHeight}px`);
-        document.documentElement.style.setProperty('--total-header-height-md', `${totalHeight}px`);
+      // Only update CSS variables and log if heights have changed
+      if (
+        prevHeights.navbarHeight !== navbarHeight || 
+        prevHeights.loyaltyHeight !== loyaltyHeight || 
+        prevHeights.totalHeight !== totalHeight
+      ) {
+        // Update CSS variables
+        document.documentElement.style.setProperty('--navbar-height', `${navbarHeight}px`);
+        document.documentElement.style.setProperty('--loyalty-banner-height', `${loyaltyHeight}px`);
+        document.documentElement.style.setProperty('--total-header-height', `${totalHeight}px`);
+        
+        if (window.matchMedia('(min-width: 768px)').matches) {
+          document.documentElement.style.setProperty('--navbar-height-md', `${navbarHeight}px`);
+          document.documentElement.style.setProperty('--loyalty-banner-height-md', `${loyaltyHeight}px`);
+          document.documentElement.style.setProperty('--total-header-height-md', `${totalHeight}px`);
+        }
+        
+        // Only log when heights actually change
+        console.log('Heights updated:', {
+          navbarHeight,
+          loyaltyHeight,
+          totalHeight
+        });
+        
+        // Update ref with new values
+        prevHeightsRef.current = { navbarHeight, loyaltyHeight, totalHeight };
       }
-      
-      console.log('Heights updated:', {
-        navbarHeight,
-        loyaltyHeight,
-        totalHeight
-      });
     };
     
-    // Run once on mount
-    setTimeout(updateHeights, 100); // Small delay to ensure DOM is ready
+    // Debounced update function to prevent too many frequent updates
+    const debouncedUpdate = () => {
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+      }
+      updateTimeoutRef.current = setTimeout(updateHeights, 100);
+    };
     
-    // Update on resize
-    window.addEventListener('resize', updateHeights);
+    // Run once on mount with a small delay
+    setTimeout(updateHeights, 100); 
     
-    // Add a MutationObserver to watch for DOM changes in the header
+    // Update on resize - use debounced version
+    window.addEventListener('resize', debouncedUpdate);
+    
+    // Clean up any existing observer
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+    }
+    
+    // Add a MutationObserver with debouncing to prevent excessive updates
     const header = document.querySelector('header');
     if (header) {
-      const observer = new MutationObserver(() => {
-        setTimeout(updateHeights, 50);
-      });
+      observerRef.current = new MutationObserver(debouncedUpdate);
       
-      observer.observe(header, { 
+      observerRef.current.observe(header, { 
         subtree: true, 
         childList: true,
         attributes: true,
@@ -57,12 +88,15 @@ export default function HeaderHeightAdjuster() {
     
     // Cleanup
     return () => {
-      window.removeEventListener('resize', updateHeights);
+      window.removeEventListener('resize', debouncedUpdate);
       window.removeEventListener('load', updateHeights);
       
-      if (header) {
-        const observer = new MutationObserver(() => {});
-        observer.disconnect();
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+      }
+      
+      if (observerRef.current) {
+        observerRef.current.disconnect();
       }
     };
   }, []);

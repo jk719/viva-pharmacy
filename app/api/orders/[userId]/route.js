@@ -68,10 +68,49 @@ export async function GET(request) {
             .sort({ createdAt: -1 })
             .lean(); // Convert to plain JavaScript objects
 
-        console.log('API: Found orders count:', orders.length);
+        // Enhance orders with image URLs if missing
+        const enhancedOrders = await Promise.all(orders.map(async (order) => {
+            // Process each item in the order to ensure it has an image
+            if (order.items && order.items.length > 0) {
+                const enhancedItems = await Promise.all(order.items.map(async (item) => {
+                    // If item already has an image, use it
+                    if (item.image) return item;
+                    
+                    try {
+                        // Try to find the product in the database to get its image
+                        const product = await mongoose.models.Product.findOne({ 
+                            _id: item.productId
+                        }).lean();
+                        
+                        if (product) {
+                            return {
+                                ...item,
+                                image: product.imageUrl || product.cloudinaryPublicId ? 
+                                    `https://res.cloudinary.com/dv3cd1aoy/image/upload/${product.cloudinaryPublicId}.png` : 
+                                    null
+                            };
+                        }
+                        
+                        return item;
+                    } catch (err) {
+                        console.error('Error enhancing order item image:', err);
+                        return item;
+                    }
+                }));
+                
+                return {
+                    ...order,
+                    items: enhancedItems
+                };
+            }
+            
+            return order;
+        }));
+
+        console.log('API: Found orders count:', enhancedOrders.length);
 
         // 7. Debug: If no orders found, check for any orders in the system
-        if (orders.length === 0) {
+        if (enhancedOrders.length === 0) {
             const totalOrders = await Order.countDocuments();
             const sampleOrder = await Order.findOne();
             console.log('API: Debug - Total orders in system:', totalOrders);
@@ -87,7 +126,7 @@ export async function GET(request) {
 
         // 8. Return response
         return new Response(
-            JSON.stringify(orders), 
+            JSON.stringify(enhancedOrders), 
             { 
                 status: 200,
                 headers: {

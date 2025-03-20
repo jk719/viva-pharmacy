@@ -3,72 +3,74 @@
 import { useSession } from "next-auth/react";
 import { useState, useEffect, useRef } from 'react';
 import { 
-  FaCrown, FaMedal, FaGem, FaSpinner, FaSync, FaStar, FaTrophy, FaCoins, FaAngleRight
+  FaCoins,
+  FaGift,
+  FaSpinner,
+  FaArrowUp,
+  FaCrown,
+  FaGem
 } from 'react-icons/fa';
+import { 
+  IoMdRibbon,
+  IoMdStar,
+  IoMdTrophy,
+  IoIosFlash,
+  IoIosRocket
+} from 'react-icons/io';
 import { Events, eventEmitter } from '@/lib/eventEmitter';
 import { TIER_CONFIG } from '@/lib/loyalty/tierConfig';
 import { calculateProgressToNextTier } from '@/lib/loyalty/loyaltyCalculator';
-import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import HeaderHeightAdjuster from '@/components/HeaderHeightAdjuster';
+import Link from 'next/link';
 
-// Modern tier icons with consistent styling
+// Tier Colors Configuration
+const TIER_COLORS = {
+  BRONZE: { icon: 'text-amber-600', bg: 'from-amber-100 to-amber-300' },
+  SILVER: { icon: 'text-slate-500', bg: 'from-slate-100 to-slate-300' },
+  GOLD: { icon: 'text-yellow-500', bg: 'from-yellow-100 to-yellow-300' },
+  PLATINUM: { icon: 'text-cyan-600', bg: 'from-cyan-100 to-cyan-300' },
+  SAPPHIRE: { icon: 'text-blue-600', bg: 'from-blue-100 to-blue-300' },
+  DIAMOND: { icon: 'text-indigo-600', bg: 'from-indigo-100 to-indigo-300' },
+  LEGEND: { icon: 'text-violet-600', bg: 'from-violet-100 to-violet-300' }
+};
+
+// Component for Tier Icon with Background
+const TierIcon = ({ tier, iconClass, children }) => (
+  <div className="relative flex items-center justify-center">
+    <div className={`absolute inset-0 rounded-full bg-gradient-to-br ${TIER_COLORS[tier]?.bg || TIER_COLORS.BRONZE.bg} opacity-60`}></div>
+    {children || <div className={`${iconClass} w-7 h-7 relative z-10`} />}
+  </div>
+);
+
+// Tier Icons Configuration
 const TIER_ICONS = {
-  BRONZE: <FaMedal className="text-[#CD7F32] w-6 h-6" />,
-  SILVER: <FaStar className="text-[#C0C0C0] w-6 h-6" />,
-  GOLD: <FaTrophy className="text-[#FFD700] w-6 h-6" />,
-  PLATINUM: <FaGem className="text-[#E5E4E2] w-6 h-6" />,
-  SAPPHIRE: <FaGem className="text-[#0F52BA] w-6 h-6" />,
-  DIAMOND: <FaGem className="text-[#B9F2FF] w-6 h-6" />,
-  LEGEND: <FaCrown className="text-[#FFD700] w-6 h-6" />
+  BRONZE: <TierIcon tier="BRONZE"><IoMdRibbon className={`${TIER_COLORS.BRONZE.icon} w-7 h-7 relative z-10`} /></TierIcon>,
+  SILVER: <TierIcon tier="SILVER"><IoMdStar className={`${TIER_COLORS.SILVER.icon} w-7 h-7 relative z-10`} /></TierIcon>,
+  GOLD: <TierIcon tier="GOLD"><IoMdTrophy className={`${TIER_COLORS.GOLD.icon} w-7 h-7 relative z-10`} /></TierIcon>,
+  PLATINUM: <TierIcon tier="PLATINUM"><IoIosFlash className={`${TIER_COLORS.PLATINUM.icon} w-7 h-7 relative z-10`} /></TierIcon>,
+  SAPPHIRE: <TierIcon tier="SAPPHIRE"><IoIosRocket className={`${TIER_COLORS.SAPPHIRE.icon} w-7 h-7 relative z-10`} /></TierIcon>,
+  DIAMOND: <TierIcon tier="DIAMOND"><FaGem className={`${TIER_COLORS.DIAMOND.icon} w-7 h-7 relative z-10`} /></TierIcon>,
+  LEGEND: <TierIcon tier="LEGEND"><FaCrown className={`${TIER_COLORS.LEGEND.icon} w-7 h-7 relative z-10`} /></TierIcon>
 };
 
-// Tier background gradients for visual appeal
-const TIER_GRADIENTS = {
-  BRONZE: "from-amber-600 to-amber-800",
-  SILVER: "from-gray-300 to-gray-500",
-  GOLD: "from-yellow-400 to-yellow-600",
-  PLATINUM: "from-gray-100 to-gray-300",
-  SAPPHIRE: "from-blue-400 to-blue-600",
-  DIAMOND: "from-purple-400 to-purple-600",
-  LEGEND: "from-red-400 to-red-600",
-};
-
-export default function LoyaltyBanner() {
-  const { data: session, status } = useSession();
-  const [mounted, setMounted] = useState(false);
-  const progressBarRef = useRef(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+// Hook for loyalty data fetching and state management
+const useLoyaltyData = (session) => {
   const [userData, setUserData] = useState(null);
   const [progressInfo, setProgressInfo] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(Date.now());
   const [animatePoints, setAnimatePoints] = useState(false);
+  
   const pollingIntervalRef = useRef(null);
   const paymentEventTimeoutRef = useRef(null);
   const isFirstLoadRef = useRef(true);
   const previousPointsRef = useRef(null);
-  
-  // Set mounted state
-  useEffect(() => {
-    setMounted(true);
-    return () => {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-      }
-      if (paymentEventTimeoutRef.current) {
-        clearTimeout(paymentEventTimeoutRef.current);
-      }
-    };
-  }, []);
+  const progressBarRef = useRef(null);
 
   // Function to fetch user data using fetch directly with no-store
-  const fetchUserDataFresh = async (showRefreshIndicator = false) => {
+  const fetchUserDataFresh = async () => {
     if (!session?.user?.id) return null;
-    
-    if (showRefreshIndicator) {
-      setIsRefreshing(true);
-    }
     
     try {
       // Build URL with cache-busting parameters
@@ -109,19 +111,6 @@ export default function LoyaltyBanner() {
       ) {
         // Points have changed, trigger animation
         setAnimatePoints(true);
-        // Log the difference
-        console.log('🎯 Points updated:', {
-          vivaBucks: {
-            previous: previousPointsRef.current.vivaBucks,
-            current: data.vivaBucks,
-            difference: data.vivaBucks - previousPointsRef.current.vivaBucks
-          },
-          cumulativePoints: {
-            previous: previousPointsRef.current.cumulativePoints,
-            current: data.cumulativePoints,
-            difference: data.cumulativePoints - previousPointsRef.current.cumulativePoints
-          }
-        });
         
         // Animate progress bar
         if (progressBarRef.current) {
@@ -146,7 +135,6 @@ export default function LoyaltyBanner() {
       return null;
     } finally {
       setIsLoading(false);
-      setIsRefreshing(false);
       
       // Reset animation after a delay
       if (animatePoints) {
@@ -156,13 +144,8 @@ export default function LoyaltyBanner() {
   };
 
   // Function to update user data and progress info
-  const updateUserData = async (forceFetch = false) => {
-    // Skip if already refreshing or if refresh was requested within the last 2 seconds (unless forced)
-    if (isRefreshing || (!forceFetch && Date.now() - lastUpdated < 2000)) {
-      return;
-    }
-    
-    const data = await fetchUserDataFresh(forceFetch);
+  const updateUserData = async () => {
+    const data = await fetchUserDataFresh();
     if (!data) return;
     
     // Update user data
@@ -182,22 +165,21 @@ export default function LoyaltyBanner() {
   // Initial data fetch when session is available
   useEffect(() => {
     if (session?.user?.id) {
-      updateUserData(true);
+      updateUserData();
     }
   }, [session]);
 
-  // Set up aggressive polling interval to check for updates
+  // Set up polling interval
   useEffect(() => {
     if (!session?.user?.id) return;
     
     // Initial load
-    updateUserData(true);
+    updateUserData();
     
-    // Set up interval with a random delay to avoid request clustering
-    const randomDelay = Math.floor(Math.random() * 1000) + 2000; // 2-3 seconds
+    // Set up interval - 30 seconds
     pollingIntervalRef.current = setInterval(() => {
       updateUserData();
-    }, randomDelay);
+    }, 30000);
     
     return () => {
       if (pollingIntervalRef.current) {
@@ -219,26 +201,18 @@ export default function LoyaltyBanner() {
 
   // Listen for payment events
   useEffect(() => {
-    const handlePaymentComplete = (data) => {
-      console.log('💰 Payment completed event detected in LoyaltyBanner:', data);
-      
+    const handlePaymentComplete = () => {
       // Force immediate update
-      updateUserData(true);
+      updateUserData();
       
-      // Schedule multiple follow-up refreshes to ensure we catch the update
-      // as it may take time for the database to be updated
+      // Schedule a follow-up refresh after a delay
       if (paymentEventTimeoutRef.current) {
         clearTimeout(paymentEventTimeoutRef.current);
       }
       
       paymentEventTimeoutRef.current = setTimeout(() => {
-        updateUserData(true);
-        
-        // Try again after a bit more time if needed
-        paymentEventTimeoutRef.current = setTimeout(() => {
-          updateUserData(true);
-        }, 3000);
-      }, 2000);
+        updateUserData();
+      }, 3000);
     };
 
     eventEmitter.on(Events.PAYMENT_COMPLETED, handlePaymentComplete);
@@ -250,10 +224,176 @@ export default function LoyaltyBanner() {
     };
   }, []);
 
-  // Manual refresh handler
-  const handleManualRefresh = () => {
-    updateUserData(true);
+  return {
+    userData,
+    progressInfo,
+    isLoading,
+    animatePoints,
+    progressBarRef
   };
+};
+
+// Subcomponent for the tier and points display
+const TierPointsDisplay = ({ currentTier, currentVivaBucks, animatePoints }) => (
+  <div className="flex items-center space-x-4 md:space-x-5 flex-1 z-10">
+    {/* Tier icon */}
+    <div className="flex md:flex items-center justify-center w-14 h-14 rounded-full relative shadow-sm">
+      <div className={`absolute inset-0 rounded-full bg-gradient-to-br ${TIER_COLORS[currentTier]?.bg || TIER_COLORS.BRONZE.bg} opacity-60`}></div>
+      <div className="relative z-20 scale-110">
+        {TIER_ICONS[currentTier] || TIER_ICONS.BRONZE}
+      </div>
+    </div>
+    
+    {/* Tier and points info */}
+    <div>
+      <motion.div 
+        className="flex items-center space-x-2"
+        animate={{ 
+          color: animatePoints ? '#FF6B00' : '#4B5563'
+        }}
+        transition={{ duration: 0.5 }}
+      >
+        <h3 className="text-sm md:text-base font-bold tracking-wider uppercase">
+          {currentTier}
+        </h3>
+        <span className="text-xs md:text-sm px-2 py-0.5 rounded-full text-white font-semibold"
+              style={{
+                background: "linear-gradient(135deg, #FF6B00, #FF9F43)"
+              }}>
+          {TIER_CONFIG[currentTier]?.multiplier || 1}x
+        </span>
+      </motion.div>
+      
+      {/* VivaBucks display with animation */}
+      <div className="flex items-baseline space-x-2 mt-1">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentVivaBucks}
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="flex items-center"
+          >
+            <div className="relative mr-1.5">
+              <FaCoins className={`h-5 w-5 ${animatePoints ? 'text-[#FFD700]' : 'text-[#FF6B00]'}`} />
+            </div>
+            <span className={`text-xl md:text-2xl font-extrabold transition-all duration-500 ${animatePoints ? 'text-[#FF6B00] scale-110' : 'text-gray-800'}`}>
+              {currentVivaBucks.toLocaleString()}
+            </span>
+          </motion.div>
+        </AnimatePresence>
+        <span className="text-xs text-gray-500">Points</span>
+      </div>
+    </div>
+  </div>
+);
+
+// Subcomponent for the progress bar
+const ProgressBar = ({ nextTierName, progressPercent, pointsNeeded, progressBarRef }) => (
+  <div className="mt-2 md:mt-0 w-full md:w-auto md:flex-1 md:mx-6 max-w-md px-1 md:px-3 z-10">
+    {/* Progress label - simplified */}
+    <div className="flex justify-between items-center text-xs mb-1.5 text-gray-600">
+      <div className="flex items-center space-x-1.5">
+        <FaArrowUp className="text-[#FF6B00]" size={10} />
+        <span>Next: {nextTierName}</span>
+      </div>
+    </div>
+    
+    {/* Progress bar */}
+    <div 
+      ref={progressBarRef}
+      className="w-full bg-gray-100 rounded-full h-5 shadow-inner relative overflow-hidden"
+    >
+      <motion.div
+        initial={{ width: '0%' }}
+        animate={{ width: `${Math.min(Math.max(progressPercent, 0), 100)}%` }}
+        transition={{ type: "spring", stiffness: 50, damping: 15 }}
+        className="h-full rounded-full overflow-hidden"
+        style={{
+          background: "linear-gradient(90deg, #FF6B00, #FF9F43)"
+        }}
+      >
+        <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
+      </motion.div>
+    </div>
+    
+    {/* Bottom info - simplified */}
+    <div className="text-xs mt-1.5 flex justify-between items-center">
+      <div className="text-gray-600">
+        {pointsNeeded > 0 ? (
+          <span className="whitespace-nowrap">{pointsNeeded.toLocaleString()} more points</span>
+        ) : (
+          <span className="text-[#FF6B00] font-medium">Max tier!</span>
+        )}
+      </div>
+    </div>
+  </div>
+);
+
+// Subcomponent for the rewards display
+const RewardsDisplay = ({ couponCount, totalCouponValue }) => (
+  <div className="flex items-center z-10 ml-auto mt-2 md:mt-0">
+    <Link href="/profile/rewards" className="no-underline">
+      {couponCount > 0 ? (
+        <div className="bg-blue-50 px-3 py-2 rounded-lg border border-blue-100 hover:bg-blue-100 transition-colors">
+          <div className="flex items-center text-blue-800">
+            <FaGift className="mr-1.5 text-blue-500" />
+            <span className="font-medium text-sm">
+              ${totalCouponValue} reward
+            </span>
+          </div>
+          <div className="text-xs text-blue-600 mt-0.5">
+            {couponCount} coupon{couponCount > 1 ? 's' : ''} available
+          </div>
+        </div>
+      ) : (
+        <div className="text-sm text-gray-500 flex items-center px-3 py-2 hover:bg-gray-50 rounded-lg transition-colors">
+          <FaGift className="mr-1.5 text-gray-400" />
+          <span>No rewards yet</span>
+        </div>
+      )}
+    </Link>
+  </div>
+);
+
+// Loading component
+const LoadingState = () => (
+  <div className="text-center w-full py-2 flex flex-col justify-center items-center z-10">
+    <motion.div
+      animate={{ 
+        rotate: 360
+      }}
+      transition={{ 
+        duration: 2, 
+        repeat: Infinity, 
+        ease: "linear" 
+      }}
+    >
+      <FaSpinner className="text-[#FF6B00] mb-2" size={28} />
+    </motion.div>
+    <span className="text-xs text-gray-500">Loading rewards...</span>
+  </div>
+);
+
+// Main component
+export default function LoyaltyBanner() {
+  const { data: session, status } = useSession();
+  const [mounted, setMounted] = useState(false);
+  
+  // Setup mounted state
+  useEffect(() => {
+    setMounted(true);
+    return () => {};
+  }, []);
+
+  // Use our custom hook to manage loyalty data
+  const { 
+    userData,
+    progressInfo,
+    isLoading, 
+    animatePoints,
+    progressBarRef
+  } = useLoyaltyData(session);
 
   if (!mounted || status === "loading" || !session) return null;
 
@@ -262,12 +402,18 @@ export default function LoyaltyBanner() {
   const lifetimeVivaBucks = userData?.cumulativePoints ?? 0;
   const currentTier = userData?.currentTier || 'BRONZE';
   
+  // Get available coupons
+  const availableCoupons = userData?.coupons?.filter(c => !c.isUsed) || [];
+  const couponCount = availableCoupons.length;
+  const totalCouponValue = availableCoupons.reduce((total, coupon) => total + (coupon.amount || 0), 0);
+  
   // Get progress data with fallbacks
   const nextTierName = progressInfo?.nextTier ?? 'SILVER';
   const progressPercent = progressInfo?.progress ?? 0;
   const pointsNeeded = progressInfo?.pointsNeeded ?? 0;
-  const currentPoints = progressInfo?.currentPoints ?? lifetimeVivaBucks;
-  const pointsThreshold = progressInfo?.pointsThreshold ?? (TIER_CONFIG[nextTierName]?.points || 1000);
+
+  // Get banner accent color
+  const bannerAccentColor = TIER_COLORS[currentTier]?.bg || TIER_COLORS.BRONZE.bg;
 
   return (
     <>
@@ -275,148 +421,48 @@ export default function LoyaltyBanner() {
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="loyalty-banner bg-gradient-to-r from-blue-900 to-blue-800 text-white py-2 px-4 md:px-6 flex flex-wrap justify-between items-center shadow-md"
+        className="loyalty-banner py-3 px-4 md:px-6 flex flex-wrap justify-between items-center relative overflow-hidden h-auto md:h-[100px] border-b"
+        style={{
+          background: "white",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+          borderBottom: "1px solid rgba(0,0,0,0.08)"
+        }}
       >
+        {/* Decorative background elements */}
+        <div className="absolute top-0 right-0 w-32 h-32 opacity-10 transform rotate-45 translate-x-12 -translate-y-12 z-0">
+          <div className={`w-full h-full bg-gradient-to-br ${bannerAccentColor}`}></div>
+        </div>
+        <div className="absolute bottom-0 left-0 w-24 h-24 opacity-10 transform -rotate-45 -translate-x-8 translate-y-8 z-0">
+          <div className={`w-full h-full bg-gradient-to-br ${bannerAccentColor}`}></div>
+        </div>
+
         {userData ? (
           <>
-            <div className="flex items-center space-x-3 md:space-x-4">
-              <div className="hidden md:flex items-center justify-center w-12 h-12 bg-gradient-to-r from-blue-800 to-blue-700 rounded-full shadow-inner p-2">
-                {TIER_ICONS[currentTier] || TIER_ICONS.BRONZE}
-              </div>
-              <div>
-                <motion.h3 
-                  className="text-xs md:text-sm font-bold tracking-wider uppercase"
-                  animate={{ color: animatePoints ? '#FFD700' : '#ffffff' }}
-                  transition={{ duration: 0.5 }}
-                >
-                  {currentTier} MEMBER
-                </motion.h3>
-                <div className="flex items-baseline space-x-2">
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key={currentVivaBucks}
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 10 }}
-                      className="flex items-center"
-                    >
-                      <FaCoins className={`mr-1 h-4 w-4 ${animatePoints ? 'text-yellow-300' : 'text-yellow-400'}`} />
-                      <span className={`text-lg md:text-xl font-bold transition-all duration-500 ${animatePoints ? 'text-yellow-300 scale-110' : ''}`}>
-                        {currentVivaBucks.toLocaleString()}
-                      </span>
-                    </motion.div>
-                  </AnimatePresence>
-                  <span className="text-xs text-blue-200">Available</span>
-                </div>
-                <div className="flex items-baseline space-x-2">
-                  <AnimatePresence mode="wait">
-                    <motion.span 
-                      key={lifetimeVivaBucks}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className={`text-sm md:text-base font-medium transition-all duration-500 ${animatePoints ? 'text-yellow-300' : ''}`}
-                    >
-                      {lifetimeVivaBucks.toLocaleString()}
-                    </motion.span>
-                  </AnimatePresence>
-                  <span className="text-xs text-blue-200">Lifetime</span>
-                </div>
-              </div>
-            </div>
+            {/* Left section - Tier info and points */}
+            <TierPointsDisplay 
+              currentTier={currentTier}
+              currentVivaBucks={currentVivaBucks}
+              animatePoints={animatePoints}
+            />
 
+            {/* Middle section - Progress bar */}
             {progressInfo && (
-              <div className="mt-2 md:mt-0 w-full md:w-auto md:flex-1 md:mx-6 max-w-sm">
-                {/* On mobile, simplify the display */}
-                <div className="md:flex justify-between text-xs mb-1 text-blue-200 hidden">
-                  <span className="flex items-center">
-                    Progress to {nextTierName}
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      className="ml-1"
-                    >
-                      {TIER_ICONS[nextTierName]}
-                    </motion.div>
-                  </span>
-                  <AnimatePresence mode="wait">
-                    <motion.span
-                      key={`${currentPoints}-${pointsThreshold}`}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                    >
-                      {currentPoints.toLocaleString()} / {pointsThreshold.toLocaleString()}
-                    </motion.span>
-                  </AnimatePresence>
-                </div>
-                
-                {/* Mobile version - just show a shorter description */}
-                <div className="flex md:hidden text-xs mb-1 text-blue-200 justify-between">
-                  <span>To {nextTierName}: {currentPoints.toLocaleString()}/{pointsThreshold.toLocaleString()}</span>
-                </div>
-                
-                <div 
-                  ref={progressBarRef}
-                  className="w-full bg-blue-900/80 rounded-full h-4 p-0.5 shadow-inner"
-                >
-                  <motion.div
-                    initial={{ width: '0%' }}
-                    animate={{ width: `${Math.min(Math.max(progressPercent, 0), 100)}%` }}
-                    transition={{ type: "spring", stiffness: 50, damping: 15 }}
-                    className={`h-full relative rounded-full overflow-hidden bg-gradient-to-r ${animatePoints ? 'from-orange-400 to-orange-500' : 'from-orange-500 to-orange-600'} transition-all duration-300`}
-                  >
-                    {/* Shimmer effect inside progress bar */}
-                    <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer"></div>
-                  </motion.div>
-                </div>
-                <div className="text-xs mt-1 text-blue-200 flex justify-between items-center">
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key={pointsNeeded}
-                      initial={{ opacity: 0, x: -5 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 5 }}
-                      className="flex items-center"
-                    >
-                      <span>{pointsNeeded.toLocaleString()} more needed</span>
-                    </motion.div>
-                  </AnimatePresence>
-                  
-                  {/* Multiplier badge */}
-                  <div className="hidden md:flex items-center bg-blue-800/70 rounded-full px-2 py-0.5 text-xs">
-                    <FaCoins className="w-3 h-3 text-yellow-400 mr-1" />
-                    <span className="font-medium">{TIER_CONFIG[currentTier]?.multiplier || 1}x Multiplier</span>
-                  </div>
-                </div>
-              </div>
+              <ProgressBar 
+                nextTierName={nextTierName}
+                progressPercent={progressPercent}
+                pointsNeeded={pointsNeeded}
+                progressBarRef={progressBarRef}
+              />
             )}
 
-            <div className="flex items-center space-x-2">
-              <motion.button
-                whileHover={{ scale: 1.05, rotate: 180 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleManualRefresh}
-                disabled={isRefreshing}
-                className="bg-white/10 hover:bg-white/20 p-2 rounded-full transition-colors text-white shadow-lg"
-                title="Refresh points"
-              >
-                <FaSync className={isRefreshing ? "animate-spin" : ""} size={16} />
-              </motion.button>
-              <Link
-                href="/profile/rewards"
-                className="hidden md:flex items-center bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 px-4 py-2 rounded-full text-sm transition-all duration-300 shadow-lg font-medium"
-              >
-                <span>View Rewards</span>
-                <FaAngleRight className="ml-1" />
-              </Link>
-            </div>
+            {/* Right section - Available rewards */}
+            <RewardsDisplay 
+              couponCount={couponCount}
+              totalCouponValue={totalCouponValue}
+            />
           </>
         ) : (
-          <div className="text-center w-full py-2 flex flex-col justify-center items-center">
-            <FaSpinner className="animate-spin text-white mb-2" size={24} />
-            <span className="text-xs text-blue-200">Loading rewards...</span>
-          </div>
+          <LoadingState />
         )}
       </motion.div>
       <HeaderHeightAdjuster />
