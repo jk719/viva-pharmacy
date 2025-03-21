@@ -1,0 +1,34 @@
+model PrescriptionDelivery {
+  id              String      @id @default(cuid())
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  paymentIntentId String      @unique
+  userId          String?     // Optional, for guest checkouts
+  status          String      // PENDING, CONFIRMED, IN_TRANSIT, DELIVERED
+  deliverySpeed   String
+  amount          Int
+  address         Address     @relation(fields: [addressId], references: [id])
+  addressId       String
+  contact         Contact     @relation(fields: [contactId], references: [id])
+  contactId       String
+
+  @@index([userId])
+  @@index([status])
+}
+
+model Address {
+  id        String    @id @default(cuid())
+  street    String
+  apartment String?
+  city      String
+  state     String
+  zipCode   String
+  deliveries PrescriptionDelivery[]
+}
+
+model Contact {
+  id        String    @id @default(cuid())
+  name      String
+  phone     String
+  deliveries PrescriptionDelivery[]
+} 

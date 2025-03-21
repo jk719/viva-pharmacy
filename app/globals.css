@@ -563,3 +563,98 @@ body {
     height: 6px !important;
   }
 }
+
+/* Add these modal-specific styles */
+.modal-content {
+  scrollbar-width: thin;
+  scrollbar-color: #D1D5DB transparent;
+  -webkit-overflow-scrolling: touch;
+}
+
+.modal-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.modal-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+  background-color: #D1D5DB;
+  border-radius: 2px;
+}
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  .modal-content {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Optimize form inputs for mobile */
+  .modal-form-group {
+    margin-bottom: 1rem;
+  }
+
+  .modal-input,
+  .modal-select {
+    font-size: 16px !important; /* Prevents iOS zoom */
+    padding: 0.75rem;
+    height: 48px;
+  }
+
+  /* Optimize buttons for mobile */
+  .modal-button {
+    height: 48px;
+    padding: 0.75rem 1rem;
+  }
+}
+
+/* Add smooth scroll behavior */
+.modal-scroll-container {
+  scroll-behavior: smooth;
+}
+
+/* Add these custom scrollbar styles */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #D1D5DB transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #D1D5DB;
+  border-radius: 2px;
+}
+
+/* Add these modal-specific styles */
+@media (max-width: 640px) {
+  .custom-scrollbar {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Optimize form spacing */
+.form-section {
+  @apply space-y-4;
+}
+
+.form-section:not(:last-child) {
+  @apply mb-6;
+}
+
+/* Optimize input heights */
+.form-input {
+  @apply h-11 sm:h-12;
+}
+
+/* Optimize delivery options grid */
+.delivery-options-grid {
+  @apply grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4;
+}

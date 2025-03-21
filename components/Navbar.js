@@ -12,7 +12,8 @@ import { useSession, signIn } from "next-auth/react";
 import { motion } from "framer-motion";
 import { FiSettings } from 'react-icons/fi';
 import { toast } from "react-hot-toast";
-import { FaPrescription } from 'react-icons/fa';
+import { FaPrescription, FaTruck, FaCreditCard } from 'react-icons/fa';
+import PrescriptionDeliveryModal from './PrescriptionDeliveryModal';
 
 const AdminDashboardButton = ({ isMobile = false }) => (
   <motion.div
@@ -52,6 +53,7 @@ export default function Navbar() {
   const searchParams = useSearchParams();
   const [showLogin, setShowLogin] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [showDeliveryModal, setShowDeliveryModal] = useState(false);
 
   // Memoize session check
   const isAdmin = useMemo(() => {
@@ -90,24 +92,41 @@ export default function Navbar() {
   }, [mounted, searchParams, session]);
 
   // Add prescription link component
-  const PrescriptionButton = ({ isMobile = false }) => (
-    <motion.div
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-    >
-      <Link 
-        href="/prescriptions"
+  const PrescriptionButtons = ({ isMobile = false }) => (
+    <div className="flex items-center gap-2">
+      <motion.div
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+      >
+        <Link 
+          href="/prescriptions"
+          className={`flex items-center gap-1  
+                     bg-primary rounded-lg hover:bg-primary/90 
+                     transition-all duration-300 shadow-md
+                     ${isMobile ? 'px-2 py-1.5 text-xs' : 'px-4 py-2'}`}
+        >
+          <FaPrescription className={`text-white ${isMobile ? 'w-3 h-3' : 'w-4 h-4'}`} />
+          <span className="font-medium text-white">
+            {isMobile ? 'Rx' : 'Fill & Refill Prescriptions'}
+          </span>
+        </Link>
+      </motion.div>
+      
+      <motion.button
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        onClick={() => setShowDeliveryModal(true)}
         className={`flex items-center gap-1  
-                   bg-primary rounded-lg hover:bg-primary/90 
+                   bg-green-600 rounded-lg hover:bg-green-700 
                    transition-all duration-300 shadow-md
                    ${isMobile ? 'px-2 py-1.5 text-xs' : 'px-4 py-2'}`}
       >
-        <FaPrescription className={`text-white ${isMobile ? 'w-3 h-3' : 'w-4 h-4'}`} />
+        <FaTruck className={`text-white ${isMobile ? 'w-3 h-3' : 'w-4 h-4'}`} />
         <span className="font-medium text-white">
-          {isMobile ? 'Rx' : 'Prescription Delivery'}
+          {isMobile ? 'Pay Rx' : 'Pay for Delivery'}
         </span>
-      </Link>
-    </motion.div>
+      </motion.button>
+    </div>
   );
 
   return (
@@ -135,7 +154,7 @@ export default function Navbar() {
               </Link>
               
               <div className="flex items-center gap-3">
-                <PrescriptionButton isMobile />
+                <PrescriptionButtons isMobile />
                 {isAdmin && <AdminDashboardButton isMobile />}
                 <Link href="/cart" className="relative flex items-center">
                   <ClientCartIcon />
@@ -166,7 +185,7 @@ export default function Navbar() {
             </Link>
 
             <div className="flex items-center gap-6">
-              <PrescriptionButton />
+              <PrescriptionButtons />
               {isAdmin && <AdminDashboardButton />}
               <Link href="/cart" className="relative flex items-center">
                 <ClientCartIcon />
@@ -181,6 +200,10 @@ export default function Navbar() {
         </div>
       </motion.nav>
       {mounted && <VerificationAlert />}
+      <PrescriptionDeliveryModal 
+        isOpen={showDeliveryModal} 
+        onClose={() => setShowDeliveryModal(false)}
+      />
     </>
   );
 }
