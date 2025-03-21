@@ -58,6 +58,32 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
   // Add payment status tracking
   const [paymentStatus, setPaymentStatus] = useState('idle'); // 'idle' | 'processing' | 'succeeded' | 'failed'
 
+  // Add progress state
+  const [progress, setProgress] = useState(0);
+  
+  useEffect(() => {
+    if (paymentStatus === 'processing') {
+      // Reset progress when starting
+      setProgress(0);
+      
+      // Animate progress from 0 to 90% during processing
+      const interval = setInterval(() => {
+        setProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(interval);
+            return 90;
+          }
+          return prev + 2;
+        });
+      }, 100);
+
+      return () => clearInterval(interval);
+    } else if (paymentStatus === 'succeeded') {
+      // Jump to 100% on success
+      setProgress(100);
+    }
+  }, [paymentStatus]);
+
   useEffect(() => {
     return () => {
       if (submitTimeoutRef.current) {
@@ -223,11 +249,25 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
             {error}
           </div>
         )}
+        
+        {/* Add progress bar */}
+        {(paymentStatus === 'processing' || paymentStatus === 'succeeded') && (
+          <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-primary transition-all duration-300 ease-out"
+              style={{ 
+                width: `${progress}%`,
+                transition: 'width 0.3s ease-out'
+              }}
+            />
+          </div>
+        )}
+
         <button
           type="submit"
           disabled={isFormDisabled}
           className={`w-full mt-4 py-3 px-6 rounded-lg font-semibold 
-                   transition-all duration-200
+                   transition-all duration-200 relative
                    ${isFormDisabled 
                      ? 'bg-gray-400 cursor-not-allowed opacity-50' 
                      : 'bg-primary text-white hover:opacity-90'}`}

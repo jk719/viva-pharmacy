@@ -82,6 +82,17 @@ export async function POST(req) {
 
     const { amount, prescriptionId, deliveryOption } = await req.json();
 
+    // Convert amount to cents and ensure it's a clean integer
+    const amountInCents = Math.round(amount * 100);
+
+    // Add validation for amount
+    if (!Number.isFinite(amountInCents) || amountInCents <= 0) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid amount' },
+        { status: 400 }
+      );
+    }
+
     // If this is a prescription order, verify it's been approved
     if (prescriptionId) {
       const prescription = await Order.findOne({
@@ -98,9 +109,9 @@ export async function POST(req) {
       }
     }
 
-    // Create Stripe payment intent
+    // Create Stripe payment intent with the properly formatted amount
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: amount * 100, // Convert to cents
+      amount: amountInCents, // Use the rounded integer amount
       currency: 'usd',
       metadata: {
         userId: session.user.id,
@@ -117,7 +128,11 @@ export async function POST(req) {
   } catch (error) {
     console.error('Payment creation error:', error);
     return NextResponse.json(
-      { success: false, message: 'Failed to create payment' },
+      { 
+        success: false, 
+        message: 'Failed to create payment',
+        error: error.message 
+      },
       { status: 500 }
     );
   }
