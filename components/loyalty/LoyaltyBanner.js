@@ -282,59 +282,7 @@ const useLoyaltyData = (session) => {
     }
   }, [session, updateUserData, isMobile]);
 
-  // Set up polling interval
-  useEffect(() => {
-    if (!session?.user?.id) return;
-    
-    // Set up interval - 30 seconds
-    pollingIntervalRef.current = setInterval(() => {
-      updateUserData();
-    }, 30000);
-    
-    return () => {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-      }
-    };
-  }, [session, updateUserData]);
-
-  // Reset animation flag after animation completes
-  useEffect(() => {
-    if (animatePoints) {
-      const timer = setTimeout(() => {
-        setAnimatePoints(false);
-      }, 3000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [animatePoints]);
-
-  // Listen for payment events
-  useEffect(() => {
-    const handlePaymentComplete = () => {
-      // Force immediate update
-      updateUserData();
-      
-      // Schedule a follow-up refresh after a delay
-      if (paymentEventTimeoutRef.current) {
-        clearTimeout(paymentEventTimeoutRef.current);
-      }
-      
-      paymentEventTimeoutRef.current = setTimeout(() => {
-        updateUserData();
-      }, 3000);
-    };
-
-    eventEmitter.on(Events.PAYMENT_COMPLETED, handlePaymentComplete);
-    return () => {
-      eventEmitter.off(Events.PAYMENT_COMPLETED, handlePaymentComplete);
-      if (paymentEventTimeoutRef.current) {
-        clearTimeout(paymentEventTimeoutRef.current);
-      }
-    };
-  }, [updateUserData]);
-
-  // Replace the existing mobile-specific useEffect with this enhanced version:
+  // Modify the mobile-specific useEffect to use a longer interval
   useEffect(() => {
     if (!isMobile || !session?.user?.id) return;
     
@@ -349,76 +297,80 @@ const useLoyaltyData = (session) => {
     const handleStorageEvent = (e) => {
       if (e && e.key === 'viva_payment_completed') {
         console.log('📱 Mobile: detected payment completion via storage event');
-        // Force an immediate update with a small delay to ensure data is ready
-        setTimeout(() => {
-          updateUserData();
-          
-          // Force a second update after a delay to handle potential server latency
-          setTimeout(() => {
-            updateUserData();
-          }, 2000);
-        }, 200);
+        updateUserData();
       }
     };
     
     const handleCustomEvent = (e) => {
       console.log('📱 Mobile: detected custom payment completion event', e);
-      // Force an immediate update with a small delay to ensure data is ready
-      setTimeout(() => {
-        updateUserData();
-        
-        // Force a second update after a delay to handle potential server latency
-        setTimeout(() => {
-          updateUserData();
-        }, 2000);
-      }, 200);
+      updateUserData();
     };
     
-    // Set up periodic polling specifically for mobile
+    // Increase mobile polling interval to 30 seconds instead of 5
     const mobilePollingInterval = setInterval(() => {
       updateUserData();
-    }, 5000); // Poll every 5 seconds on mobile
+    }, 30000); // Changed from 5000 to 30000
     
     // Add event listeners
-    try {
-      document.addEventListener('visibilitychange', handleVisibilityChange);
-      window.addEventListener('storage', handleStorageEvent);
-      window.addEventListener('viva:payment:completed', handleCustomEvent);
-      
-      // Create global refresh function with enhanced logic for mobile
-      window.refreshLoyaltyData = () => {
-        console.log('📱 Mobile global refresh function called');
-        // Immediate update
-        updateUserData();
-        
-        // Followed by delayed updates to catch server changes
-        setTimeout(() => updateUserData(), 1000);
-        setTimeout(() => updateUserData(), 3000);
-      };
-      
-      // Force a data refresh when the component mounts on mobile
-      updateUserData();
-    } catch (error) {
-      console.error('Error setting up mobile event listeners:', error);
-    }
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('storage', handleStorageEvent);
+    window.addEventListener('viva:payment:completed', handleCustomEvent);
     
-    // Return cleanup function
+    // Create global refresh function with debounce
+    const debounceTimeout = useRef(null);
+    window.refreshLoyaltyData = () => {
+      console.log('📱 Mobile global refresh function called');
+      if (debounceTimeout.current) {
+        clearTimeout(debounceTimeout.current);
+      }
+      debounceTimeout.current = setTimeout(() => {
+        updateUserData();
+      }, 1000);
+    };
+    
     return () => {
-      try {
-        document.removeEventListener('visibilitychange', handleVisibilityChange);
-        window.removeEventListener('storage', handleStorageEvent);
-        window.removeEventListener('viva:payment:completed', handleCustomEvent);
-        
-        clearInterval(mobilePollingInterval);
-        
-        if (window.refreshLoyaltyData && window.refreshLoyaltyData.toString().includes('Mobile global refresh')) {
-          delete window.refreshLoyaltyData;
-        }
-      } catch (error) {
-        console.error('Error cleaning up mobile event listeners:', error);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('storage', handleStorageEvent);
+      window.removeEventListener('viva:payment:completed', handleCustomEvent);
+      clearInterval(mobilePollingInterval);
+      if (debounceTimeout.current) {
+        clearTimeout(debounceTimeout.current);
+      }
+      if (window.refreshLoyaltyData) {
+        delete window.refreshLoyaltyData;
       }
     };
   }, [isMobile, session, updateUserData]);
+
+  // Modify the main polling interval
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    
+    // Set up interval - increase to 60 seconds
+    pollingIntervalRef.current = setInterval(() => {
+      updateUserData();
+    }, 60000); // Changed from 30000 to 60000
+    
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, [session, updateUserData]);
+
+  // Add debouncing to updateUserData
+  const debouncedUpdate = useCallback(
+    (() => {
+      let timeout;
+      return () => {
+        if (timeout) clearTimeout(timeout);
+        timeout = setTimeout(() => {
+          fetchUserDataFresh();
+        }, 1000);
+      };
+    })(),
+    [fetchUserDataFresh]
+  );
 
   return {
     userData,
