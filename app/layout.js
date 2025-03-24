@@ -32,7 +32,7 @@ export default async function RootLayout({ children }) {
         <meta charSet="utf-8" />
         <meta name="description" content={siteConfig.description} />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
-        <meta name="theme-color" content="#FF9F43" />
+        <meta name="theme-color" content="#002B49" />
         <link rel="icon" href="/favicon.ico" />
         {/* Remove source-map-support meta tag in production */}
         {process.env.NODE_ENV === 'development' && (
