@@ -59,27 +59,27 @@ export default function LoyaltyBanner() {
   const bannerAccentColor = TIER_COLORS[currentTier]?.bg || TIER_COLORS.BRONZE.bg;
 
   return (
-    <motion.div 
+      <motion.div 
       {...ANIMATIONS.fadeIn}
-      className="loyalty-banner w-full py-1 md:py-2 px-2 md:px-6 relative overflow-hidden border-b"
-      style={{
-        background: "white",
-        boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
-        borderBottom: "1px solid rgba(0,0,0,0.08)",
+        className="loyalty-banner w-full py-1 md:py-2 px-2 md:px-6 relative overflow-hidden border-b"
+        style={{
+          background: "white",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+          borderBottom: "1px solid rgba(0,0,0,0.08)",
         minHeight: isMobile ? '70px' : '90px',
-        height: 'auto'
-      }}
-    >
-      {/* Decorative background elements */}
-      <div className={`absolute top-0 right-0 ${isMobile ? 'w-20 h-20' : 'w-32 h-32'} opacity-10 transform rotate-45 translate-x-12 -translate-y-12 z-0`}>
-        <div className={`w-full h-full bg-gradient-to-br ${bannerAccentColor}`}></div>
-      </div>
-      <div className={`absolute bottom-0 left-0 ${isMobile ? 'w-12 h-12' : 'w-24 h-24'} opacity-10 transform -rotate-45 -translate-x-8 translate-y-8 z-0`}>
-        <div className={`w-full h-full bg-gradient-to-br ${bannerAccentColor}`}></div>
-      </div>
+          height: 'auto'
+        }}
+      >
+        {/* Decorative background elements */}
+        <div className={`absolute top-0 right-0 ${isMobile ? 'w-20 h-20' : 'w-32 h-32'} opacity-10 transform rotate-45 translate-x-12 -translate-y-12 z-0`}>
+          <div className={`w-full h-full bg-gradient-to-br ${bannerAccentColor}`}></div>
+        </div>
+        <div className={`absolute bottom-0 left-0 ${isMobile ? 'w-12 h-12' : 'w-24 h-24'} opacity-10 transform -rotate-45 -translate-x-8 translate-y-8 z-0`}>
+          <div className={`w-full h-full bg-gradient-to-br ${bannerAccentColor}`}></div>
+        </div>
 
-      {userData ? (
-        <div className={`flex ${isMobile ? 'flex-col' : 'flex-row flex-wrap'} justify-between z-10 ${isMobile ? 'items-start' : 'items-center'}`}>
+        {userData ? (
+          <div className={`flex ${isMobile ? 'flex-col' : 'flex-row flex-wrap'} justify-between z-10 ${isMobile ? 'items-start' : 'items-center'}`}>
           <TierPointsDisplay 
             currentTier={currentTier}
             points={currentVivaBucks}
@@ -88,7 +88,7 @@ export default function LoyaltyBanner() {
             isMobile={isMobile}
           />
           
-          {progressInfo && (
+            {progressInfo && (
             <ProgressBar 
               progress={progressPercent}
               currentTier={currentTier}
@@ -99,11 +99,11 @@ export default function LoyaltyBanner() {
               endPoints={TIER_CONFIG[nextTierName]?.points || lifetimeVivaBucks}
               isMobile={isMobile}
             />
-          )}
-        </div>
-      ) : (
-        <LoadingState />
-      )}
-    </motion.div>
+            )}
+          </div>
+        ) : (
+          <LoadingState />
+        )}
+      </motion.div>
   );
-}
+} 

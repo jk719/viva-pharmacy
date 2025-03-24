@@ -91,44 +91,6 @@ export default function Navbar() {
     }
   }, [mounted, searchParams, session]);
 
-  // Add prescription link component
-  const PrescriptionButtons = ({ isMobile = false }) => (
-    <div className="flex items-center gap-2">
-      <motion.div
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-      >
-        <Link 
-          href="/prescriptions"
-          className={`flex items-center gap-1  
-                     bg-primary rounded-lg hover:bg-primary/90 
-                     transition-all duration-300 shadow-md
-                     ${isMobile ? 'px-2 py-1.5 text-xs' : 'px-4 py-2'}`}
-        >
-          <FaPrescription className={`text-white ${isMobile ? 'w-3 h-3' : 'w-4 h-4'}`} />
-          <span className="font-medium text-white">
-            {isMobile ? 'Rx' : 'Fill & Refill Prescriptions'}
-          </span>
-        </Link>
-      </motion.div>
-      
-      <motion.button
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        onClick={() => setShowDeliveryModal(true)}
-        className={`flex items-center gap-1  
-                   bg-green-600 rounded-lg hover:bg-green-700 
-                   transition-all duration-300 shadow-md
-                   ${isMobile ? 'px-2 py-1.5 text-xs' : 'px-4 py-2'}`}
-      >
-        <FaTruck className={`text-white ${isMobile ? 'w-3 h-3' : 'w-4 h-4'}`} />
-        <span className="font-medium text-white">
-          {isMobile ? 'Pay Rx' : 'Pay for Delivery'}
-        </span>
-      </motion.button>
-    </div>
-  );
-
   return (
     <>
       <motion.nav 
@@ -154,7 +116,6 @@ export default function Navbar() {
               </Link>
               
               <div className="flex items-center gap-3">
-                <PrescriptionButtons isMobile />
                 {isAdmin && <AdminDashboardButton isMobile />}
                 <Link href="/cart" className="relative flex items-center">
                   <ClientCartIcon />
@@ -185,7 +146,6 @@ export default function Navbar() {
             </Link>
 
             <div className="flex items-center gap-6">
-              <PrescriptionButtons />
               {isAdmin && <AdminDashboardButton />}
               <Link href="/cart" className="relative flex items-center">
                 <ClientCartIcon />
@@ -200,10 +160,6 @@ export default function Navbar() {
         </div>
       </motion.nav>
       {mounted && <VerificationAlert />}
-      <PrescriptionDeliveryModal 
-        isOpen={showDeliveryModal} 
-        onClose={() => setShowDeliveryModal(false)}
-      />
     </>
   );
 }
