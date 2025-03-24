@@ -14,12 +14,12 @@ import SiteFooterWrapper from '@/components/SiteFooterWrapper';
 
 // Metadata can be exported as a constant
 const siteConfig = {
-  title: 'VIVA Pharmacy & Wellness',
+  title: 'Go Viva Nova',
   description: 'Your trusted online pharmacy for health and wellness products.',
   socialLinks: {
-    instagram: 'https://www.instagram.com/vivapharmacy',
-    facebook: 'https://www.facebook.com/vivapharmacy',
-    tiktok: 'https://www.tiktok.com/@vivapharmacy'
+    instagram: 'https://www.instagram.com/govivanova',
+    facebook: 'https://www.facebook.com/govivanova',
+    tiktok: 'https://www.tiktok.com/@govivanova'
   }
 };
 
