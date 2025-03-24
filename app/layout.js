@@ -2,17 +2,15 @@
 // Keep this as a server component (no 'use client' directive)
 
 import { Suspense } from "react";
-import Navbar from "../components/Navbar";
 import Image from "next/image";
 import { FaInstagram, FaFacebook, FaTiktok } from "react-icons/fa";
 import { Providers } from './providers';
-import { Toaster } from 'react-hot-toast';
 import "./globals.css";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from '@/lib/auth';
-import { eventEmitter } from '@/lib/eventEmitter';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
-import LoyaltyBanner from '@/components/loyalty/LoyaltyBanner';
+import ClientLayout from '@/components/ClientLayout';
+import SiteFooterWrapper from '@/components/SiteFooterWrapper';
 
 // Metadata can be exported as a constant
 const siteConfig = {
@@ -43,31 +41,20 @@ export default async function RootLayout({ children }) {
       </head>
       <body className="bg-white text-primary-color">
         <Providers session={session}>
-          <Toaster />
-          <SiteHeader />
-          <main className="min-h-screen w-full flex-grow pt-[calc(var(--navbar-height)+var(--loyalty-banner-height))] md:pt-[calc(var(--navbar-height-md)+var(--loyalty-banner-height-md))]">
-            <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
-              <Suspense fallback={<LoadingSpinner />}>
-                {children}
-              </Suspense>
-            </div>
-          </main>
-          <SiteFooter />
+          <ClientLayout>
+            <main className="min-h-screen w-full flex-grow pt-[calc(var(--navbar-height)+var(--loyalty-banner-height))] md:pt-[calc(var(--navbar-height-md)+var(--loyalty-banner-height-md))]">
+              <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
+                <Suspense fallback={<LoadingSpinner />}>
+                  {children}
+                </Suspense>
+              </div>
+            </main>
+          </ClientLayout>
+          <SiteFooterWrapper />
           <div id="modal-root" className="relative z-50" />
         </Providers>
       </body>
     </html>
-  );
-}
-
-function SiteHeader() {
-  return (
-    <header className="fixed top-0 left-0 right-0 w-full bg-white z-50">
-      <div className="w-full">
-        <Navbar />
-        <LoyaltyBanner />
-      </div>
-    </header>
   );
 }
 

@@ -3,6 +3,7 @@ import { authOptions } from '@/lib/auth';
 import dbConnect from "@/lib/dbConnect";
 import Order from "@/models/Order";
 import mongoose from 'mongoose';
+import { getCloudinaryUrl } from '@/lib/cloudinary';
 
 export async function GET(request) {
     try {
@@ -68,43 +69,52 @@ export async function GET(request) {
             .sort({ createdAt: -1 })
             .lean(); // Convert to plain JavaScript objects
 
-        // Enhance orders with image URLs if missing
+        // Use Promise.all with map for async operations
         const enhancedOrders = await Promise.all(orders.map(async (order) => {
-            // Process each item in the order to ensure it has an image
-            if (order.items && order.items.length > 0) {
-                const enhancedItems = await Promise.all(order.items.map(async (item) => {
-                    // If item already has an image, use it
-                    if (item.image) return item;
+            const enhancedItems = await Promise.all(order.items.map(async (item) => {
+                try {
+                    // Try to get the product to get the latest image URL
+                    const product = await mongoose.models.Product.findById(item.productId).lean();
                     
-                    try {
-                        // Try to find the product in the database to get its image
-                        const product = await mongoose.models.Product.findOne({ 
-                            _id: item.productId
-                        }).lean();
-                        
-                        if (product) {
-                            return {
-                                ...item,
-                                image: product.imageUrl || product.cloudinaryPublicId ? 
-                                    `https://res.cloudinary.com/dv3cd1aoy/image/upload/${product.cloudinaryPublicId}.png` : 
-                                    null
-                            };
-                        }
-                        
-                        return item;
-                    } catch (err) {
-                        console.error('Error enhancing order item image:', err);
-                        return item;
+                    if (product) {
+                        // Use the same pattern as ProductCard component
+                        const imageUrl = product.imageUrl || 
+                            (product.cloudinaryPublicId ? 
+                                `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/${product.cloudinaryPublicId}` : 
+                                null);
+
+                        return {
+                            ...item,
+                            image: imageUrl,
+                            cloudinaryPublicId: product.cloudinaryPublicId,
+                            name: product.name // Ensure we have the latest product name
+                        };
                     }
-                }));
-                
-                return {
-                    ...order,
-                    items: enhancedItems
-                };
-            }
-            
-            return order;
+                    
+                    // If no product found, try to construct URL from item name
+                    if (item.name) {
+                        const normalizedName = item.name.toLowerCase()
+                            .replace(/[^a-z0-9\s-]/g, '')
+                            .replace(/\s+/g, '-')
+                            .trim();
+                        
+                        return {
+                            ...item,
+                            image: `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/viva-pharmacy/products/${normalizedName}.png`
+                        };
+                    }
+
+                    return item;
+                } catch (error) {
+                    console.error(`Failed to enhance item ${item.productId}:`, error);
+                    return item;
+                }
+            }));
+
+            return {
+                ...order,
+                items: enhancedItems
+            };
         }));
 
         console.log('API: Found orders count:', enhancedOrders.length);

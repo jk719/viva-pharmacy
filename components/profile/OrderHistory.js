@@ -225,7 +225,6 @@ export default function OrderHistory({ userId, limit }) {
                       {/* Use the imported ProductImage component */}
                       <ProductImage 
                         src={item.image}
-                        productName={item.name}
                         alt={item.name || "Product"}
                         fill
                         className="object-contain rounded-md p-1"

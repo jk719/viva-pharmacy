@@ -7,6 +7,7 @@ import { AnnouncementProvider } from "../components/context/AnnouncementContext"
 import { SWRConfig } from 'swr';
 import SSEProvider from '@/components/SSEProvider';
 import HeaderHeightAdjuster from '@/components/HeaderHeightAdjuster';
+import ToasterProvider from '@/components/ToasterProvider';
 
 const fetcher = async (url) => {
   const res = await fetch(url);
@@ -29,6 +30,7 @@ export function Providers({ children, session }) {
           <CategoryProvider>
             <CartProvider>
               <SSEProvider>
+                <ToasterProvider />
                 {children}
               </SSEProvider>
             </CartProvider>

@@ -125,6 +125,73 @@ const slides = [
   }
 ];
 
+// Move the renderSlide function outside of the main component
+const renderSlide = (slide, isMobile) => {
+  const isTylaSlide = slide.id === "tyla";
+  
+  return (
+    <div className="relative pt-6 sm:pt-10">
+      {/* Main vector graphic */}
+      <div className="w-full flex justify-center items-center mb-4 sm:mb-6">
+        <div className="relative w-16 h-16 sm:w-24 sm:h-24 flex items-center justify-center floating z-10">
+          <div className="p-2 bg-white/20 backdrop-blur-md rounded-full shadow-lg">
+            <div className="w-full h-full">
+              {slide.vectors.main}
+            </div>
+          </div>
+          
+          <div className="absolute -left-4 top-2 w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-white/10 floating" 
+            data-delay="1.5s">
+          </div>
+          <div className="absolute -right-4 top-4 w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-white/5 floating" 
+            data-delay="0.8s">
+          </div>
+        </div>
+      </div>
+      
+      {/* Delivery highlights */}
+      <div className={`px-2 ${isMobile ? '' : 'sm:px-0'}`}>
+        <div className={`grid ${isTylaSlide ? 'grid-cols-2' : 'grid-cols-3'} gap-2 sm:gap-3`}>
+          {slide.highlights.map((highlight, index) => (
+            <div 
+              key={index}
+              className={`
+                bg-gradient-to-br ${highlight.color} 
+                p-2 sm:p-3 rounded-lg shadow-md backdrop-blur-sm 
+                hover:shadow-lg transition-shadow duration-300
+              `}
+              data-delay={`${0.15 * index}s`}
+            >
+              {highlight.isFree && highlight.price && (
+                <div className="absolute -top-2 -right-2 bg-green-500 text-white text-[10px] sm:text-xs font-bold rounded-full px-2 py-0.5 sm:px-3 sm:py-1 badge-pulse z-10 border border-white/30 sm:border-2">
+                  FREE
+                </div>
+              )}
+              
+              <div className="flex flex-col items-center text-center">
+                <div className="w-7 h-7 sm:w-10 sm:h-10 mb-1 sm:mb-2 pulse relative">
+                  {highlight.vector}
+                  {highlight.label && (
+                    <div className="absolute -top-2 left-1/2 -translate-x-1/2 text-white text-[8px] sm:text-[10px] font-bold">
+                      {highlight.label}
+                    </div>
+                  )}
+                </div>
+                <h3 className="text-xs sm:text-base font-bold text-white leading-tight">
+                  {highlight.title}
+                </h3>
+                <p className="text-white/80 text-[10px] sm:text-xs mt-0.5">
+                  {highlight.description}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function HeroCarousel() {
   const { data: session } = useSession();
   const [loyaltyBannerVisible, setLoyaltyBannerVisible] = useState(false);
@@ -208,132 +275,6 @@ export default function HeroCarousel() {
     }
   }, []);
 
-  // Render each slide by its component with delivery options highlighted
-  const renderSlide = (slide) => {
-    const SlideComponent = slide.component;
-    const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
-    const isTylaSlide = slide.id === "tyla";
-    
-    return (
-      <div className="relative pt-6 sm:pt-10">
-        {/* Center the main vector graphic above the highlight cards */}
-        <div className="w-full flex justify-center items-center mb-4 sm:mb-6">
-          {/* Main vector graphic - centered for both mobile and desktop */}
-          <div className="relative w-16 h-16 sm:w-24 sm:h-24 flex items-center justify-center floating z-10">
-            <div className="p-2 bg-white/20 backdrop-blur-md rounded-full shadow-lg">
-              <div className="w-full h-full">
-                {slide.vectors.main}
-              </div>
-            </div>
-            
-            {/* Small decorative circles positioned around the main icon */}
-            <div className="absolute -left-4 top-2 w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-white/10 floating" 
-              style={{ animationDelay: "1.5s" }}>
-            </div>
-            <div className="absolute -right-4 top-4 w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-white/5 floating" 
-              style={{ animationDelay: "0.8s" }}>
-            </div>
-          </div>
-        </div>
-        
-        {/* Delivery highlights - adapt layout based on slide type */}
-        {isTylaSlide ? (
-          // Tyla slide - always 2 columns
-          <div className="grid grid-cols-2 gap-3 px-2 sm:px-0">
-            {slide.highlights.map((highlight, index) => (
-              <div 
-                key={index}
-                className={`bg-gradient-to-br ${highlight.color} p-2 sm:p-3 rounded-lg shadow-md backdrop-blur-sm hover:shadow-lg transition-shadow duration-300 highlight-appear relative`}
-                style={{ animationDelay: `${0.15 * index}s` }}
-              >
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 mb-1 sm:mb-2 pulse relative">
-                    {highlight.vector}
-                  </div>
-                  <h3 className="text-sm sm:text-base font-bold text-white leading-tight">{highlight.title}</h3>
-                  <p className="text-white/80 text-xs mt-0.5">{highlight.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          // Delivery slide - special layout for mobile
-          isMobile ? (
-            // Mobile-specific layout - all options in one row
-            <div className="px-2">
-              {/* All three options in one row with equal widths */}
-              <div className="grid grid-cols-3 gap-2">
-                {slide.highlights.map((highlight, index) => (
-                  <div 
-                    key={index}
-                    className={`
-                      bg-gradient-to-br ${highlight.color} p-2 rounded-lg 
-                      shadow-md backdrop-blur-sm hover:shadow-lg transition-shadow duration-300 
-                      highlight-appear relative
-                    `}
-                    style={{ animationDelay: `${0.15 * index}s` }}
-                  >
-                    {/* Pricing badge - only show for Same-Day "FREE" option */}
-                    {highlight.isFree && highlight.price && (
-                      <div className="absolute -top-2 -right-2 bg-green-500 text-white shadow-lg shadow-green-500/30 rounded-full px-2 py-0.5 text-[10px] font-bold badge-pulse z-10 border border-white/30">
-                        FREE
-                      </div>
-                    )}
-                    
-                    <div className="flex flex-col items-center text-center">
-                      <div className="w-7 h-7 mb-1 pulse relative">
-                        {highlight.vector}
-                        {highlight.label && (
-                          <div className="absolute -top-2 left-1/2 -translate-x-1/2 text-white text-[8px] font-bold">
-                            {highlight.label}
-                          </div>
-                        )}
-                      </div>
-                      <h3 className="text-xs font-bold text-white leading-tight">{highlight.title}</h3>
-                      <p className="text-white/80 text-[10px] mt-0.5">{highlight.description}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            // Desktop layout - 3 columns
-            <div className="grid grid-cols-3 gap-3 px-0">
-              {slide.highlights.map((highlight, index) => (
-                <div 
-                  key={index}
-                  className={`bg-gradient-to-br ${highlight.color} p-3 rounded-lg shadow-md backdrop-blur-sm hover:shadow-lg transition-shadow duration-300 highlight-appear relative`}
-                  style={{ animationDelay: `${0.15 * index}s` }}
-                >
-                  {/* Pricing badge - only show for Same-Day "FREE" option */}
-                  {highlight.isFree && highlight.price && (
-                    <div className="absolute -top-3 -right-3 bg-green-500 text-white shadow-lg shadow-green-500/30 rounded-full px-3 py-1 text-xs font-bold badge-pulse z-10 border-2 border-white/30">
-                      FREE
-                    </div>
-                  )}
-                  
-                  <div className="flex flex-col items-center text-center">
-                    <div className="w-10 h-10 mb-2 pulse relative">
-                      {highlight.vector}
-                      {/* Add SVG text as HTML for better accessibility */}
-                      {highlight.label && (
-                        <div className="absolute -top-2 left-1/2 -translate-x-1/2 text-white text-[10px] font-bold">
-                          {highlight.label}
-                        </div>
-                      )}
-                    </div>
-                    <h3 className="text-base font-bold text-white leading-tight">{highlight.title}</h3>
-                    <p className="text-white/80 text-xs mt-0.5">{highlight.description}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )
-        )}
-      </div>
-    );
-  };
-
   return (
     <div className="mx-auto max-w-[1000px]">
       {/* Applied fixed spacing below any header elements */}
@@ -349,7 +290,7 @@ export default function HeroCarousel() {
       <CarouselEngine 
         slides={slides}
         interval={6000}
-        renderSlide={renderSlide}
+        renderSlide={(slide) => renderSlide(slide, isMobile)}
         className="shadow-lg carousel-container"
         compact={true}
       />

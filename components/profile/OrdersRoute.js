@@ -18,7 +18,7 @@ export default function OrdersRoute() {
       return;
     }
 
-    if (status === 'authenticated') {
+    if (status === 'authenticated' && session?.user?.id) {  // Make sure we have user.id
       // Fetch user data
       fetch(`/api/user/profile`)
         .then(response => {
@@ -29,7 +29,11 @@ export default function OrdersRoute() {
         })
         .then(data => {
           console.log("User profile data:", data);
-          setUserData(data);
+          // Ensure we're using the session user ID
+          setUserData({
+            ...data,
+            _id: session.user.id // Use the session ID instead of the profile ID
+          });
           setLoading(false);
         })
         .catch(error => {
@@ -40,6 +44,16 @@ export default function OrdersRoute() {
       // Keep loading state true
     }
   }, [status, session, router]);
+
+  // Add debug logging
+  useEffect(() => {
+    if (userData) {
+      console.log("Debug - User Data:", {
+        sessionUserId: session?.user?.id,
+        userDataId: userData._id
+      });
+    }
+  }, [userData, session]);
 
   if (status === 'loading' || loading) {
     return <div className="min-h-screen flex items-center justify-center"><LoadingSpinner /></div>;
