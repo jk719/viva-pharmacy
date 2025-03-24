@@ -26,15 +26,15 @@ export default function SubcategoryCarousel({ subcategory, products }) {
       </div>
 
       <div className="relative">
-        <div className="flex overflow-x-auto gap-4 pb-4 px-4
-                    scroll-snap-x scrollbar-thin scrollbar-thumb-gray-300 
-                    scrollbar-track-transparent">
+        <div className="flex overflow-x-auto gap-2 sm:gap-4 pb-4 px-2 sm:px-4
+                      scroll-snap-x scrollbar-thin scrollbar-thumb-gray-300 
+                      scrollbar-track-transparent">
           {products.map((product) => (
             <motion.div
               key={product._id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="min-w-[280px] scroll-snap-align-start"
+              className="min-w-[160px] sm:min-w-[280px] scroll-snap-align-start"
             >
               <ProductCard product={product} />
             </motion.div>

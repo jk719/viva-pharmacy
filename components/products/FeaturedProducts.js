@@ -194,9 +194,9 @@ export default function FeaturedProducts({ categoryFilter }) {
                   <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
                   <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
                   
-                  <div className="flex overflow-x-auto gap-4 pb-4 scrollbar-hide">
+                  <div className="flex overflow-x-auto gap-2 sm:gap-4 pb-4 scrollbar-hide">
                     {categoryProducts.map((product) => (
-                      <div key={product._id} className="flex-none w-[280px]">
+                      <div key={product._id} className="flex-none w-[160px] sm:w-[280px]">
                         <ProductCard
                           product={product}
                         />

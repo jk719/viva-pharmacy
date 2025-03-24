@@ -20,22 +20,22 @@ const QuantityControls = memo(({
   
   const sizeClasses = {
     small: {
-      wrapper: 'p-1',
-      button: 'w-6 h-6 text-sm',
-      addButton: 'px-3 py-1.5 text-sm',
-      quantityText: 'w-8 text-sm'
+      wrapper: 'p-0.5 sm:p-1',
+      button: 'w-5 h-5 sm:w-6 sm:h-6 text-xs sm:text-sm',
+      addButton: 'px-2 py-1 sm:px-3 sm:py-1.5 text-xs sm:text-sm',
+      quantityText: 'w-6 sm:w-8 text-xs sm:text-sm'
     },
     default: {
-      wrapper: 'p-1 md:p-1.5',
-      button: 'w-8 h-8 text-base',
-      addButton: 'py-2 md:py-2.5 px-4 md:px-6 text-sm md:text-base',
-      quantityText: 'w-10 text-lg'
+      wrapper: 'p-1 sm:p-1.5',
+      button: 'w-6 h-6 sm:w-8 sm:h-8 text-sm sm:text-base',
+      addButton: 'py-1.5 px-3 sm:py-2 sm:px-4 text-xs sm:text-sm',
+      quantityText: 'w-8 sm:w-10 text-base sm:text-lg'
     },
     large: {
-      wrapper: 'p-2',
-      button: 'w-10 h-10 text-lg',
-      addButton: 'px-6 py-3 text-lg',
-      quantityText: 'w-12 text-xl'
+      wrapper: 'p-1.5 sm:p-2',
+      button: 'w-8 h-8 sm:w-10 sm:h-10 text-base sm:text-lg',
+      addButton: 'px-4 py-2 sm:px-6 sm:py-3 text-sm sm:text-lg',
+      quantityText: 'w-10 sm:w-12 text-lg sm:text-xl'
     }
   }[size];
 
@@ -52,8 +52,8 @@ const QuantityControls = memo(({
           disabled={!isInStock || isLoading}
           className={`
             bg-primary text-white rounded-full 
-            flex items-center justify-center gap-2 
-            hover:opacity-90 shadow-lg hover:shadow-xl 
+            flex items-center justify-center gap-1 sm:gap-2 
+            hover:opacity-90 shadow-md hover:shadow-lg 
             transition-all duration-300
             ${sizeClasses.addButton}
             ${!isInStock ? 'opacity-50 cursor-not-allowed' : ''}
@@ -61,12 +61,14 @@ const QuantityControls = memo(({
           `}
           {...motionProps}
         >
-          <IoAdd className="text-lg md:text-xl" />
-          <span className="font-medium">{variant === 'card' ? 'Add' : 'Add to Cart'}</span>
+          <IoAdd className="text-base sm:text-lg" />
+          <span className="font-medium whitespace-nowrap">
+            {variant === 'card' ? 'Add' : 'Add to Cart'}
+          </span>
         </ButtonComponent>
       ) : (
         <div className={`
-          flex items-center justify-center gap-2 md:gap-3 
+          flex items-center justify-center gap-1 sm:gap-2 
           bg-gray-100 rounded-full shadow-inner
           ${sizeClasses.wrapper}
         `}>
@@ -77,6 +79,7 @@ const QuantityControls = memo(({
               bg-white rounded-full text-red-500 
               hover:bg-red-50 shadow-sm hover:shadow-md 
               transition-all duration-300
+              min-w-[20px] min-h-[20px]
               ${sizeClasses.button}
             `}
             {...motionProps}
@@ -96,6 +99,7 @@ const QuantityControls = memo(({
               bg-white rounded-full text-green-500 
               hover:bg-green-50 shadow-sm hover:shadow-md 
               transition-all duration-300
+              min-w-[20px] min-h-[20px]
               ${sizeClasses.button}
             `}
             {...motionProps}

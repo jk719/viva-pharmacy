@@ -71,23 +71,23 @@ const ProductCard = memo(({ product }) => {
         </span>
       )}
       <Link href={`/products/${product._id}`}>
-        <div className="p-4 border rounded-lg hover:shadow-lg transition-shadow cursor-pointer">
-          <div className="relative w-full h-48 mb-4">
+        <div className="p-2 sm:p-4 border rounded-lg hover:shadow-lg transition-shadow cursor-pointer">
+          <div className="relative w-full h-32 sm:h-48 mb-2 sm:mb-4">
             <Image
               src={imageUrl}
               alt={product.name}
               fill
               priority={true}
               className="object-contain"
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              sizes="(max-width: 640px) 45vw, (max-width: 768px) 33vw, 25vw"
               onError={() => setImageError(true)}
             />
           </div>
           
-          <div className="mt-2">
-            <h3 className="text-lg font-semibold line-clamp-2">{product.name}</h3>
-            <p className="text-gray-600 text-sm mt-1">{product.categoryPath}</p>
-            <span className="text-lg font-bold mt-2 block">${product.price.toFixed(2)}</span>
+          <div className="mt-1 sm:mt-2">
+            <h3 className="text-sm sm:text-lg font-semibold line-clamp-2">{product.name}</h3>
+            <p className="text-xs sm:text-sm text-gray-600 mt-0.5 sm:mt-1">{product.categoryPath}</p>
+            <span className="text-base sm:text-lg font-bold mt-1 sm:mt-2 block">${product.price.toFixed(2)}</span>
             {product.activeIngredients?.length > 0 && (
               <div className="text-sm text-gray-600">
                 <p className="font-medium">Active Ingredients:</p>
