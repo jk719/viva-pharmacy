@@ -73,7 +73,9 @@ function CheckoutContent() {
     deliverySpeed,
     setDeliverySpeed,
     deliveryFee,
-    DELIVERY_FEES
+    DELIVERY_FEES,
+    redemptionApplied,
+    loyaltyDiscount
   } = useCart();
   const [error, setError] = useState(null);
   const [cartTotal, setCartTotal] = useState(0);
@@ -204,7 +206,6 @@ function CheckoutContent() {
         return;
       }
       
-      // Check if any item is a prescription
       const hasPrescription = items.some(item => item.isPrescription);
       setIsPrescriptionOrder(hasPrescription);
       
@@ -212,20 +213,20 @@ function CheckoutContent() {
         return sum + (parseFloat(item.price) * parseInt(item.quantity));
       }, 0);
       
-      // Calculate delivery fee
       const deliveryFee = deliveryMethod === 'delivery' ? DELIVERY_FEES[deliverySpeed] : 0;
       
-      // Calculate tax on subtotal AND delivery fee
+      // Apply loyalty discount before tax calculation
+      const discountedSubtotal = redemptionApplied ? newSubtotal - 10 : newSubtotal;
+      
       const taxAmount = shippingAddress 
-        ? calculateTax(newSubtotal + deliveryFee, shippingAddress.state, 'NYC')
+        ? calculateTax(discountedSubtotal + deliveryFee, shippingAddress.state, 'NYC')
         : 0;
       
       setSubtotal(newSubtotal);
       setTax(taxAmount);
-      // Update total to include delivery fee
-      setCartTotal(newSubtotal + deliveryFee + taxAmount);
+      setCartTotal(discountedSubtotal + deliveryFee + taxAmount);
     }
-  }, [items, loading, shippingAddress, deliveryMethod, deliverySpeed]);
+  }, [items, loading, shippingAddress, deliveryMethod, deliverySpeed, redemptionApplied]);
 
   // Add validation check function
   const validateSelections = () => {
@@ -595,13 +596,15 @@ function CheckoutContent() {
               subtotal,
               deliveryFee: deliveryMethod === 'delivery' ? DELIVERY_FEES[deliverySpeed] : 0,
               tax,
-              total: cartTotal
+              total: cartTotal,
+              loyaltyDiscount: redemptionApplied ? 10 : 0
             }}
             items={items}
             shippingAddress={deliveryMethod === 'delivery' ? shippingAddress : null}
             deliveryMethod={deliveryMethod}
             selectedTime={selectedTime}
             deliverySpeed={deliverySpeed}
+            redemptionApplied={redemptionApplied}
           />
         </motion.div>
       )}

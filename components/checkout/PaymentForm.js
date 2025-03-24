@@ -12,6 +12,8 @@ import ReactConfetti from 'react-confetti';
 import toast from 'react-hot-toast';
 import { LoyaltyCheckoutService } from '@/lib/checkout/loyaltyCheckoutServiceClient';
 import { FaGift, FaUndo } from 'react-icons/fa';
+import { motion } from 'framer-motion';
+import OrderSuccessModal from './OrderSuccessModal';
 
 // Add this custom hook
 const useWindowSize = () => {
@@ -60,6 +62,10 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
 
   // Add progress state
   const [progress, setProgress] = useState(0);
+  
+  // Add these new state variables
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [orderDetails, setOrderDetails] = useState(null);
   
   useEffect(() => {
     if (paymentStatus === 'processing') {
@@ -122,28 +128,27 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
         console.log('✅ Payment succeeded:', paymentIntent.id);
         setPaymentStatus('succeeded');
 
+        // Store order details
+        const orderDetails = {
+          orderId: paymentIntent.id,
+          deliveryMethod,
+          selectedTime,
+          pointsEarned: Math.floor(amountDetails.total)  // 1 point per dollar
+        };
+        setOrderDetails(orderDetails);
+        setShowConfetti(true);
+
         // Store payment info
         sessionStorage.setItem('paymentProcessed', 'true');
         sessionStorage.setItem('paymentIntentId', paymentIntent.id);
         sessionStorage.setItem('paymentAmount', amountDetails.total);
 
         try {
-          // Show success message
           toast.success('Payment successful!', { id: loadingToast });
-          setShowConfetti(true);
-
-          // Send order confirmation
           await handleOrderConfirmation(paymentIntent);
-
-          // Wait for animations
-          await new Promise(resolve => setTimeout(resolve, ANIMATION_DURATION));
-
-          // Clear cart and redirect
           await clearCart();
-          router.replace('/checkout/success');
         } catch (err) {
           console.error('Post-payment error:', err);
-          setTimeout(() => router.replace('/checkout/success'), REDIRECT_DELAY);
         }
       }
     } catch (err) {
@@ -285,7 +290,62 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
           )}
         </button>
       </form>
+      {showSuccessModal && (
+        <OrderSuccessModal
+          orderDetails={orderDetails}
+          onClose={() => {
+            setShowSuccessModal(false);
+            router.push('/');
+          }}
+        />
+      )}
     </>
+  );
+};
+
+const OrderSummary = ({ amountDetails, redemptionApplied }) => {
+  const {
+    subtotal,
+    deliveryFee,
+    tax,
+    total,
+    loyaltyDiscount
+  } = amountDetails;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white rounded-lg border border-gray-200 p-4 mb-6"
+    >
+      <h3 className="font-semibold text-lg mb-4">Order Summary</h3>
+      <div className="space-y-2">
+        <div className="flex justify-between text-gray-600">
+          <span>Subtotal</span>
+          <span>${subtotal.toFixed(2)}</span>
+        </div>
+        {redemptionApplied && (
+          <div className="flex justify-between text-green-600">
+            <span>VivaBucks Discount</span>
+            <span>-$10.00</span>
+          </div>
+        )}
+        {deliveryFee > 0 && (
+          <div className="flex justify-between text-gray-600">
+            <span>Delivery Fee</span>
+            <span>${deliveryFee.toFixed(2)}</span>
+          </div>
+        )}
+        <div className="flex justify-between text-gray-600">
+          <span>Tax</span>
+          <span>${tax.toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between font-bold text-lg pt-2 border-t border-gray-200">
+          <span>Total Due</span>
+          <span className="text-primary">${total.toFixed(2)}</span>
+        </div>
+      </div>
+    </motion.div>
   );
 };
 
@@ -310,6 +370,8 @@ export default function PaymentForm({ amount, amountDetails, items, shippingAddr
   const [userData, setUserData] = useState(null);
   const [isLoadingUserData, setIsLoadingUserData] = useState(false);
   const [redemptionError, setRedemptionError] = useState(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [orderDetails, setOrderDetails] = useState(null);
 
   useEffect(() => {
     if (paymentInitialized || !amount || amount <= 0) {
@@ -532,6 +594,11 @@ export default function PaymentForm({ amount, amountDetails, items, shippingAddr
 
   return (
     <div className="space-y-6">
+      <OrderSummary 
+        amountDetails={amountDetails}
+        redemptionApplied={redemptionApplied}
+      />
+
       {/* Loyalty Benefits Section */}
       {session?.user && userData && (
         <div className="bg-blue-50 rounded-lg p-4 space-y-3">

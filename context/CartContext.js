@@ -78,20 +78,23 @@ export function CartProvider({ children }) {
             ? DELIVERY_FEES[deliveryState.deliverySpeed]
             : 0;
         
-        // Apply loyalty discount before tax calculation
-        const loyaltyDiscount = loyaltyState.redemptionApplied ? loyaltyState.discountAmount : 0;
+        // Apply loyalty discount to subtotal
+        const loyaltyDiscount = loyaltyState.redemptionApplied ? 10 : 0; // Fixed $10 discount
         const discountedSubtotal = Math.max(subtotal - loyaltyDiscount, 0);
         
+        // Calculate tax on discounted amount
         const tax = (discountedSubtotal + deliveryFee) * 0.08875;
+        
+        const total = discountedSubtotal + deliveryFee + tax;
         
         return {
             subtotal,
             deliveryFee,
             tax,
             loyaltyDiscount,
-            total: discountedSubtotal + deliveryFee + tax
+            total
         };
-    }, [cartState.items, cartState.initialized, cartState.loading, deliveryState.option, deliveryState.deliverySpeed, loyaltyState]);
+    }, [cartState.items, cartState.initialized, cartState.loading, deliveryState.option, deliveryState.deliverySpeed, loyaltyState.redemptionApplied]);
 
     useEffect(() => {
         if (cartCalculations) {
