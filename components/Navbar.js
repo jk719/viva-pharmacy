@@ -94,7 +94,7 @@ export default function Navbar() {
   return (
     <>
       <motion.nav 
-        className="viva-navbar w-full shadow-sm bg-[#002B49]"
+        className="viva-navbar w-full shadow-sm bg-black"
         initial={{ y: -100 }}
         animate={{ y: 0 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
@@ -103,13 +103,13 @@ export default function Navbar() {
           <div className="flex md:hidden flex-col w-full px-2">
             <div className="flex items-center justify-between py-2">
               <Link href="/" className="flex-shrink-0">
-                <div className="relative w-[120px] h-[32px]">
+                <div className="relative w-[160px] h-[45px]">
                   <Image
-                    src="/images/viva-online-logo.png"
-                    alt="VIVA Logo"
+                    src="/images/govivanova-logo.png"
+                    alt="Go Viva Nova"
                     fill
                     className="object-contain object-left"
-                    sizes="120px"
+                    sizes="160px"
                     priority
                   />
                 </div>
@@ -133,13 +133,13 @@ export default function Navbar() {
 
           <div className="hidden md:flex items-center justify-between py-3 px-6">
             <Link href="/" className="flex-shrink-0">
-              <div className="relative w-[280px] h-[60px]">
+              <div className="relative w-[320px] h-[90px]">
                 <Image
-                  src="/images/viva-online-logo.png"
-                  alt="VIVA Logo"
+                  src="/images/govivanova-logo.png"
+                  alt="Go Viva Nova"
                   fill
                   className="object-contain object-left"
-                  sizes="280px"
+                  sizes="320px"
                   priority
                 />
               </div>
