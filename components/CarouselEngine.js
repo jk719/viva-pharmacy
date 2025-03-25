@@ -96,8 +96,8 @@ export default function CarouselEngine({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       style={{ 
-        height: isMobile ? '400px' : 'auto',
-        maxHeight: isMobile ? '65vh' : 'none'
+        height: isMobile ? '480px' : 'auto',
+        maxHeight: isMobile ? '85vh' : 'none'
       }}
     >
       {/* Background with blur effect and pattern overlay */}
@@ -122,8 +122,8 @@ export default function CarouselEngine({
         </div>
       </div>
 
-      {/* Content - more compact with additional space for overlapping elements */}
-      <div className="relative z-10 px-3 sm:px-6 pt-4 sm:pt-10 pb-8 sm:pb-10 max-w-4xl mx-auto">
+      {/* Content - adjusted padding for mobile */}
+      <div className="relative z-10 px-2 sm:px-6 pt-3 sm:pt-10 pb-6 sm:pb-10 max-w-4xl mx-auto">
         <AnimatePresence custom={direction} mode="wait">
           <motion.div
             key={slides[current].id}
@@ -136,24 +136,25 @@ export default function CarouselEngine({
               x: { type: "spring", stiffness: 300, damping: 30 },
               opacity: { duration: 0.4 }
             }}
-            className={slideContainerClassName || "w-full"}
+            className={`${slideContainerClassName || "w-full"} overflow-y-auto`}
+            style={{ maxHeight: isMobile ? '420px' : 'none' }}
           >
-            {/* Header content - more compact */}
-            <div className="mb-4 sm:mb-5">
+            {/* Header content - adjusted for mobile */}
+            <div className="mb-3 sm:mb-5">
               <motion.div
                 initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1, duration: 0.4 }}
-                className="inline-flex items-center px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-sm text-white text-xs font-medium mb-2 space-x-1"
+                className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-sm text-white text-[10px] sm:text-xs font-medium mb-1.5 sm:mb-2 space-x-1"
               >
-                <span className={`w-1.5 h-1.5 bg-white rounded-full ${!prefersReducedMotion ? 'animate-pulse' : ''}`}></span>
+                <span className={`w-1 sm:w-1.5 h-1 sm:h-1.5 bg-white rounded-full ${!prefersReducedMotion ? 'animate-pulse' : ''}`}></span>
                 <span>{slides[current].subtitle}</span>
               </motion.div>
               <motion.h2
                 initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2, duration: 0.4 }}
-                className="text-xl sm:text-2xl font-bold text-white mb-1 leading-tight"
+                className="text-lg sm:text-2xl font-bold text-white mb-1 leading-tight"
               >
                 {slides[current].title}
               </motion.h2>
@@ -161,32 +162,32 @@ export default function CarouselEngine({
                 initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3, duration: 0.4 }}
-                className="text-sm text-white/90 leading-relaxed max-w-xl"
+                className="text-xs sm:text-sm text-white/90 leading-relaxed max-w-xl"
               >
                 {slides[current].description}
               </motion.p>
             </div>
             
-            {/* Slide component with delivery options */}
+            {/* Slide content */}
             <motion.div
               initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4, duration: 0.4 }}
-              className="min-h-[160px] sm:min-h-[220px]"
+              className="min-h-[140px] sm:min-h-[220px]"
             >
-              {renderSlide ? renderSlide(slides[current], current) : null}
+              {renderSlide ? renderSlide(slides[current], isMobile) : null}
             </motion.div>
           </motion.div>
         </AnimatePresence>
       </div>
-      
-      {/* Dots navigation - moved up a bit for more space */}
-      <div className="absolute bottom-3 left-0 right-0 z-20">
+
+      {/* Navigation dots - adjusted position */}
+      <div className="absolute bottom-2 sm:bottom-3 left-0 right-0 z-20">
         <CarouselNavigation 
           slides={slides}
           currentIndex={current}
           onDotClick={handleDotClick}
-          compact={compact}
+          compact={true}
           prefersReducedMotion={prefersReducedMotion}
         />
       </div>
