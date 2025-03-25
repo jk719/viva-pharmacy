@@ -1,53 +1,79 @@
 import { v2 as cloudinary } from 'cloudinary';
-import dotenv from 'dotenv';
+import fs from 'fs/promises';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Load environment variables
-dotenv.config({ path: path.join(__dirname, '..', '.env.local') });
+// Load environment variables from .env.local
+dotenv.config({ path: '.env.local' });
 
 // Configure Cloudinary
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
 async function listAllResources() {
   try {
-    console.log('Fetching ALL Cloudinary resources...');
-    
-    // Get all resources without folder restriction
-    const result = await cloudinary.api.resources({
-      type: 'upload',
-      max_results: 500,
-      prefix: '' // empty prefix to get everything
-    });
+    const result = {};
+    let nextCursor = null;
+    let totalImages = 0;
 
-    console.log('\nFound Resources:');
-    result.resources.forEach(resource => {
-      console.log(`\nPublic ID: ${resource.public_id}`);
-      console.log(`URL: ${resource.secure_url}`);
-      console.log(`Format: ${resource.format}`);
-      console.log(`Folder: ${path.dirname(resource.public_id)}`);
-    });
+    console.log('Starting to fetch images from Cloudinary...');
+    console.log(`Looking in folder: viva-pharmacy-online-store`);
+
+    do {
+      const options = {
+        type: 'upload',
+        max_results: 500,
+        prefix: 'viva-pharmacy-online-store/',
+        resource_type: 'image'
+      };
+
+      if (nextCursor) {
+        options.next_cursor = nextCursor;
+      }
+
+      console.log('Fetching batch of images...');
+      const response = await cloudinary.api.resources(options);
+      
+      response.resources.forEach(resource => {
+        // Get just the filename without the path
+        const filename = path.basename(resource.public_id);
+        // Store the full URL
+        result[filename] = resource.secure_url;
+        totalImages++;
+      });
+
+      nextCursor = response.next_cursor;
+      console.log(`Processed ${Object.keys(result).length} images so far...`);
+
+    } while (nextCursor);
+
+    // Create data directory if it doesn't exist
+    await fs.mkdir('data', { recursive: true });
+
+    // Write results to file
+    await fs.writeFile(
+      'data/cloudinaryUrlsClean.json',
+      JSON.stringify(result, null, 2)
+    );
 
     console.log('\nSummary:');
-    console.log(`Total resources found: ${result.resources.length}`);
-    
-    // List all folders
-    const folders = await cloudinary.api.root_folders();
-    console.log('\nFolders:');
-    folders.folders.forEach(folder => {
-      console.log(folder.path);
+    console.log(`Total images found: ${totalImages}`);
+    console.log('Results saved to data/cloudinaryUrlsClean.json');
+    console.log('\nSample URLs:');
+    // Show first 3 URLs as examples
+    Object.entries(result).slice(0, 3).forEach(([filename, url]) => {
+      console.log(`${filename}: ${url}`);
     });
 
   } catch (error) {
-    console.error('Error fetching Cloudinary resources:', error);
-    console.error('Error details:', error.error || error);
+    console.error('Error listing Cloudinary resources:', error.message);
+    if (error.error) {
+      console.error('Cloudinary error details:', error.error);
+    }
+    process.exit(1);
   }
 }
 

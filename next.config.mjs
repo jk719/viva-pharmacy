@@ -81,6 +81,15 @@ const nextConfig = {
           }
         ],
       },
+      {
+        source: '/api/products/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, must-revalidate',
+          },
+        ],
+      },
     ];
   },
   webpack: (config, { dev, isServer }) => {

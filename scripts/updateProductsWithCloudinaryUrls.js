@@ -1,94 +1,133 @@
-import dbConnect from '../lib/dbConnect.js';
-import getProductModel from '../models/Product.js';
-import fs from 'fs';
+import { MongoClient } from 'mongodb';
+import fs from 'fs/promises';
+import dotenv from 'dotenv';
 import path from 'path';
-import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Load environment variables from .env.local
+dotenv.config({ path: '.env.local' });
 
-async function updateProductsWithCloudinaryUrls() {
+function cleanProductName(name) {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .replace(/\d+ct|\d+count|\d+pk|\d+pack/g, '')
+    .replace(/exp-\d+|\d+oz|\d+fl|\d+mg/g, '')
+    .replace(/-+/g, '-')
+    .trim();
+}
+
+function findMatchingUrl(productName, cloudinaryUrls) {
+  const cleanedName = cleanProductName(productName);
+  
+  // Create variations of the product name
+  const variations = [
+    cleanedName,
+    cleanedName.replace(/-/g, ''),
+    ...cleanedName.split('-')
+  ];
+
+  for (const [filename, url] of Object.entries(cloudinaryUrls)) {
+    const cleanedFilename = cleanProductName(filename.replace('.jpg', '').replace('.png', ''));
+    
+    // Check for matches
+    for (const variation of variations) {
+      if (cleanedFilename.includes(variation) || variation.includes(cleanedFilename)) {
+        return url;
+      }
+    }
+  }
+
+  return null;
+}
+
+async function updateProducts() {
+  const client = new MongoClient(process.env.MONGODB_URI);
+
   try {
-    // Read the Cloudinary URLs file
-    const cloudinaryUrlsPath = path.join(__dirname, '..', 'data', 'cloudinaryUrls.json');
-    const cloudinaryUrls = JSON.parse(fs.readFileSync(cloudinaryUrlsPath, 'utf8'));
-    
-    // Create multiple maps for different matching strategies
-    const urlMaps = {
-      byPublicId: new Map(cloudinaryUrls.map(item => [item.public_id, item])),
-      byFilename: new Map(cloudinaryUrls.map(item => [item.filename, item])),
-      byOriginalFilename: new Map(cloudinaryUrls.map(item => [item.original_filename, item]))
-    };
+    console.log('Loading Cloudinary URLs...');
+    const cloudinaryUrls = JSON.parse(
+      await fs.readFile('data/cloudinaryUrlsClean.json', 'utf8')
+    );
 
-    // Connect to MongoDB
-    await dbConnect();
-    const Product = getProductModel();
-    
-    // Get all products
-    const products = await Product.find({});
-    console.log(`Found ${products.length} products to process`);
-    
+    console.log('Connecting to MongoDB...');
+    await client.connect();
+    const db = client.db('vivaPharmacy');
+    const products = db.collection('products');
+
+    const allProducts = await products.find({}).toArray();
+    console.log(`Processing ${allProducts.length} products...`);
+
     let updated = 0;
     let skipped = 0;
     let errors = [];
-    
-    for (const product of products) {
-      let cloudinaryData = null;
-      
-      // Try matching by existing cloudinaryPublicId
-      if (product.cloudinaryPublicId) {
-        cloudinaryData = urlMaps.byPublicId.get(product.cloudinaryPublicId);
-      }
-      
-      // Try matching by imageKey
-      if (!cloudinaryData && product.imageKey) {
-        const basename = path.basename(product.imageKey, path.extname(product.imageKey));
-        cloudinaryData = urlMaps.byFilename.get(basename);
-      }
-      
-      // Try matching by slug
-      if (!cloudinaryData && product.slug) {
-        cloudinaryData = urlMaps.byFilename.get(product.slug);
-      }
+    let matchingDetails = [];
 
-      if (cloudinaryData) {
-        try {
-          await Product.findByIdAndUpdate(product._id, {
-            $set: {
-              imageUrl: cloudinaryData.url,
-              cloudinaryPublicId: cloudinaryData.public_id
+    for (const product of allProducts) {
+      try {
+        const imageUrl = findMatchingUrl(product.name, cloudinaryUrls);
+
+        if (imageUrl) {
+          await products.updateOne(
+            { _id: product._id },
+            {
+              $set: {
+                imageUrl,
+                updatedAt: new Date()
+              }
             }
-          });
-          console.log(`✅ Updated ${product.name}`);
+          );
           updated++;
-        } catch (error) {
-          errors.push({ product: product.name, error: error.message });
+          console.log(`✅ Updated: ${product.name}`);
+          matchingDetails.push({
+            productName: product.name,
+            cleanedName: cleanProductName(product.name),
+            imageUrl
+          });
+        } else {
           skipped++;
+          console.log(`⚠️ No match: ${product.name}`);
+          errors.push({
+            productName: product.name,
+            cleanedName: cleanProductName(product.name),
+            reason: 'No matching image found'
+          });
         }
-      } else {
-        console.log(`❌ No match found for ${product.name}`);
-        errors.push({ product: product.name, error: 'No matching Cloudinary image found' });
-        skipped++;
+      } catch (error) {
+        console.error(`❌ Error with ${product.name}:`, error);
+        errors.push({
+          productName: product.name,
+          error: error.message
+        });
       }
     }
-    
-    // Save errors to a file for review
-    fs.writeFileSync(
-      path.join(__dirname, '..', 'data', 'cloudinary-update-errors.json'),
+
+    // Save reports
+    await fs.writeFile(
+      'data/matching-details.json',
+      JSON.stringify(matchingDetails, null, 2)
+    );
+
+    await fs.writeFile(
+      'data/update-errors.json',
       JSON.stringify(errors, null, 2)
     );
-    
+
     console.log('\nUpdate Summary:');
-    console.log(`Total products: ${products.length}`);
-    console.log(`Updated: ${updated}`);
-    console.log(`Skipped: ${skipped}`);
-    console.log(`Errors saved to data/cloudinary-update-errors.json`);
-    
+    console.log(`✅ Updated: ${updated} products`);
+    console.log(`⚠️ Skipped: ${skipped} products`);
+    console.log(`❌ Errors: ${errors.length}`);
+    console.log('\nReports saved:');
+    console.log('- data/matching-details.json');
+    console.log('- data/update-errors.json');
+
   } catch (error) {
-    console.error('Update failed:', error);
+    console.error('Script error:', error);
   } finally {
-    process.exit();
+    await client.close();
+    console.log('\nDatabase connection closed');
   }
 }
 
-updateProductsWithCloudinaryUrls(); 
+updateProducts(); 

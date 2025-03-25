@@ -1,41 +1,39 @@
-const cloudinary = require('cloudinary').v2;
-const fs = require('fs');
+import { v2 as cloudinary } from 'cloudinary';
+import dotenv from 'dotenv';
 
-// Configure Cloudinary
+// Load environment variables
+dotenv.config({ path: '.env.local' });
+
+// Configure Cloudinary with your existing env variables
 cloudinary.config({
   cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-async function listFolderStructure(path = '') {
+async function verifyCloudinaryStructure() {
   try {
-    console.log(`Checking structure for: ${path || 'root'}`);
+    console.log('Checking Cloudinary configuration...');
+    console.log('Cloud Name:', process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME);
     
-    // Get folder structure
     const result = await cloudinary.api.resources({
       type: 'upload',
-      prefix: path,
+      prefix: 'viva-pharmacy-online-store',
       max_results: 500
     });
     
-    console.log(`Found ${result.resources.length} resources`);
-    
-    // Save sample URLs to a file
-    const sampleUrls = result.resources.slice(0, 10).map(resource => ({
-      public_id: resource.public_id,
-      url: resource.secure_url
-    }));
-    
-    fs.writeFileSync('cloudinary-structure.json', JSON.stringify(sampleUrls, null, 2));
-    console.log('Saved sample URLs to cloudinary-structure.json');
-    
-    return sampleUrls;
+    console.log('\nCloudinary structure verification:');
+    console.log(`Total resources found: ${result.resources.length}`);
+    console.log('\nSample URLs:');
+    result.resources.slice(0, 5).forEach(resource => {
+      console.log(resource.secure_url);
+    });
   } catch (error) {
-    console.error('Error listing Cloudinary resources:', error);
-    return [];
+    console.error('Error verifying Cloudinary structure:', error.message);
+    if (error.http_code) {
+      console.error('HTTP Status:', error.http_code);
+    }
   }
 }
 
-// Run the function with your expected product image path
-listFolderStructure('viva-pharmacy/products'); 
+verifyCloudinaryStructure(); 

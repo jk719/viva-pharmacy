@@ -5,12 +5,16 @@ import { SWRConfig } from 'swr';
 const swrConfig = {
   provider: () => new Map(),
   revalidateIfStale: true,
-  revalidateOnFocus: false,
+  revalidateOnFocus: true,
   revalidateOnReconnect: true,
-  dedupingInterval: 30000, // Reduced to 30 seconds
+  dedupingInterval: 0,
   shouldRetryOnError: true,
   fetcher: async (resource, init) => {
-    const res = await fetch(resource, init);
+    const res = await fetch(resource, {
+      ...init,
+      cache: 'no-store',
+      next: { revalidate: 0 }
+    });
     if (!res.ok) {
       const error = new Error('An error occurred while fetching the data.');
       error.info = await res.json();
