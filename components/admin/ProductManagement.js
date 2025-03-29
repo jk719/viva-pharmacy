@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { FiPlus, FiEdit2, FiTrash2, FiSearch } from 'react-icons/fi';
 import Image from 'next/image';
 import { getCloudinaryUrl } from '@/lib/cloudinary';
+import RecentProductEdits from './RecentProductEdits';
 
 export default function ProductManagement() {
   const { data: session } = useSession();
@@ -91,6 +92,9 @@ export default function ProductManagement() {
 
   return (
     <div className="w-full">
+      {/* Recent Product Edits Section */}
+      <RecentProductEdits />
+
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
         <div className="flex-1">
           <div className="relative">

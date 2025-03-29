@@ -65,6 +65,14 @@ export default withAuth(
         }
       }
 
+      // Add this to the middleware function after the admin routes check
+      if (req.nextUrl.pathname.startsWith('/pharmacy-check-in')) {
+        if (!token?.isPharmacyAccount) {
+          return NextResponse.redirect(new URL('/', req.url));
+        }
+        return NextResponse.next();
+      }
+
       return NextResponse.next();
     }
 
@@ -269,5 +277,6 @@ export const config = {
     '/prescriptions/:path*',
     '/api/prescriptions/:path*',
     '/admin/prescriptions/:path*',
+    '/pharmacy-check-in/:path*',
   ],
 };

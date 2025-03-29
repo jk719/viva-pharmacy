@@ -7,7 +7,9 @@ export default function VerificationAlert() {
   const [resending, setResending] = useState(false);
   const [message, setMessage] = useState('');
 
-  const shouldShowAlert = session?.user && !session.user.isVerified;
+  const shouldShowAlert = session?.user && 
+    !session.user.isVerified && 
+    session.user.email !== 'vivajacksonheights@gmail.com';
   
   if (!shouldShowAlert) {
     return null;

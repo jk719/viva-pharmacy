@@ -127,11 +127,10 @@ export async function PUT(request, context) {
         }
 
         const data = await request.json();
-        console.log('Received update data:', data);
-
         await dbConnect();
         const Product = getProductModel();
-        
+
+        // Fetch existing product first
         const existingProduct = await Product.findById(id);
         if (!existingProduct) {
             return NextResponse.json(
@@ -140,52 +139,63 @@ export async function PUT(request, context) {
             );
         }
 
-        // Validate category hierarchy
-        const category = categories.find(c => c.slug === data.categorySlug);
-        const item = category?.items?.find(i => i.slug === data.itemSlug);
+        // Compare old and new values to track changes
+        const changes = Object.keys(data).reduce((acc, key) => {
+            if (key !== 'editHistory' && // Skip editHistory field
+                JSON.stringify(existingProduct[key]) !== JSON.stringify(data[key])) {
+                acc.push({
+                    field: key,
+                    oldValue: existingProduct[key],
+                    newValue: data[key]
+                });
+            }
+            return acc;
+        }, []);
 
-        if (!category || !item) {
-            return NextResponse.json(
-                { success: false, message: 'Invalid category or item' },
-                { status: 400 }
+        // Only proceed with update if there are actual changes
+        if (changes.length > 0) {
+            // Create new history entry
+            const newHistoryEntry = {
+                editedBy: session.user.email,
+                timestamp: new Date(),
+                changes
+            };
+
+            // Update the product with new data and push to editHistory
+            const result = await Product.findByIdAndUpdate(
+                id,
+                {
+                    $set: {
+                        ...data,
+                        updatedAt: new Date()
+                    },
+                    $push: {
+                        editHistory: newHistoryEntry
+                    }
+                },
+                { new: true }
             );
+
+            if (!result) {
+                return NextResponse.json(
+                    { success: false, message: 'Failed to update product' },
+                    { status: 400 }
+                );
+            }
+
+            return NextResponse.json({
+                success: true,
+                product: result,
+                message: 'Product updated successfully'
+            });
+        } else {
+            // No changes detected
+            return NextResponse.json({
+                success: true,
+                product: existingProduct,
+                message: 'No changes detected'
+            });
         }
-
-        // Generate SEO data for the update
-        const seoData = generateSEOData(data, category, item);
-
-        // Create update data
-        const updateData = {
-            ...data,
-            createdBy: existingProduct.createdBy,
-            _id: existingProduct._id,
-            createdAt: existingProduct.createdAt,
-            category: category.name,
-            subcategory: category.name,
-            item: item.name,
-            categoryPath: `${category.name} > ${item.name}`,
-            seo: seoData
-        };
-
-        const result = await Product.replaceOne(
-            { _id: id },
-            updateData,
-            { upsert: false }
-        );
-
-        if (result.modifiedCount !== 1) {
-            return NextResponse.json(
-                { success: false, message: 'Failed to update product' },
-                { status: 400 }
-            );
-        }
-
-        const updatedProduct = await Product.findById(id);
-        return NextResponse.json({
-            success: true,
-            product: updatedProduct,
-            message: 'Product updated successfully'
-        });
 
     } catch (error) {
         console.error('Database error:', error);

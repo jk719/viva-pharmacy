@@ -190,6 +190,23 @@ const productSchema = new mongoose.Schema({
     type: String,
     required: false
   },
+
+  // Add this to your schema
+  editHistory: [{
+    editedBy: {
+      type: String,
+      required: true
+    },
+    timestamp: {
+      type: Date,
+      default: Date.now
+    },
+    changes: [{
+      field: String,
+      oldValue: mongoose.Schema.Types.Mixed,
+      newValue: mongoose.Schema.Types.Mixed
+    }]
+  }],
 }, {
   timestamps: true
 });
