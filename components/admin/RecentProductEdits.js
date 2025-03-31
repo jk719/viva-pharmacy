@@ -112,9 +112,12 @@ export default function RecentProductEdits() {
             No recent edits available
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="flex overflow-x-auto pb-4 md:grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {recentEdits.slice(0, 6).map((edit, index) => (
-              <div key={index} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+              <div 
+                key={index} 
+                className="flex-shrink-0 w-[300px] md:w-auto border rounded-lg p-4 hover:shadow-md transition-shadow"
+              >
                 <div className="flex justify-between items-start mb-2">
                   <div>
                     <Link 
