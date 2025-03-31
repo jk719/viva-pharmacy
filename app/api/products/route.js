@@ -189,15 +189,47 @@ export async function POST(request) {
     }
 
     // Generate SKU
-    let sku;
-    try {
-      sku = await Product.generateSKU(body.categorySlug);
-    } catch (error) {
-      console.error("Error generating SKU:", error);
-      // Fallback SKU generation if the method fails
-      const prefix = body.categorySlug.substring(0, 3).toUpperCase();
-      const timestamp = Date.now().toString().slice(-6);
-      sku = `${prefix}${timestamp}`;
+    let sku = body.sku; // Use provided SKU if available
+    
+    if (!sku) {
+      try {
+        sku = await Product.generateSKU(body.categorySlug);
+        
+        // Verify the generated SKU doesn't already exist
+        // This safeguards against race conditions
+        let skuExists = await Product.findOne({ sku });
+        let attempts = 0;
+        const MAX_ATTEMPTS = 3;
+        
+        while (skuExists && attempts < MAX_ATTEMPTS) {
+          attempts++;
+          sku = await Product.generateSKU(body.categorySlug);
+          skuExists = await Product.findOne({ sku });
+        }
+        
+        if (skuExists) {
+          // If we still have a conflict after multiple attempts,
+          // create a unique timestamp-based SKU as fallback
+          const prefix = body.categorySlug.substring(0, 3).toUpperCase();
+          const timestamp = Date.now().toString().slice(-6);
+          sku = `${prefix}${timestamp}`;
+        }
+      } catch (error) {
+        console.error("Error generating SKU:", error);
+        // Fallback SKU generation
+        const prefix = body.categorySlug.substring(0, 3).toUpperCase();
+        const timestamp = Date.now().toString().slice(-6);
+        sku = `${prefix}${timestamp}`;
+      }
+    } else {
+      // If SKU was provided, check if it already exists
+      const skuExists = await Product.findOne({ sku });
+      if (skuExists) {
+        return NextResponse.json(
+          { success: false, message: 'SKU already exists' },
+          { status: 409 } // Conflict status code
+        );
+      }
     }
 
     // Generate a slug for the product if not provided

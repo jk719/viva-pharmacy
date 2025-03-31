@@ -33,10 +33,14 @@ export default function BaseProductForm({
     dosageForm: '',
     activeIngredients: [{ name: "", amount: "" }],
     warnings: [""],
-    directions: ''
+    directions: '',
+    sku: ''
   });
 
   const [imagePreview, setImagePreview] = useState(initialData.imageUrl || initialData.image || null);
+
+  const [skuError, setSkuError] = useState('');
+  const [isValidatingSku, setIsValidatingSku] = useState(false);
 
   useEffect(() => {
     if (initialData && Object.keys(initialData).length > 0) {
@@ -205,10 +209,53 @@ export default function BaseProductForm({
     }
   };
 
+  const validateSku = async (sku, currentSku) => {
+    if (!sku) return true; // Skip validation if empty
+    
+    // If the SKU is the same as the current product's SKU, it's valid
+    if (sku === currentSku) {
+        setSkuError('');
+        return true;
+    }
+    
+    try {
+        setIsValidatingSku(true);
+        const response = await fetch(`/api/products/validate-sku?sku=${sku}`);
+        const data = await response.json();
+        
+        if (data.exists) {
+            setSkuError('This SKU already exists. Please use a different SKU.');
+            return false;
+        } else {
+            setSkuError('');
+            return true;
+        }
+    } catch (error) {
+        console.error("Error validating SKU:", error);
+        setSkuError('Error validating SKU. Please try again.');
+        return false;
+    } finally {
+        setIsValidatingSku(false);
+    }
+  };
+
+  const handleSkuBlur = (e) => {
+    validateSku(e.target.value, initialData.sku);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+    
+    // Validate SKU if manually entered - pass the original SKU for comparison
+    if (formData.sku && formData.sku !== initialData.sku) {
+        const isSkuValid = await validateSku(formData.sku, initialData.sku);
+        if (!isSkuValid) {
+            setLoading(false);
+            return; // Prevent submission if SKU is invalid
+        }
+    }
     
     try {
       if (!formData.categorySlug || !formData.itemSlug) {
@@ -222,22 +269,33 @@ export default function BaseProductForm({
         throw new Error('Invalid category selection');
       }
 
-      let imageUrl = formData.image;
+      // Generate a unique slug for the product
+      const slug = formData.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '') + '-' + Date.now().toString().slice(-4);
 
+      // Handle image upload first to get URL and publicId
+      let imageData = {};
       if (imageFile) {
         setUploadingImage(true);
-        const { url } = await uploadToCloudinary(imageFile);
-        imageUrl = url;
+        // Pass the slug to ensure consistent naming
+        const uploadResult = await uploadToCloudinary(imageFile, formData.name);
+        imageData = {
+          imageUrl: uploadResult.url,
+          cloudinaryPublicId: uploadResult.publicId
+        };
         setUploadingImage(false);
       }
       
       const cleanedData = {
         ...formData,
+        slug, // Use the generated slug
         price: parseFloat(formData.price),
         stock: parseInt(formData.stock),
         activeIngredients: formData.activeIngredients.filter(i => i.name && i.amount),
         warnings: formData.warnings.filter(w => w.trim()),
-        image: imageUrl || process.env.NEXT_PUBLIC_DEFAULT_PRODUCT_IMAGE,
+        ...imageData, // Include Cloudinary image data
         categorySlug: category.slug,
         subcategorySlug: category.slug,
         itemSlug: item.slug,
@@ -253,7 +311,6 @@ export default function BaseProductForm({
     } catch (error) {
       console.error("Error submitting form:", error);
       setError(error.message || "An unexpected error occurred");
-    } finally {
       setLoading(false);
     }
   };
@@ -546,6 +603,23 @@ export default function BaseProductForm({
           <label className="ml-2 block text-sm text-gray-700">
             Featured Product
           </label>
+        </div>
+
+        {/* SKU */}
+        <div className="mb-4">
+          <label className="block text-gray-700 text-sm font-bold mb-2">
+            SKU (optional, will be generated if blank)
+          </label>
+          <input
+            type="text"
+            name="sku"
+            value={formData.sku || ''}
+            onChange={handleChange}
+            onBlur={handleSkuBlur}
+            className={`shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline ${skuError ? 'border-red-500' : ''}`}
+          />
+          {isValidatingSku && <p className="text-blue-500 text-xs italic">Validating SKU...</p>}
+          {skuError && <p className="text-red-500 text-xs italic">{skuError}</p>}
         </div>
 
         {/* Error Message */}

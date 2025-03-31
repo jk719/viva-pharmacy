@@ -139,6 +139,29 @@ export async function PUT(request, context) {
             );
         }
 
+        // Check for SKU conflict ONLY if the SKU is actually changed
+        if (data.sku && data.sku !== existingProduct.sku) {
+            const skuExists = await Product.findOne({ 
+                sku: data.sku,
+                _id: { $ne: id } // Exclude the current product
+            });
+            
+            if (skuExists) {
+                return NextResponse.json({ 
+                    success: false, 
+                    message: 'SKU already exists. Please use a different SKU.' 
+                }, { status: 409 });
+            }
+        } else {
+            // If SKU is not provided or unchanged, use the existing one
+            data.sku = existingProduct.sku;
+        }
+
+        // Ensure isFeatured is a boolean
+        if (typeof data.isFeatured === 'string') {
+            data.isFeatured = data.isFeatured === 'true';
+        }
+
         // Compare old and new values to track changes
         const changes = Object.keys(data).reduce((acc, key) => {
             if (key !== 'editHistory' && // Skip editHistory field
@@ -161,19 +184,23 @@ export async function PUT(request, context) {
                 changes
             };
 
-            // Update the product with new data and push to editHistory
+            // SPLIT THE UPDATE INTO TWO OPERATIONS:
+            
+            // 1. First, update all the product data except editHistory
+            const updateData = { ...data, updatedAt: new Date() };
+            delete updateData.editHistory; // Remove editHistory to avoid conflicts
+            
+            await Product.findByIdAndUpdate(
+                id,
+                { $set: updateData },
+                { runValidators: true }
+            );
+            
+            // 2. Then in a separate operation, update the editHistory array
             const result = await Product.findByIdAndUpdate(
                 id,
-                {
-                    $set: {
-                        ...data,
-                        updatedAt: new Date()
-                    },
-                    $push: {
-                        editHistory: newHistoryEntry
-                    }
-                },
-                { new: true }
+                { $push: { editHistory: newHistoryEntry } },
+                { new: true, runValidators: true }
             );
 
             if (!result) {

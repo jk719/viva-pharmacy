@@ -17,10 +17,17 @@ export default function AddProductForm() {
             // Show loading toast
             const loadingToast = toast.loading('Adding product...');
 
+            // Generate slug if it doesn't exist
+            const slug = formData.slug || formData.name.toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$/g, '');
+
             // Upload image to Cloudinary if there's a file
             let imageData = {};
             if (formData.imageFile) {
-                const uploadResult = await uploadToCloudinary(formData.imageFile);
+                // Send slug to use in the filename
+                const uploadResult = await uploadToCloudinary(formData.imageFile, slug);
                 imageData = {
                     imageUrl: uploadResult.url,
                     cloudinaryPublicId: uploadResult.publicId
