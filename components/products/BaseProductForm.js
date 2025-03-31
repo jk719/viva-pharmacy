@@ -49,27 +49,33 @@ export default function BaseProductForm({
                       null;
       setImagePreview(imageUrl);
       
-      // Find the matching category
+      // Find the matching category - add null check here
       const categorySlug = initialData.categorySlug || 
-                          initialData.category?.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                          (initialData.category ? initialData.category.toLowerCase().replace(/[^a-z0-9]+/g, '-') : '');
       
-      const category = categories.find(c => c.slug === categorySlug);
-      
-      if (category) {
-        console.log('Found matching category:', category.name);
-        setAvailableItems(category.items || []);
+      // Only try to find a category if categorySlug exists
+      if (categorySlug) {
+        const category = categories.find(c => c.slug === categorySlug);
         
-        // Set the form data with validated category information
-        setFormData({
-          ...initialData,
-          categorySlug: category.slug,
-          subcategorySlug: category.slug,
-          itemSlug: initialData.itemSlug || 
-                    initialData.item?.toLowerCase().replace(/[^a-z0-9]+/g, '-')
-        });
+        if (category) {
+          console.log('Found matching category:', category.name);
+          setAvailableItems(category.items || []);
+          
+          // Set the form data with validated category information
+          setFormData({
+            ...initialData,
+            categorySlug: category.slug,
+            subcategorySlug: category.slug,
+            itemSlug: initialData.itemSlug || 
+                      (initialData.item ? initialData.item.toLowerCase().replace(/[^a-z0-9]+/g, '-') : '')
+          });
+        } else {
+          console.error('Could not find matching category for:', categorySlug);
+          // Set form data without category information
+          setFormData(initialData);
+        }
       } else {
-        console.error('Could not find matching category for:', categorySlug);
-        // Set form data without category information
+        // No category slug, just set the initial data
         setFormData(initialData);
       }
     }

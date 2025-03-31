@@ -189,11 +189,81 @@ export async function POST(request) {
     }
 
     // Generate SKU
-    const sku = await Product.generateSKU(body.categorySlug);
+    let sku;
+    try {
+      sku = await Product.generateSKU(body.categorySlug);
+    } catch (error) {
+      console.error("Error generating SKU:", error);
+      // Fallback SKU generation if the method fails
+      const prefix = body.categorySlug.substring(0, 3).toUpperCase();
+      const timestamp = Date.now().toString().slice(-6);
+      sku = `${prefix}${timestamp}`;
+    }
+
+    // Generate a slug for the product if not provided
+    const slug = body.slug || body.name.toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+
+    // Generate a short description if not provided (truncate regular description)
+    const shortDescription = body.shortDescription || 
+      (body.description ? body.description.substring(0, 150) + (body.description.length > 150 ? '...' : '') : '');
+
+    // Generate SEO data
+    const seoData = {
+      metaTitle: `${body.name} | ${category.name} | GoVivanova Pharmacy`,
+      metaDescription: shortDescription,
+      metaKeywords: [
+        body.name,
+        category.name,
+        item.name,
+        body.dosageForm,
+        'pharmacy',
+        'medicine',
+        'online pharmacy'
+      ].filter(Boolean),
+      canonical: `/${category.slug}/${item.slug}/${slug}`,
+      breadcrumbs: [
+        { name: 'Home', url: '/' },
+        { name: category.name, url: `/${category.slug}` },
+        { name: item.name, url: `/${category.slug}/${item.slug}` },
+        { name: body.name, url: `/${category.slug}/${item.slug}/${slug}` }
+      ],
+      structuredData: {
+        "@context": "https://schema.org/",
+        "@type": "Product",
+        name: body.name,
+        description: body.description,
+        brand: {
+          "@type": "Brand",
+          name: item.name
+        },
+        category: category.name,
+        sku: sku,
+        image: body.image || '/images/placeholder.png',
+        offers: {
+          "@type": "Offer",
+          price: body.price,
+          priceCurrency: "USD",
+          availability: body.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+          seller: {
+            "@type": "Organization",
+            name: "GoVivanova Pharmacy"
+          }
+        }
+      }
+    };
 
     const productData = {
       ...body,
       sku,
+      slug,
+      shortDescription,
+      seo: seoData,
+      subcategoryIndex: 0, // Default value for required field
+      price: parseFloat(body.price),
+      stock: parseInt(body.stock || 0),
       category: category.name,
       subcategory: category.name, // Same as category
       item: item.name,

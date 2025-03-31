@@ -218,6 +218,22 @@ productSchema.index({ 'seo.canonical': 1 }, { unique: true });
 productSchema.index({ keywords: 1 });
 productSchema.index({ name: 'text', shortDescription: 'text', keywords: 'text' });
 
+// Generate SKU method
+productSchema.statics.generateSKU = async function(categorySlug) {
+  const prefix = categorySlug.substring(0, 3).toUpperCase();
+  
+  // Create a counter collection if it doesn't exist
+  const counterCollection = mongoose.connection.collection('counters');
+  const counterDoc = await counterCollection.findOneAndUpdate(
+    { _id: 'productSKU' },
+    { $inc: { seq: 1 } },
+    { upsert: true, returnDocument: 'after' }
+  );
+  
+  const counter = counterDoc.value ? counterDoc.value.seq : 1;
+  return `${prefix}${counter.toString().padStart(6, '0')}`;
+};
+
 const getModel = () => {
   try {
     return mongoose.models.Product || mongoose.model('Product', productSchema);
