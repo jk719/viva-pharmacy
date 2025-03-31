@@ -232,7 +232,10 @@ export default function ProductManagement() {
             {SPECIAL_CATEGORIES.map(({ id, name, icon: Icon, iconColor }) => (
               <div key={id} className="select-none">
                 <button
-                  onClick={() => toggleCategory(id)}
+                  onClick={() => {
+                    toggleCategory(id);
+                    setSelectedCategory(id);
+                  }}
                   className={`w-full flex items-center gap-2 p-2 rounded-lg transition-colors ${
                     id === 'Uncategorized'
                       ? 'text-red-600 hover:bg-red-50'
@@ -276,7 +279,10 @@ export default function ProductManagement() {
               .map(category => (
                 <div key={category.name} className="select-none">
                   <button
-                    onClick={() => toggleCategory(category.name)}
+                    onClick={() => {
+                      toggleCategory(category.name);
+                      setSelectedCategory(category.name);
+                    }}
                     className={`w-full flex items-center gap-2 p-2 rounded-lg transition-colors ${
                       selectedCategory === category.name 
                         ? 'bg-primary/10 text-primary' 
@@ -322,12 +328,32 @@ export default function ProductManagement() {
         {/* Product Grid */}
         <div className="bg-white rounded-xl shadow-sm p-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Object.entries(organizedProducts).map(([category, subCategories]) =>
-              Object.entries(subCategories).map(([subCategory, products]) =>
-                (selectedCategory === 'all' || 
-                 selectedCategory === category || 
-                 selectedCategory === `${category}-${subCategory}`) &&
-                products.map((product, index) => (
+            {Object.entries(organizedProducts).map(([category, subCategories]) => {
+              // Updated category filtering logic
+              const shouldShowCategory = 
+                selectedCategory === 'all' || 
+                selectedCategory === category ||
+                selectedCategory === category.replace(/\s+/g, '') || // Handle special categories
+                (selectedCategory?.includes('-') && selectedCategory.split('-')[0] === category) ||
+                (selectedCategory?.includes('-') && selectedCategory.split('-')[0] === category.replace(/\s+/g, ''));
+
+              if (!shouldShowCategory) return null;
+
+              return Object.entries(subCategories).map(([subCategory, products]) => {
+                // Updated subcategory filtering logic
+                const selectedSubCategory = selectedCategory?.includes('-') 
+                  ? selectedCategory.split('-')[1] 
+                  : null;
+
+                const shouldShowSubCategory = 
+                  !selectedSubCategory || 
+                  selectedSubCategory === subCategory ||
+                  (category === 'Uncategorized' && subCategory === 'General') ||
+                  (category === 'Featured' && subCategory === 'Featured Products');
+
+                if (!shouldShowSubCategory) return null;
+
+                return products.map((product, index) => (
                   <motion.div
                     key={product._id}
                     initial={{ opacity: 0, y: 20 }}
@@ -411,9 +437,9 @@ export default function ProductManagement() {
                       </div>
                     </div>
                   </motion.div>
-                ))
-              )
-            )}
+                ));
+              });
+            })}
           </div>
         </div>
       </div>
