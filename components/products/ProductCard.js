@@ -8,6 +8,7 @@ import { getCloudinaryUrl, FALLBACK_IMAGE } from '@/lib/cloudinary';
 import { HiMinus, HiPlus } from 'react-icons/hi';
 import { debounce } from 'lodash';
 import QuantityControls from '@/components/common/QuantityControls';
+import { trackAddToCart, trackRemoveFromCart } from '@/lib/analytics/events';
 
 const ProductCard = memo(({ product }) => {
   const { addToCart, updateItemQuantity, items } = useCart();
@@ -24,6 +25,7 @@ const ProductCard = memo(({ product }) => {
     debounce(async (product) => {
       try {
         await addToCart(product);
+        trackAddToCart(product, 1);
       } finally {
         setIsAdding(false);
       }
@@ -41,6 +43,7 @@ const ProductCard = memo(({ product }) => {
     setIsAdding(true);
     
     addToCart(product);
+    trackAddToCart(product, 1);
     
     // Reset loading state after a short delay for UX
     setTimeout(() => setIsAdding(false), 300);
@@ -52,6 +55,15 @@ const ProductCard = memo(({ product }) => {
       debouncedAddToCart.cancel();
     };
   }, [debouncedAddToCart]);
+
+  const handleRemoveFromCart = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (quantity > 0) {
+      updateItemQuantity(product._id, quantity - 1);
+      trackRemoveFromCart(product, 1);
+    }
+  }, [product, quantity, updateItemQuantity]);
 
   const imageUrl = useMemo(() => {
     if (imageError) return FALLBACK_IMAGE;
@@ -111,13 +123,7 @@ const ProductCard = memo(({ product }) => {
       <QuantityControls
         quantity={quantity}
         onAdd={handleAddToCart}
-        onRemove={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          if (quantity > 0) {
-            updateItemQuantity(product._id, quantity - 1);
-          }
-        }}
+        onRemove={handleRemoveFromCart}
         isInStock={product.isInStock}
         isLoading={isAdding}
         variant="card"

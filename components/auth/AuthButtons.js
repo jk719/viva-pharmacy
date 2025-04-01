@@ -6,6 +6,7 @@ import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { FiUser } from 'react-icons/fi';
 import sseManager from '@/lib/sseManager';
+import { trackUserLogin, trackUserSignUp } from '@/lib/analytics/events';
 
 const VERIFICATION_SUCCESS = 'verification_success';
 
@@ -178,6 +179,7 @@ const AuthButtons = ({ isMobile = false }) => {
       } else if (result?.ok) {
         setShowLogin(false);
         toast.success('Successfully signed in!');
+        trackUserLogin();
         
         // Single page refresh
         window.location.href = result.url || '/';

@@ -11,6 +11,7 @@ import { authOptions } from '@/lib/auth';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import ClientLayout from '@/components/ClientLayout';
 import SiteFooterWrapper from '@/components/SiteFooterWrapper';
+import GoogleAnalytics from '@/components/analytics/GoogleAnalytics';
 
 // Metadata can be exported as a constant
 const siteConfig = {
@@ -40,6 +41,7 @@ export default async function RootLayout({ children }) {
         )}
       </head>
       <body className="bg-white text-primary-color">
+        <GoogleAnalytics />
         <Providers session={session}>
           <ClientLayout>
             <main className="min-h-screen w-full flex-grow pt-[calc(var(--navbar-height)+var(--loyalty-banner-height))] md:pt-[calc(var(--navbar-height-md)+var(--loyalty-banner-height-md))]">

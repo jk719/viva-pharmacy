@@ -11,6 +11,7 @@ import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase
 import { compressImage, validateImage, getCroppedImg } from '@/lib/imageUtils';
 import ImageEditor from './ImageEditor';
 import ShippingAddress from '@/components/checkout/ShippingAddress';
+import { trackPrescriptionUpload } from '@/lib/analytics/events';
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 2000;
@@ -192,14 +193,15 @@ export default function PrescriptionUploadForm() {
       }));
 
       // Send to the correct endpoint
-      const response = await fetch('/api/prescriptions', {  // Changed back to original endpoint
+      const response = await fetch('/api/prescriptions', {
         method: 'POST',
-        body: formData // Use FormData instead of JSON
+        body: formData
       });
 
       const data = await response.json();
 
       if (data.success) {
+        trackPrescriptionUpload(); // Track successful prescription upload
         toast.success('Prescription uploaded successfully!', { id: loadingToast });
         router.push(`/prescriptions/verify/${data.prescriptionId}`);
       } else {

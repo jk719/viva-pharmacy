@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { calculateProgressToNextTier } from '@/lib/loyalty/loyaltyCalculator';
 import { TIER_CONFIG } from '../constants/tierConfig';
 import eventEmitter, { Events } from '@/lib/eventEmitter';
+import { trackLoyaltyPointsEarned, trackLoyaltyPointsRedeemed } from '@/lib/analytics/events';
 
 export default function useLoyaltyData() {
   const { data: session } = useSession();
@@ -82,6 +83,18 @@ export default function useLoyaltyData() {
   const updateUserData = useCallback(async () => {
     const data = await fetchUserDataFresh();
     if (!data) return;
+    
+    // Track points changes
+    if (previousPointsRef.current) {
+      const pointsDiff = data.vivaBucks - previousPointsRef.current.vivaBucks;
+      const cumulativeDiff = data.cumulativePoints - previousPointsRef.current.cumulativePoints;
+      
+      if (pointsDiff > 0) {
+        trackLoyaltyPointsEarned(pointsDiff);
+      } else if (pointsDiff < 0) {
+        trackLoyaltyPointsRedeemed(Math.abs(pointsDiff));
+      }
+    }
     
     setUserData(data);
     setIsInitialized(true);

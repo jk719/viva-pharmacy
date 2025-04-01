@@ -6,10 +6,11 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { IoArrowBack, IoAdd } from 'react-icons/io5';
 import { HiMinusSm, HiPlusSm } from 'react-icons/hi';
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { categories } from '@/data/categories';
 import { getCloudinaryUrl, FALLBACK_IMAGE } from '@/lib/cloudinary';
 import QuantityControls from '@/components/common/QuantityControls';
+import { trackProductView, trackAddToCart, trackRemoveFromCart } from '@/lib/analytics/events';
 
 // Moved outside component to prevent recreation on each render
 const getCategoryContent = (product) => ({
@@ -31,6 +32,13 @@ export default function ClientProductView({ product }) {
   const [imgError, setImgError] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   
+  // Track product view on mount
+  useEffect(() => {
+    if (product) {
+      trackProductView(product);
+    }
+  }, [product]);
+
   // Fix the quantity calculation to use productId
   const quantity = useMemo(() => {
     if (!product || !items?.length) return 0;
@@ -47,6 +55,7 @@ export default function ClientProductView({ product }) {
     setIsAdding(true);
     
     addToCart(product);
+    trackAddToCart(product, 1);
     
     // Reset loading state after a short delay for UX
     setTimeout(() => setIsAdding(false), 300);
@@ -55,6 +64,7 @@ export default function ClientProductView({ product }) {
   const handleDecrement = useCallback(() => {
     if (!product?._id) return;
     decrement(product._id);
+    trackRemoveFromCart(product, 1);
   }, [product, decrement]);
 
   const toggleSection = (section) => {

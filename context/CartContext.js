@@ -22,6 +22,8 @@ const normalizeProduct = (product) => {
         name: product.name,
         price: parseFloat(product.price),
         image: product.image,
+        imageUrl: product.imageUrl,
+        cloudinaryPublicId: product.cloudinaryPublicId,
         quantity: product.quantity || 1
     };
 };

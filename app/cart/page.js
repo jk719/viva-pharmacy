@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { HiMinusSm, HiPlusSm, HiOutlineTrash } from 'react-icons/hi';
 import { useSession } from 'next-auth/react';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
+import { getCloudinaryUrl, FALLBACK_IMAGE } from '@/lib/cloudinary';
 
 function CartContent() {
     const router = useRouter();
@@ -46,7 +47,7 @@ function CartContent() {
 
     if (status === 'loading') {
         return (
-            <div className="container mx-auto px-4 md:px-6 py-8">
+            <div className="container mx-auto px-4 md:px-6">
                 <div className="animate-pulse space-y-6">
                     <div className="h-8 bg-gray-200 rounded w-48"></div>
                     <div className="h-32 bg-gray-200 rounded"></div>
@@ -102,7 +103,7 @@ function CartContent() {
                                     <div className="w-24 h-24 relative bg-white rounded-lg p-2
                                                   shadow-sm group-hover:shadow-md transition-shadow">
                                         <Image
-                                            src={item.image}
+                                            src={getCloudinaryUrl(item) || FALLBACK_IMAGE}
                                             alt={item.name}
                                             fill
                                             className="object-contain p-2"

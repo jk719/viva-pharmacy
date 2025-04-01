@@ -14,6 +14,7 @@ import { LoyaltyCheckoutService } from '@/lib/checkout/loyaltyCheckoutServiceCli
 import { FaGift, FaUndo } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import OrderSuccessModal from './OrderSuccessModal';
+import { trackBeginCheckout, trackPurchase } from '@/lib/analytics/events';
 
 // Add this custom hook
 const useWindowSize = () => {
@@ -64,6 +65,11 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
 
   // Add progress state
   const [progress, setProgress] = useState(0);
+
+  // Track begin checkout when component mounts
+  useEffect(() => {
+    trackBeginCheckout(items, amountDetails.total);
+  }, [items, amountDetails.total]);
 
   useEffect(() => {
     if (paymentStatus === 'processing') {
@@ -126,9 +132,22 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
         console.log('✅ Payment succeeded:', paymentIntent.id);
         setPaymentStatus('succeeded');
 
+        // Track successful purchase with enhanced data
+        trackPurchase(
+          paymentIntent.id,
+          items,
+          amountDetails.total,
+          amountDetails.deliveryFee || 0,
+          amountDetails.tax || 0
+        );
+
         // Store order details
         const orderDetails = {
           orderId: paymentIntent.id,
+          items: items,
+          total: amountDetails.total,
+          tax: amountDetails.tax,
+          shipping: amountDetails.deliveryFee,
           deliveryMethod,
           selectedTime,
           pointsEarned: Math.floor(amountDetails.total)  // 1 point per dollar

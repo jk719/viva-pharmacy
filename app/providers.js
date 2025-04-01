@@ -8,6 +8,7 @@ import { SWRConfig } from 'swr';
 import SSEProvider from '@/components/SSEProvider';
 import HeaderHeightAdjuster from '@/components/HeaderHeightAdjuster';
 import ToasterProvider from '@/components/ToasterProvider';
+import GoogleAnalytics from '@/components/analytics/GoogleAnalytics';
 
 const fetcher = async (url) => {
   const res = await fetch(url);
@@ -20,6 +21,7 @@ const fetcher = async (url) => {
 export function Providers({ children, session }) {
   return (
     <SessionProvider session={session} refetchInterval={0}>
+      <GoogleAnalytics />
       <SWRConfig value={{
         fetcher,
         revalidateOnFocus: false,
