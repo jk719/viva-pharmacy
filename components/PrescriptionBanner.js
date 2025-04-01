@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import PrescriptionDeliveryModal from './PrescriptionDeliveryModal';
 import { toast } from 'react-hot-toast';
+import { trackPrescriptionLinkClick, trackDeliveryLinkClick } from '@/lib/analytics/events';
 
 const BANNER_ITEMS = [
   {
@@ -14,19 +15,22 @@ const BANNER_ITEMS = [
     label: 'Fill & Refill',
     href: '/prescriptions',
     description: 'Upload your prescription',
-    requiresAuth: true
+    requiresAuth: true,
+    analyticsId: 'fill_refill'
   },
   {
     icon: FaTruck,
     label: 'Pay for Delivery',
     isModal: true,
-    description: 'Schedule delivery'
+    description: 'Schedule delivery',
+    analyticsId: 'delivery'
   },
   {
     icon: FaClock,
     label: 'Track Order',
     description: 'Coming Soon',
-    isUnderConstruction: true
+    isUnderConstruction: true,
+    analyticsId: 'track_order'
   }
 ];
 
@@ -35,6 +39,13 @@ export default function PrescriptionBanner() {
   const [showDeliveryModal, setShowDeliveryModal] = useState(false);
 
   const handleItemClick = (item) => {
+    // Track analytics for all clicks
+    if (item.analyticsId === 'fill_refill') {
+      trackPrescriptionLinkClick('banner');
+    } else if (item.analyticsId === 'delivery') {
+      trackDeliveryLinkClick('banner', 'prescription');
+    }
+
     if (item.isUnderConstruction) {
       toast('Coming soon!', {
         icon: 'ℹ️',
@@ -110,6 +121,9 @@ export default function PrescriptionBanner() {
                   onClick={e => {
                     if (!session && item.requiresAuth) {
                       e.preventDefault();
+                      handleItemClick(item);
+                    } else {
+                      // Track successful navigation
                       handleItemClick(item);
                     }
                   }}

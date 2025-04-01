@@ -11,6 +11,7 @@ import { HiMinusSm, HiPlusSm, HiOutlineTrash } from 'react-icons/hi';
 import { useSession } from 'next-auth/react';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
 import { getCloudinaryUrl, FALLBACK_IMAGE } from '@/lib/cloudinary';
+import { trackCartView, trackUpdateCartQuantity, trackCartAbandonment, trackRemoveFromCart } from '@/lib/analytics/events';
 
 function CartContent() {
     const router = useRouter();
@@ -27,11 +28,37 @@ function CartContent() {
     const deliveryFee = deliveryOption === 'delivery' ? 5 : 0;
     const total = subtotal + deliveryFee;
 
+    // Track cart view on mount
+    useEffect(() => {
+        if (items?.length > 0) {
+            trackCartView(items, total);
+        }
+    }, []);
+
+    // Track cart abandonment
+    useEffect(() => {
+        const handleBeforeUnload = () => {
+            if (items?.length > 0) {
+                trackCartAbandonment(items, total);
+            }
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [items, total]);
+
     const handleQuantityChange = (productId, newQuantity) => {
+        const item = items.find(i => i.productId === productId);
+        if (!item) return;
+
+        const oldQuantity = item.quantity;
+
         if (newQuantity < 1) {
             removeFromCart(productId);
+            trackRemoveFromCart(item, oldQuantity);
         } else {
             updateQuantity(productId, newQuantity);
+            trackUpdateCartQuantity(item, oldQuantity, newQuantity);
         }
     };
 
@@ -41,7 +68,6 @@ function CartContent() {
             router.push(`/?showLogin=true&redirect=/checkout`);
             return;
         }
-        console.log('Checkout clicked');
         router.push('/checkout');
     };
 

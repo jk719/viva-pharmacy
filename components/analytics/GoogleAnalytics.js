@@ -4,33 +4,54 @@ import Script from 'next/script';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
 import { GA_MEASUREMENT_ID } from '@/lib/analytics/gtag';
+import { initializeAnalytics } from '@/lib/firebase';
+import { logEvent } from 'firebase/analytics';
 
 export default function GoogleAnalytics() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    // Debug logging
-    console.log('🔍 GA Debug:', {
-      component: 'GoogleAnalytics',
-      measurementId: GA_MEASUREMENT_ID,
-      pathname,
-      searchParams: searchParams?.toString()
-    });
-    
-    if (pathname) {
-      if (typeof window !== 'undefined' && window.gtag) {
-        console.log('📊 Sending pageview:', pathname);
-        window.gtag('config', GA_MEASUREMENT_ID, {
-          page_path: pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : ''),
-          send_page_view: true,
-          currency: 'USD',
-          country: 'US'
-        });
-      } else {
-        console.warn('⚠️ gtag not available');
+    const initAnalytics = async () => {
+      // Debug logging
+      console.log('🔍 GA Debug:', {
+        component: 'GoogleAnalytics',
+        measurementId: GA_MEASUREMENT_ID,
+        pathname,
+        searchParams: searchParams?.toString()
+      });
+      
+      if (pathname) {
+        // Google Analytics 4 pageview
+        if (typeof window !== 'undefined' && window.gtag) {
+          console.log('📊 Sending GA4 pageview:', pathname);
+          window.gtag('config', GA_MEASUREMENT_ID, {
+            page_path: pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : ''),
+            send_page_view: true,
+            currency: 'USD',
+            country: 'US'
+          });
+        } else {
+          console.warn('⚠️ gtag not available');
+        }
+
+        // Firebase Analytics pageview
+        try {
+          const analytics = await initializeAnalytics();
+          if (analytics) {
+            console.log('📊 Sending Firebase Analytics pageview:', pathname);
+            logEvent(analytics, 'page_view', {
+              page_path: pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : ''),
+              page_title: document.title
+            });
+          }
+        } catch (error) {
+          console.error('❌ Firebase Analytics event failed:', error);
+        }
       }
-    }
+    };
+
+    initAnalytics();
   }, [pathname, searchParams]);
 
   if (!GA_MEASUREMENT_ID) {
