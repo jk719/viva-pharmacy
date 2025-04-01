@@ -16,7 +16,10 @@ const productSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Short description is required'],
     trim: true,
-    maxLength: 200
+    maxLength: [200, 'Short description cannot exceed 200 characters'],
+    default: function() {
+      return this.description?.substring(0, 150) + (this.description?.length > 150 ? '...' : '');
+    }
   },
   description: {
     type: String,
@@ -154,25 +157,33 @@ const productSchema = new mongoose.Schema({
   seo: {
     metaTitle: {
       type: String,
-      required: true
+      required: [true, 'Meta title is required'],
+      default: function() {
+        return `${this.name} | ${this.category || 'Medicine'} | GoVivanova Pharmacy`;
+      }
     },
     metaDescription: {
       type: String,
-      required: true
+      required: [true, 'Meta description is required'],
+      default: function() {
+        return this.shortDescription || this.description?.substring(0, 150);
+      }
     },
     metaKeywords: [String],
     structuredData: mongoose.Schema.Types.Mixed,
     canonical: {
       type: String,
-      required: true
+      required: [true, 'Canonical URL is required'],
+      default: function() {
+        const categorySlug = this.categorySlug || 'medicine';
+        const itemSlug = this.itemSlug || 'general';
+        return `/${categorySlug}/${itemSlug}/${this.slug}`;
+      }
     },
-    breadcrumbs: {
-      type: [{
-        name: String,
-        url: String
-      }],
-      required: false
-    }
+    breadcrumbs: [{
+      name: String,
+      url: String
+    }]
   },
 
   // Add this to the productSchema

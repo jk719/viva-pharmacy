@@ -288,6 +288,33 @@ export default function BaseProductForm({
         setUploadingImage(false);
       }
       
+      // Generate short description if not provided
+      if (!formData.shortDescription) {
+        formData.shortDescription = formData.description.substring(0, 150) + (formData.description.length > 150 ? '...' : '');
+      }
+
+      // Generate SEO data
+      const seoData = {
+        metaTitle: `${formData.name} | ${category?.name || 'Medicine'} | GoVivanova Pharmacy`,
+        metaDescription: formData.shortDescription,
+        metaKeywords: [
+          formData.name,
+          category?.name,
+          item?.name,
+          formData.dosageForm,
+          'pharmacy',
+          'medicine',
+          'online pharmacy'
+        ].filter(Boolean),
+        canonical: `/${category?.slug || 'medicine'}/${item?.slug || 'general'}/${slug}`,
+        breadcrumbs: [
+          { name: 'Home', url: '/' },
+          { name: category?.name || 'Medicine', url: `/${category?.slug || 'medicine'}` },
+          { name: item?.name || 'General', url: `/${category?.slug || 'medicine'}/${item?.slug || 'general'}` },
+          { name: formData.name, url: `/${category?.slug || 'medicine'}/${item?.slug || 'general'}/${slug}` }
+        ]
+      };
+
       const cleanedData = {
         ...formData,
         slug, // Use the generated slug
@@ -303,7 +330,8 @@ export default function BaseProductForm({
         subcategory: category.name,
         item: item.name,
         categoryPath: `${category.name} > ${item.name}`,
-        categoryTagline: category.tagline
+        categoryTagline: category.tagline,
+        seo: seoData
       };
       
       console.log('Submitting form data:', cleanedData);
@@ -449,6 +477,23 @@ export default function BaseProductForm({
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               required
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Short Description *</label>
+            <textarea
+              name="shortDescription"
+              value={formData.shortDescription}
+              onChange={handleChange}
+              rows="2"
+              maxLength="200"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              required
+              placeholder="Brief product description (max 200 characters)"
+            />
+            <p className="mt-1 text-sm text-gray-500">
+              {formData.shortDescription?.length || 0}/200 characters
+            </p>
           </div>
         </div>
 

@@ -273,7 +273,7 @@ export async function POST(request) {
         },
         category: category.name,
         sku: sku,
-        image: body.image || '/images/placeholder.png',
+        image: body.imageUrl || '/images/placeholder.png',
         offers: {
           "@type": "Offer",
           price: body.price,
@@ -289,10 +289,10 @@ export async function POST(request) {
 
     const productData = {
       ...body,
+      shortDescription: body.shortDescription || body.description?.substring(0, 150),
+      seo: seoData,
       sku,
       slug,
-      shortDescription,
-      seo: seoData,
       subcategoryIndex: 0, // Default value for required field
       price: parseFloat(body.price),
       stock: parseInt(body.stock || 0),
