@@ -6,14 +6,26 @@ import { toast } from 'react-hot-toast';
 
 function formatPhoneNumber(value) {
   if (!value) return '';
+  // Remove all non-digits
   const phoneNumber = value.replace(/\D/g, '');
-  if (phoneNumber.length <= 3) {
-    return phoneNumber;
-  } else if (phoneNumber.length <= 6) {
-    return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3)}`;
+  // Remove +1 prefix if present
+  const cleanNumber = phoneNumber.startsWith('1') ? phoneNumber.slice(1) : phoneNumber;
+  
+  if (cleanNumber.length <= 3) {
+    return cleanNumber;
+  } else if (cleanNumber.length <= 6) {
+    return `(${cleanNumber.slice(0, 3)}) ${cleanNumber.slice(3)}`;
   } else {
-    return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
+    return `(${cleanNumber.slice(0, 3)}) ${cleanNumber.slice(3, 6)}-${cleanNumber.slice(6, 10)}`;
   }
+}
+
+function unformatPhoneNumber(value) {
+  if (!value) return '';
+  // Remove all non-digits
+  const phoneNumber = value.replace(/\D/g, '');
+  // Ensure it starts with 1
+  return phoneNumber.startsWith('1') ? phoneNumber : '1' + phoneNumber;
 }
 
 function ProfileInfo({ user: initialUser }) {
@@ -89,7 +101,14 @@ function ProfileInfo({ user: initialUser }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     console.log('🔵 Starting profile update submission');
-    console.log('📝 Form data:', JSON.stringify(formData, null, 2));
+    
+    // Unformat phone number before sending
+    const submitData = {
+      ...formData,
+      phone: unformatPhoneNumber(formData.phone)
+    };
+    
+    console.log('📝 Form data:', JSON.stringify(submitData, null, 2));
     
     const loadingToast = toast.loading('Updating profile...');
     
@@ -100,7 +119,7 @@ function ProfileInfo({ user: initialUser }) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submitData),
       });
 
       const data = await response.json();
@@ -115,7 +134,7 @@ function ProfileInfo({ user: initialUser }) {
         ...session,
         user: {
           ...session.user,
-          ...formData
+          ...submitData
         }
       });
       console.log('✅ Session updated successfully');

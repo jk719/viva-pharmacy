@@ -79,8 +79,13 @@ export async function PUT(req) {
     const data = await req.json();
     console.log('📝 Update data received:', JSON.stringify(data, null, 2));
 
-    // Format phone number - remove all non-digits
-    const formattedPhone = data.phone.replace(/\D/g, '');
+    // Format phone number - remove all non-digits and ensure +1 prefix
+    let formattedPhone = data.phone.replace(/\D/g, '');
+    if (formattedPhone.length === 10) {
+      formattedPhone = '+1' + formattedPhone;
+    } else if (!formattedPhone.startsWith('+1')) {
+      formattedPhone = '+1' + formattedPhone;
+    }
 
     // Find the user
     let user = await User.findOne({ email: session.user.email });
@@ -127,7 +132,7 @@ export async function PUT(req) {
     console.log('✅ User updated successfully:', {
       id: user._id,
       email: user.email,
-      name: user.name, // Log the name as well
+      name: user.name,
       phoneNumber: user.phoneNumber,
       addresses: user.addresses
     });

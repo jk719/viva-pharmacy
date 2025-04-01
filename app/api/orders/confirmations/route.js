@@ -6,7 +6,9 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { LoyaltyCheckoutService } from '@/lib/checkout/loyaltyCheckoutService';
 import User from '@/models/User';
+import Order from '@/models/Order';
 import { calculateTierFromPoints, TIER_CONFIG } from '@/lib/loyalty/loyaltyService';
+import { twilioService } from '@/lib/sms/twilioService';
 
 export async function POST(request) {
   try {
@@ -48,7 +50,31 @@ export async function POST(request) {
       }
     });
 
-    // Generate email with formatted data
+    // Create order record
+    const order = new Order({
+      orderNumber: formattedData.orderNumber,
+      userId: session?.user?.id,
+      items: formattedData.items.map(item => ({
+        productId: item.productId || item._id || 'unknown',
+        name: item.name,
+        quantity: parseInt(item.quantity),
+        price: parseFloat(item.price),
+        image: item.image
+      })),
+      total: parseFloat(formattedData.total),
+      status: 'Processing',
+      paymentStatus: 'Paid',
+      paymentIntentId: formattedData.orderNumber,
+      deliveryMethod: formattedData.deliveryMethod,
+      selectedTime: formattedData.selectedTime,
+      shippingAddress: formattedData.shippingAddress,
+      emailSent: false
+    });
+
+    await order.save();
+    console.log('✅ Order record created:', order.orderNumber);
+
+    // Generate and send email
     const emailData = {
       ...formattedData,
       items: formattedData.items.map(item => ({
@@ -59,6 +85,40 @@ export async function POST(request) {
     };
 
     await sendOrderConfirmationEmail(formattedData.email, emailData);
+    order.emailSent = true;
+    await order.save();
+
+    // Send SMS notification if phone number is available
+    if (session?.user?.id) {
+      const user = await User.findById(session.user.id);
+      console.log('📱 Checking user for SMS:', {
+        userId: session.user.id,
+        hasPhoneNumber: !!user?.phoneNumber,
+        phoneNumber: user?.phoneNumber,
+        smsPreferences: user?.smsPreferences
+      });
+
+      if (user?.phoneNumber) {
+        try {
+          const message = `Your order #${formattedData.orderNumber} has been confirmed! Total: $${formattedData.total}. Thank you for shopping with Viva Pharmacy!`;
+          console.log('📱 Attempting to send SMS:', {
+            to: user.phoneNumber,
+            messageLength: message.length
+          });
+          
+          await twilioService.sendSMS(user.phoneNumber, message);
+          console.log('✅ SMS notification sent successfully');
+        } catch (smsError) {
+          console.error('❌ Error sending SMS:', {
+            error: smsError.message,
+            code: smsError.code,
+            status: smsError.status
+          });
+        }
+      } else {
+        console.log('⚠️ No phone number found for user:', session.user.id);
+      }
+    }
 
     // Calculate and apply loyalty benefits
     if (session?.user?.id) {
@@ -89,7 +149,7 @@ export async function POST(request) {
 
         // Add points earned entry
         user.rewardHistory.push({
-          type: 'POINTS_EARNED',  // This matches the enum in User model
+          type: 'POINTS_EARNED',
           points: loyaltyBenefits.basePoints,
           adjustedPoints: loyaltyBenefits.totalPoints,
           multiplier: loyaltyBenefits.tierMultiplier,
@@ -110,7 +170,7 @@ export async function POST(request) {
 
           // Add tier change entry
           user.rewardHistory.push({
-            type: 'TIER_CHANGED',  // This matches the enum in User model
+            type: 'TIER_CHANGED',
             oldTier: oldTier,
             newTier: newTier,
             timestamp: new Date(),
@@ -140,7 +200,6 @@ export async function POST(request) {
 
       } catch (loyaltyError) {
         console.error('Error processing loyalty benefits:', loyaltyError);
-        // Don't throw the error, continue with order confirmation
       }
     }
 

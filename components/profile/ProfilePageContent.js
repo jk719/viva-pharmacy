@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { FaUser, FaCoins, FaShoppingBag } from 'react-icons/fa';
+import SMSPreferences from './SMSPreferences';
 
 export default function ProfilePageContent({ user }) {
   // Ensure user has all required fields
@@ -146,6 +147,12 @@ export default function ProfilePageContent({ user }) {
                 </div>
               </div>
             )}
+
+            {/* Add SMS Preferences section */}
+            <div className="mb-8">
+              <h3 className="text-md font-medium text-gray-700 mb-4">Notification Preferences</h3>
+              <SMSPreferences />
+            </div>
             
             <div className="flex justify-start mt-6">
               <Link

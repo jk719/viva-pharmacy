@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getFeaturedProducts } from '@/lib/products/productDb';
-import cloudinaryUrls from '@/data/cloudinaryUrls.json';
+import { getCloudinaryUrl } from '@/lib/cloudinary';
 
 export async function GET() {
   try {
@@ -10,13 +10,10 @@ export async function GET() {
     const transformedProducts = products.map(product => {
       const productData = product.toObject();
       
-      // Get image URL from cloudinaryUrls.json
-      const imageFileName = `${productData.imageKey}.png`;
-      const imageUrl = cloudinaryUrls[imageFileName] || '/images/placeholder.png';
+      // Use the getCloudinaryUrl function instead of cloudinaryUrls.json
+      const imageUrl = getCloudinaryUrl(productData);
       
       console.log('Product:', productData.name);
-      console.log('Image file name:', imageFileName);
-      console.log('Found in cloudinaryUrls:', !!cloudinaryUrls[imageFileName]);
       console.log('Image URL:', imageUrl);
 
       return {

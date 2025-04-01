@@ -204,6 +204,61 @@ const userSchema = new mongoose.Schema({
       type: Boolean,
       default: true
     }
+  },
+  smsPreferences: {
+    orderUpdates: {
+      type: Boolean,
+      default: true
+    },
+    prescriptionStatus: {
+      type: Boolean,
+      default: true
+    },
+    deliveryUpdates: {
+      type: Boolean,
+      default: true
+    },
+    promotionalMessages: {
+      type: Boolean,
+      default: false
+    },
+    appointmentReminders: {
+      type: Boolean,
+      default: true
+    },
+    refillReminders: {
+      type: Boolean,
+      default: true
+    }
+  },
+  phoneNotificationSettings: {
+    preferredTime: {
+      start: {
+        type: String,
+        default: '09:00' // 9 AM
+      },
+      end: {
+        type: String,
+        default: '21:00' // 9 PM
+      }
+    },
+    timezone: {
+      type: String,
+      default: 'America/New_York'
+    },
+    doNotDisturb: {
+      type: Boolean,
+      default: false
+    },
+    lastNotificationSent: {
+      type: Date,
+      default: null
+    },
+    notificationCount: {
+      type: Number,
+      default: 0,
+      min: 0
+    }
   }
 });
 

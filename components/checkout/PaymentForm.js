@@ -56,32 +56,30 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
   const submitTimeoutRef = useRef(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const { width, height } = useWindowSize();
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [orderDetails, setOrderDetails] = useState(null);
 
   // Add payment status tracking
   const [paymentStatus, setPaymentStatus] = useState('idle'); // 'idle' | 'processing' | 'succeeded' | 'failed'
 
   // Add progress state
   const [progress, setProgress] = useState(0);
-  
-  // Add these new state variables
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [orderDetails, setOrderDetails] = useState(null);
-  
+
   useEffect(() => {
     if (paymentStatus === 'processing') {
-      // Reset progress when starting
+      // Start progress immediately
       setProgress(0);
       
-      // Animate progress from 0 to 90% during processing
+      // Animate progress faster (every 50ms instead of 100ms)
       const interval = setInterval(() => {
         setProgress(prev => {
           if (prev >= 90) {
             clearInterval(interval);
             return 90;
           }
-          return prev + 2;
+          return prev + 5; // Increase by 5% each time
         });
-      }, 100);
+      }, 50);
 
       return () => clearInterval(interval);
     } else if (paymentStatus === 'succeeded') {
@@ -137,6 +135,7 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
         };
         setOrderDetails(orderDetails);
         setShowConfetti(true);
+        setShowSuccessModal(true);
 
         // Store payment info
         sessionStorage.setItem('paymentProcessed', 'true');
@@ -147,6 +146,11 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
           toast.success('Payment successful!', { id: loadingToast });
           await handleOrderConfirmation(paymentIntent);
           await clearCart();
+          
+          // Redirect after a delay
+          setTimeout(() => {
+            router.push('/profile/orders');
+          }, 3000);
         } catch (err) {
           console.error('Post-payment error:', err);
         }
@@ -176,7 +180,8 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
       price: parseFloat(item.price || 0).toFixed(2),
       quantity: parseInt(item.quantity || 1),
       image: item.image,
-      hasImage: !!item.image
+      hasImage: !!item.image,
+      productId: item._id || item.id // Include product ID
     }));
 
     const response = await fetch('/api/orders/confirmations', {
@@ -247,6 +252,18 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
           onConfettiComplete={() => setShowConfetti(false)}
         />
       )}
+      {showSuccessModal && (
+        <OrderSuccessModal
+          orderDetails={orderDetails}
+          onClose={() => {
+            setShowSuccessModal(false);
+            // Add a small delay before redirecting
+            setTimeout(() => {
+              router.push('/profile/orders');
+            }, 500);
+          }}
+        />
+      )}
       <form onSubmit={handleSubmit} className="space-y-4">
         <PaymentElement />
         {error && (
@@ -255,7 +272,7 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
           </div>
         )}
         
-        {/* Add progress bar */}
+        {/* Update progress bar styling */}
         {(paymentStatus === 'processing' || paymentStatus === 'succeeded') && (
           <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
             <div 
@@ -290,15 +307,6 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
           )}
         </button>
       </form>
-      {showSuccessModal && (
-        <OrderSuccessModal
-          orderDetails={orderDetails}
-          onClose={() => {
-            setShowSuccessModal(false);
-            router.push('/');
-          }}
-        />
-      )}
     </>
   );
 };
@@ -372,6 +380,12 @@ export default function PaymentForm({ amount, amountDetails, items, shippingAddr
   const [redemptionError, setRedemptionError] = useState(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [orderDetails, setOrderDetails] = useState(null);
+
+  // Add payment status tracking
+  const [paymentStatus, setPaymentStatus] = useState('idle'); // 'idle' | 'processing' | 'succeeded' | 'failed'
+
+  // Add progress state
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     if (paymentInitialized || !amount || amount <= 0) {

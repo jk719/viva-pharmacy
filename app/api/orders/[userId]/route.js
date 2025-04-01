@@ -73,6 +73,14 @@ export async function GET(request) {
         const enhancedOrders = await Promise.all(orders.map(async (order) => {
             const enhancedItems = await Promise.all(order.items.map(async (item) => {
                 try {
+                    // Skip product lookup if productId is 'unknown'
+                    if (item.productId === 'unknown') {
+                        return {
+                            ...item,
+                            image: item.image || null
+                        };
+                    }
+
                     // Try to get the product to get the latest image URL
                     const product = await mongoose.models.Product.findById(item.productId).lean();
                     
@@ -91,23 +99,17 @@ export async function GET(request) {
                         };
                     }
                     
-                    // If no product found, try to construct URL from item name
-                    if (item.name) {
-                        const normalizedName = item.name.toLowerCase()
-                            .replace(/[^a-z0-9\s-]/g, '')
-                            .replace(/\s+/g, '-')
-                            .trim();
-                        
-                        return {
-                            ...item,
-                            image: `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/viva-pharmacy/products/${normalizedName}.png`
-                        };
-                    }
-
-                    return item;
+                    // If no product found, return item with existing image
+                    return {
+                        ...item,
+                        image: item.image || null
+                    };
                 } catch (error) {
                     console.error(`Failed to enhance item ${item.productId}:`, error);
-                    return item;
+                    return {
+                        ...item,
+                        image: item.image || null
+                    };
                 }
             }));
 
