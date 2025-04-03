@@ -163,7 +163,12 @@ const AuthButtons = ({ isMobile = false }) => {
     setLoading(true);
     setError('');
 
-    console.log('Login attempt starting for:', formData.email);
+    console.log('🔑 Login attempt:', { 
+      email: formData.email,
+      url: window.location.href,
+      environment: process.env.NODE_ENV,
+      timestamp: new Date().toISOString()
+    });
 
     try {
       // Close any existing connections before login
@@ -176,11 +181,11 @@ const AuthButtons = ({ isMobile = false }) => {
         password: formData.password
       });
 
-      console.log('signIn result:', { 
-        ok: result?.ok, 
+      console.log('🔒 Auth result:', {
+        ok: result?.ok,
+        status: result?.status,
         error: result?.error,
-        url: result?.url,
-        status: result?.status
+        url: result?.url
       });
 
       if (result?.error) {
@@ -195,7 +200,11 @@ const AuthButtons = ({ isMobile = false }) => {
         window.location.href = result.url || '/';
       }
     } catch (err) {
-      console.error('Sign in error details:', err);
+      console.error('🚫 Auth error:', {
+        message: err.message,
+        name: err.name,
+        code: err.code
+      });
       setError('An unexpected error occurred');
     } finally {
       setLoading(false);
