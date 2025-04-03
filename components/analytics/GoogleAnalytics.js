@@ -13,41 +13,45 @@ export default function GoogleAnalytics() {
 
   useEffect(() => {
     const initAnalytics = async () => {
-      // Debug logging
-      console.log('🔍 GA Debug:', {
-        component: 'GoogleAnalytics',
-        measurementId: GA_MEASUREMENT_ID,
-        pathname,
-        searchParams: searchParams?.toString()
-      });
-      
-      if (pathname) {
-        // Google Analytics 4 pageview
-        if (typeof window !== 'undefined' && window.gtag) {
-          console.log('📊 Sending GA4 pageview:', pathname);
-          window.gtag('config', GA_MEASUREMENT_ID, {
-            page_path: pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : ''),
-            send_page_view: true,
-            currency: 'USD',
-            country: 'US'
+      try {
+        // Debug logging only in development
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🔍 GA Debug:', {
+            component: 'GoogleAnalytics',
+            measurementId: GA_MEASUREMENT_ID,
+            pathname,
+            searchParams: searchParams?.toString()
           });
-        } else {
-          console.warn('⚠️ gtag not available');
         }
-
-        // Firebase Analytics pageview
-        try {
-          const analytics = await initializeAnalytics();
-          if (analytics) {
-            console.log('📊 Sending Firebase Analytics pageview:', pathname);
-            logEvent(analytics, 'page_view', {
+        
+        if (pathname && GA_MEASUREMENT_ID) {
+          // Google Analytics 4 pageview
+          if (typeof window !== 'undefined' && window.gtag) {
+            window.gtag('config', GA_MEASUREMENT_ID, {
               page_path: pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : ''),
-              page_title: document.title
+              send_page_view: true,
+              currency: 'USD',
+              country: 'US'
             });
           }
-        } catch (error) {
-          console.error('❌ Firebase Analytics event failed:', error);
+
+          // Firebase Analytics pageview
+          try {
+            const analytics = await initializeAnalytics();
+            if (analytics) {
+              logEvent(analytics, 'page_view', {
+                page_path: pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : ''),
+                page_title: document.title
+              });
+            }
+          } catch (error) {
+            // Silently fail analytics - don't let it break the app
+            console.error('Analytics error (non-critical):', error);
+          }
         }
+      } catch (error) {
+        // Catch any unexpected errors to prevent breaking the app
+        console.error('Analytics initialization error (non-critical):', error);
       }
     };
 
