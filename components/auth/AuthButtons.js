@@ -163,14 +163,24 @@ const AuthButtons = ({ isMobile = false }) => {
     setLoading(true);
     setError('');
 
+    console.log('Login attempt starting for:', formData.email);
+
     try {
       // Close any existing connections before login
       closeAllConnections();
 
+      console.log('Calling signIn with credentials');
       const result = await signIn('credentials', {
         redirect: false,
         email: formData.email.toLowerCase().trim(),
         password: formData.password
+      });
+
+      console.log('signIn result:', { 
+        ok: result?.ok, 
+        error: result?.error,
+        url: result?.url,
+        status: result?.status
       });
 
       if (result?.error) {
@@ -185,7 +195,7 @@ const AuthButtons = ({ isMobile = false }) => {
         window.location.href = result.url || '/';
       }
     } catch (err) {
-      console.error('Sign in error:', err);
+      console.error('Sign in error details:', err);
       setError('An unexpected error occurred');
     } finally {
       setLoading(false);
