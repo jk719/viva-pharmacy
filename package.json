@@ -124,7 +124,7 @@
     "tailwindcss": "^3.4.14"
   },
   "engines": {
-    "node": ">=18.17.0"
+    "node": "20.x"
   },
   "resolutions": {
     "@types/react": "19.0.8"
