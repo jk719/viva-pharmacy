@@ -9,6 +9,7 @@ export default function SSEProvider({ children }) {
   const [mounted, setMounted] = useState(false);
   const reconnectTimeoutRef = useRef(null);
   const eventSourceRef = useRef(null);
+  const lastReconnectAttemptRef = useRef(0);
 
   // Handle initial mount
   useEffect(() => {
@@ -36,6 +37,13 @@ export default function SSEProvider({ children }) {
     }
 
     const initSSE = async () => {
+      const now = Date.now();
+      if (now - lastReconnectAttemptRef.current < 2000) {
+        // Prevent rapid reconnection attempts
+        return;
+      }
+      lastReconnectAttemptRef.current = now;
+
       try {
         // Only import and initialize on client side
         const { default: sseManager } = await import('@/lib/sseManager');
@@ -49,12 +57,26 @@ export default function SSEProvider({ children }) {
             });
           };
 
-          newEventSource.onerror = handleConnectionError;
+          newEventSource.onerror = (error) => {
+            console.error('SSE connection error:', error);
+            handleConnectionError();
+            eventEmitter.emit(Events.CONNECTION_STATUS, {
+              userId: session.user.id,
+              status: 'error',
+              error: error.message
+            });
+          };
+
           eventSourceRef.current = newEventSource;
         }
       } catch (error) {
         console.error('SSE initialization error:', error);
         handleConnectionError();
+        eventEmitter.emit(Events.CONNECTION_STATUS, {
+          userId: session.user.id,
+          status: 'error',
+          error: error.message
+        });
       }
     };
 

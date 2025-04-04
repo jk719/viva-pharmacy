@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
+export const maxDuration = 60; // Set max duration to 60 seconds for Vercel hobby plan
 
 export async function GET(request) {
   try {
@@ -24,7 +25,12 @@ export async function GET(request) {
     const encoder = new TextEncoder();
 
     const writeEvent = async (data) => {
-      await writer.write(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+      try {
+        await writer.write(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+      } catch (error) {
+        console.error('Error writing SSE event:', error);
+        throw error;
+      }
     };
 
     // Send initial connection message
@@ -34,7 +40,7 @@ export async function GET(request) {
       timestamp: new Date().toISOString()
     });
 
-    // Set up heartbeat interval
+    // Set up heartbeat interval (every 15 seconds)
     const heartbeatInterval = setInterval(async () => {
       try {
         await writeEvent({
@@ -44,12 +50,20 @@ export async function GET(request) {
       } catch (error) {
         console.error('Heartbeat error:', error);
         clearInterval(heartbeatInterval);
+        writer.close();
       }
-    }, 30000);
+    }, 15000);
+
+    // Set up connection timeout (55 seconds to ensure we close before maxDuration)
+    const connectionTimeout = setTimeout(() => {
+      clearInterval(heartbeatInterval);
+      writer.close();
+    }, 55000);
 
     // Clean up on disconnect
     request.signal.addEventListener('abort', () => {
       clearInterval(heartbeatInterval);
+      clearTimeout(connectionTimeout);
       writer.close();
     });
 
