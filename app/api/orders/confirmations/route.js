@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { generateOrderConfirmationEmail } from '@/lib/email-templates/order-confirmation';
 import { sendOrderConfirmationEmail } from '@/lib/email/sendEmail';
-import { eventEmitter, Events, paymentTracker } from '@/lib/eventEmitter';
+import { eventEmitter, Events } from '@/lib/eventEmitter';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { LoyaltyCheckoutService } from '@/lib/checkout/loyaltyCheckoutService';
+import loyaltyEventsService from '@/lib/loyalty/eventsService';
 import User from '@/models/User';
 import Order from '@/models/Order';
 import { calculateTierFromPoints, TIER_CONFIG } from '@/lib/loyalty/loyaltyService';
@@ -126,7 +127,7 @@ export async function POST(request) {
         const user = await User.findById(session.user.id);
         if (!user) throw new Error('User not found');
 
-        // Use LoyaltyCheckoutService to calculate benefits
+        // Use LoyaltyCheckoutService to calculate benefits without emitting events
         const amount = parseFloat(formattedData.total);
         const loyaltyBenefits = await LoyaltyCheckoutService.calculateLoyaltyBenefits(
           user,
@@ -181,25 +182,49 @@ export async function POST(request) {
 
         await user.save();
 
-        // Emit the event for real-time updates
-        eventEmitter.emit(Events.PAYMENT_COMPLETED, {
-          userId: user._id,
-          paymentIntentId: formattedData.orderNumber,
-          amount: amount,
-          animate: true,
-          loyaltyBenefits: {
-            ...loyaltyBenefits,
-            currentPoints: user.vivaBucks,
-            lifetimePoints: user.cumulativePoints,
-            currentTier: user.currentTier,
-            oldPoints,
-            oldLifetimePoints
-          },
-          timestamp: new Date().toISOString()
-        });
+        // Wait for a short delay to ensure any pending transactions are complete
+        await new Promise(resolve => setTimeout(resolve, 100));
 
-      } catch (loyaltyError) {
-        console.error('Error processing loyalty benefits:', loyaltyError);
+        // Use a single consolidated loyalty update event with delay
+        setTimeout(async () => {
+          try {
+            // Use loyaltyEventsService for all loyalty-related events
+            await loyaltyEventsService.emitLoyaltyUpdate(user._id, {
+              type: 'ORDER_COMPLETE',
+              paymentIntentId: formattedData.orderNumber,
+              amount: amount,
+              animate: true,
+              isComplete: true,
+              points: loyaltyBenefits.totalPoints,
+              vivaBucks: user.vivaBucks,
+              loyaltyBenefits: {
+                ...loyaltyBenefits,
+                currentPoints: user.vivaBucks,
+                lifetimePoints: user.cumulativePoints,
+                currentTier: user.currentTier,
+                oldPoints,
+                oldLifetimePoints,
+                tierChanged: newTier !== user.currentTier,
+                oldTier: user.currentTier,
+                newTier: newTier
+              }
+            });
+
+            // Payment event emitted separately after a delay
+            setTimeout(() => {
+              eventEmitter.emit(Events.PAYMENT_COMPLETED, {
+                userId: user._id,
+                paymentIntentId: formattedData.orderNumber,
+                amount: amount,
+                status: 'completed'
+              });
+            }, 200);
+          } catch (emitError) {
+            console.error('Error emitting loyalty events:', emitError);
+          }
+        }, 100);
+      } catch (error) {
+        console.error('Error processing loyalty benefits:', error);
       }
     }
 

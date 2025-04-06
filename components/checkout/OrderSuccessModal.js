@@ -3,13 +3,20 @@
 import { motion } from 'framer-motion';
 import { FaCheckCircle, FaBox, FaEnvelope, FaGift } from 'react-icons/fa';
 import confetti from 'canvas-confetti';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { eventEmitter, Events } from '@/lib/eventEmitter';
 
-export default function OrderSuccessModal({ orderDetails, onClose }) {
+export default function OrderSuccessModal({ orderDetails }) {
   const router = useRouter();
+  const [showRewards, setShowRewards] = useState(false);
 
   useEffect(() => {
+    // Delay showing rewards section to allow loyalty bar to animate first
+    const rewardsTimeout = setTimeout(() => {
+      setShowRewards(true);
+    }, 1000);
+
     const duration = 3000;
     const animationEnd = Date.now() + duration;
 
@@ -30,6 +37,8 @@ export default function OrderSuccessModal({ orderDetails, onClose }) {
     };
 
     confettiAnimation();
+
+    return () => clearTimeout(rewardsTimeout);
   }, []);
 
   return (
@@ -88,8 +97,13 @@ export default function OrderSuccessModal({ orderDetails, onClose }) {
             </p>
           </div>
 
-          {orderDetails?.pointsEarned && (
-            <div className="bg-yellow-50 rounded-lg p-4">
+          {orderDetails?.pointsEarned && showRewards && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="bg-yellow-50 rounded-lg p-4"
+            >
               <div className="flex items-center gap-3 mb-2">
                 <FaGift className="text-yellow-600 text-xl" />
                 <h3 className="font-semibold text-gray-800">Rewards Earned</h3>
@@ -97,7 +111,7 @@ export default function OrderSuccessModal({ orderDetails, onClose }) {
               <p className="text-sm text-gray-600">
                 You earned {orderDetails.pointsEarned} VivaBucks! 🌟
               </p>
-            </div>
+            </motion.div>
           )}
         </div>
 

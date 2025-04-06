@@ -15,11 +15,16 @@ export default function useLoyaltyData() {
   const [animatePoints, setAnimatePoints] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState('disconnected');
 
   const previousPointsRef = useRef(null);
-  const sseInitializedRef = useRef(false);
-  const pollingIntervalRef = useRef(null);
-  const debounceTimeoutRef = useRef(null);
+  const lastUpdateRef = useRef(0);
+  const updateTimeoutRef = useRef(null);
+  const animationTimeoutRef = useRef(null);
+  const reconnectTimeoutRef = useRef(null);
+  const initialFetchDoneRef = useRef(false);
+  const updateQueueRef = useRef([]);
+  const isProcessingRef = useRef(false);
 
   // Check for mobile device
   useEffect(() => {
@@ -52,25 +57,7 @@ export default function useLoyaltyData() {
       });
 
       if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-      
-      const data = await response.json();
-      
-      // Check if points have changed
-      if (previousPointsRef.current && (
-        previousPointsRef.current.vivaBucks !== data.vivaBucks ||
-        previousPointsRef.current.cumulativePoints !== data.cumulativePoints
-      )) {
-        setAnimatePoints(true);
-        setTimeout(() => setAnimatePoints(false), 3000);
-      }
-
-      // Update previous points reference
-      previousPointsRef.current = {
-        vivaBucks: data.vivaBucks,
-        cumulativePoints: data.cumulativePoints
-      };
-
-      return data;
+      return await response.json();
     } catch (err) {
       console.error('Error fetching user data:', err);
       return null;
@@ -79,105 +66,140 @@ export default function useLoyaltyData() {
     }
   }, [session]);
 
-  // Update user data and progress info
-  const updateUserData = useCallback(async () => {
-    const data = await fetchUserDataFresh();
-    if (!data) return;
+  // Process update queue
+  const processUpdateQueue = useCallback(async () => {
+    if (isProcessingRef.current || updateQueueRef.current.length === 0) return;
     
-    // Track points changes
-    if (previousPointsRef.current) {
-      const pointsDiff = data.vivaBucks - previousPointsRef.current.vivaBucks;
-      const cumulativeDiff = data.cumulativePoints - previousPointsRef.current.cumulativePoints;
-      
-      if (pointsDiff > 0) {
-        trackLoyaltyPointsEarned(pointsDiff);
-      } else if (pointsDiff < 0) {
-        trackLoyaltyPointsRedeemed(Math.abs(pointsDiff));
+    isProcessingRef.current = true;
+    const update = updateQueueRef.current.shift();
+    
+    try {
+      const data = await fetchUserDataFresh();
+      if (!data) return;
+
+      // Check if points have changed
+      const pointsChanged = previousPointsRef.current && (
+        previousPointsRef.current.vivaBucks !== data.vivaBucks ||
+        previousPointsRef.current.cumulativePoints !== data.cumulativePoints
+      );
+
+      if (pointsChanged) {
+        const pointsDiff = data.vivaBucks - previousPointsRef.current.vivaBucks;
+        if (pointsDiff > 0) {
+          trackLoyaltyPointsEarned(pointsDiff);
+          setAnimatePoints(true);
+          if (animationTimeoutRef.current) {
+            clearTimeout(animationTimeoutRef.current);
+          }
+          animationTimeoutRef.current = setTimeout(() => setAnimatePoints(false), 3000);
+        } else if (pointsDiff < 0) {
+          trackLoyaltyPointsRedeemed(Math.abs(pointsDiff));
+        }
       }
-    }
-    
-    setUserData(data);
-    setIsInitialized(true);
-    
-    if (data.cumulativePoints && typeof data.cumulativePoints === 'number') {
-      try {
-        const progress = calculateProgressToNextTier(data.cumulativePoints, TIER_CONFIG);
-        setProgressInfo(progress);
-      } catch (err) {
-        console.error('Error calculating tier progress:', err);
+
+      // Update previous points reference
+      previousPointsRef.current = {
+        vivaBucks: data.vivaBucks,
+        cumulativePoints: data.cumulativePoints
+      };
+      
+      setUserData(data);
+      setIsInitialized(true);
+      
+      if (data.cumulativePoints && typeof data.cumulativePoints === 'number') {
+        try {
+          const progress = calculateProgressToNextTier(data.cumulativePoints, TIER_CONFIG);
+          setProgressInfo(progress);
+        } catch (err) {
+          console.error('Error calculating tier progress:', err);
+        }
+      }
+    } finally {
+      isProcessingRef.current = false;
+      // Process next update if any
+      if (updateQueueRef.current.length > 0) {
+        setTimeout(processUpdateQueue, 100);
       }
     }
   }, [fetchUserDataFresh]);
 
-  // Initialize SSE connection
-  useEffect(() => {
-    if (sseInitializedRef.current || !session?.user?.id) return;
-
-    const initSSE = async () => {
-      try {
-        const { default: sseManager } = await import('@/lib/sseManager');
-        await sseManager.connect(session.user.id);
-        sseInitializedRef.current = true;
-
-        const removeListener = sseManager.addListener((event) => {
-          if (event.type === 'LOYALTY_UPDATE' || event.type === 'POINTS_EARNED') {
-            updateUserData();
-          }
-        });
-
-        return removeListener;
-      } catch (error) {
-        console.error('Error initializing SSE:', error);
+  // Queue update with debounce
+  const queueUpdate = useCallback((force = false) => {
+    const now = Date.now();
+    if (!force && now - lastUpdateRef.current < 1000) {
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
       }
-    };
+      updateTimeoutRef.current = setTimeout(() => queueUpdate(true), 1000);
+      return;
+    }
+    
+    lastUpdateRef.current = now;
+    updateQueueRef.current.push({ timestamp: now });
+    processUpdateQueue();
+  }, [processUpdateQueue]);
 
-    initSSE();
-  }, [session, updateUserData]);
-
-  // Set up polling and event listeners
+  // Handle connection status changes and SSE events
   useEffect(() => {
     if (!session?.user?.id) return;
 
-    // Initial data fetch
-    updateUserData();
-
-    // Set up polling interval
-    pollingIntervalRef.current = setInterval(updateUserData, 60000);
-
-    // Event listeners for mobile
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') updateUserData();
+    const handleConnectionStatus = (data) => {
+      if (data.status === 'reconnecting') {
+        setConnectionStatus('reconnecting');
+        if (reconnectTimeoutRef.current) {
+          clearTimeout(reconnectTimeoutRef.current);
+        }
+        reconnectTimeoutRef.current = setTimeout(() => {
+          queueUpdate(true);
+          setConnectionStatus('connected');
+        }, data.delay || 1000);
+      } else if (data.status === 'connected') {
+        setConnectionStatus('connected');
+      } else if (data.status === 'failed') {
+        setConnectionStatus('disconnected');
+      }
     };
 
-    const handleStorageEvent = (e) => {
-      if (e.key === 'viva_payment_completed') updateUserData();
+    const handleLoyaltyUpdate = (data) => {
+      if (data.isComplete) {
+        queueUpdate(true);
+      }
+    };
+
+    // Initial data fetch only if not already done
+    if (!initialFetchDoneRef.current) {
+      queueUpdate(true);
+      initialFetchDoneRef.current = true;
+    }
+
+    // Listen for loyalty updates
+    eventEmitter.on(Events.LOYALTY_UPDATE, handleLoyaltyUpdate);
+    eventEmitter.on(Events.CONNECTION_STATUS, handleConnectionStatus);
+
+    // Set up visibility change handler
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && connectionStatus === 'disconnected') {
+        queueUpdate(true);
+      }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('storage', handleStorageEvent);
-    window.addEventListener('viva:payment:completed', updateUserData);
-
-    // Global refresh function with debounce
-    window.refreshLoyaltyData = () => {
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
-      debounceTimeoutRef.current = setTimeout(updateUserData, 1000);
-    };
 
     return () => {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
       }
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
+      if (animationTimeoutRef.current) {
+        clearTimeout(animationTimeoutRef.current);
       }
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      eventEmitter.off(Events.LOYALTY_UPDATE, handleLoyaltyUpdate);
+      eventEmitter.off(Events.CONNECTION_STATUS, handleConnectionStatus);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('storage', handleStorageEvent);
-      window.removeEventListener('viva:payment:completed', updateUserData);
-      delete window.refreshLoyaltyData;
     };
-  }, [session, updateUserData]);
+  }, [session, queueUpdate, connectionStatus]);
 
   return {
     userData,
@@ -186,6 +208,7 @@ export default function useLoyaltyData() {
     animatePoints,
     isMobile,
     isInitialized,
-    refresh: updateUserData
+    connectionStatus,
+    refresh: () => queueUpdate(true)
   };
 } 

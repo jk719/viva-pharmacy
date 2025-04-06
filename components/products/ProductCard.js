@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
 import { useState, useRef, useEffect, useCallback, memo, useMemo } from 'react';
-import { getCloudinaryUrl, FALLBACK_IMAGE } from '@/lib/cloudinary';
+import { getCloudinaryUrl, FALLBACK_IMAGE, debugImageUrl } from '@/lib/cloudinary';
 import { HiMinus, HiPlus } from 'react-icons/hi';
 import { debounce } from 'lodash';
 import QuantityControls from '@/components/common/QuantityControls';
@@ -67,8 +67,22 @@ const ProductCard = memo(({ product }) => {
 
   const imageUrl = useMemo(() => {
     if (imageError) return FALLBACK_IMAGE;
-    return getCloudinaryUrl(product);
+    return debugImageUrl(product);
   }, [product, imageError]);
+
+  // Add fallback for non-cloudinary images or missing product data
+  useEffect(() => {
+    if (!product || !product?.imageUrl) return;
+    
+    // Check if the image URL actually points to a real image
+    const img = new Image();
+    img.src = imageUrl;
+    
+    img.onerror = () => {
+      console.error(`Image loading failed for: ${imageUrl}`);
+      setImageError(true);
+    };
+  }, [imageUrl, product]);
 
   return (
     <div className="relative group bg-white">

@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { FaArrowUp } from 'react-icons/fa';
 import { TIER_COLORS } from '../constants/tierConfig';
 import { ANIMATIONS } from '../constants/animations';
+import eventEmitter, { Events } from '@/lib/eventEmitter';
 
 export default function ProgressBar({
   progress,
@@ -18,10 +19,11 @@ export default function ProgressBar({
   animate = true
 }) {
   const [showLabels, setShowLabels] = useState(false);
+  const [animationComplete, setAnimationComplete] = useState(!animate);
   const progressBarRef = useRef(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => setShowLabels(true), 500);
+    const timer = setTimeout(() => setShowLabels(true), 300);
     return () => clearTimeout(timer);
   }, []);
 
@@ -31,6 +33,14 @@ export default function ProgressBar({
     progress,
     (minProgressWidth / (progressBarRef?.current?.offsetWidth || 300)) * 100
   );
+
+  // Notify parent when animation completes
+  const handleAnimationComplete = () => {
+    setAnimationComplete(true);
+    eventEmitter.emit(Events.PROGRESS_BAR_ANIMATION_COMPLETE, {
+      timestamp: Date.now()
+    });
+  };
 
   return (
     <div className={`
@@ -72,7 +82,9 @@ export default function ProgressBar({
         {/* Points labels */}
         {showLabels && (
           <motion.div 
-            {...ANIMATIONS.fadeIn}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3, delay: 0.2 }}
             className={`
               flex
               justify-between
@@ -107,7 +119,12 @@ export default function ProgressBar({
           <motion.div
             initial={animate ? { width: '0%' } : false}
             animate={{ width: `${Math.min(Math.max(displayProgress, 0), 100)}%` }}
-            transition={{ duration: 1, ease: "easeOut" }}
+            transition={{ 
+              duration: 1.5,
+              ease: "easeOut",
+              delay: 0.3 // Slight delay to ensure proper setup
+            }}
+            onAnimationComplete={handleAnimationComplete}
             className={`
               h-full
               rounded-full
@@ -116,14 +133,19 @@ export default function ProgressBar({
             `}
           >
             {showLabels && (
-              <div className={`
-                absolute
-                inset-y-0
-                right-0
-                flex
-                items-center
-                ${isMobile ? 'mr-2' : 'mr-3'}
-              `}>
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3, delay: 1.8 }}
+                className={`
+                  absolute
+                  inset-y-0
+                  right-0
+                  flex
+                  items-center
+                  ${isMobile ? 'mr-2' : 'mr-3'}
+                `}
+              >
                 <span className={`
                   text-white
                   font-bold
@@ -131,7 +153,7 @@ export default function ProgressBar({
                 `}>
                   {currentPoints.toLocaleString()}
                 </span>
-              </div>
+              </motion.div>
             )}
           </motion.div>
 
@@ -162,7 +184,9 @@ export default function ProgressBar({
 
       {/* Lifetime points display */}
       <motion.div 
-        {...ANIMATIONS.fadeIn}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.3, delay: 1.8 }}
         className={`
           flex
           justify-end
