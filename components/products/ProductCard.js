@@ -1,24 +1,49 @@
 "use client";
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
 import { useState, useRef, useEffect, useCallback, memo, useMemo } from 'react';
-import { getCloudinaryUrl, FALLBACK_IMAGE, debugImageUrl } from '@/lib/cloudinary';
+import { FALLBACK_IMAGE, getCloudinaryUrl } from '@/lib/cloudinary';
 import { HiMinus, HiPlus } from 'react-icons/hi';
 import { debounce } from 'lodash';
 import QuantityControls from '@/components/common/QuantityControls';
 import { trackAddToCart, trackRemoveFromCart } from '@/lib/analytics/events';
+import { motion } from 'framer-motion';
+import { IoMdAdd } from 'react-icons/io';
+import { HiMinusSm, HiPlusSm } from 'react-icons/hi';
+import { useRateLimit } from '@/lib/hooks/useRateLimit';
+import toast from 'react-hot-toast';
 
 const ProductCard = memo(({ product }) => {
   const { addToCart, updateItemQuantity, items } = useCart();
   const [isAdding, setIsAdding] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [currentImageUrl, setCurrentImageUrl] = useState('');
   const addButtonRef = useRef(null);
 
   // Memoize cartItem lookup
   const cartItem = items.find(item => item.productId === product._id);
   const quantity = cartItem?.quantity || 0;
+
+  // Handle image error
+  const handleImageError = useCallback(() => {
+    console.error('Image loading failed for:', currentImageUrl);
+    setImageError(true);
+    
+    // Try to load the fallback image
+    if (currentImageUrl !== FALLBACK_IMAGE) {
+      setCurrentImageUrl(FALLBACK_IMAGE);
+    }
+  }, [currentImageUrl]);
+
+  // Get initial image URL
+  useEffect(() => {
+    if (product) {
+      const url = getCloudinaryUrl(product);
+      setCurrentImageUrl(url);
+      setImageError(false); // Reset error state when product changes
+    }
+  }, [product]);
 
   // Debounced add to cart function
   const debouncedAddToCart = useCallback(
@@ -66,23 +91,12 @@ const ProductCard = memo(({ product }) => {
   }, [product, quantity, updateItemQuantity]);
 
   const imageUrl = useMemo(() => {
-    if (imageError) return FALLBACK_IMAGE;
-    return debugImageUrl(product);
-  }, [product, imageError]);
-
-  // Add fallback for non-cloudinary images or missing product data
-  useEffect(() => {
-    if (!product || !product?.imageUrl) return;
-    
-    // Check if the image URL actually points to a real image
-    const img = new Image();
-    img.src = imageUrl;
-    
-    img.onerror = () => {
-      console.error(`Image loading failed for: ${imageUrl}`);
-      setImageError(true);
-    };
-  }, [imageUrl, product]);
+    if (imageError) {
+      console.warn('Using fallback image for:', product.name);
+      return FALLBACK_IMAGE;
+    }
+    return currentImageUrl || FALLBACK_IMAGE;
+  }, [currentImageUrl, imageError, product.name]);
 
   return (
     <div className="relative group bg-white">
@@ -99,14 +113,12 @@ const ProductCard = memo(({ product }) => {
       <Link href={`/products/${product._id}`}>
         <div className="p-2 sm:p-4 border rounded-lg hover:shadow-lg transition-shadow cursor-pointer">
           <div className="relative w-full h-32 sm:h-48 mb-2 sm:mb-4">
-            <Image
+            <img
               src={imageUrl}
               alt={product.name}
-              fill
-              priority={true}
-              className="object-contain"
-              sizes="(max-width: 640px) 45vw, (max-width: 768px) 33vw, 25vw"
-              onError={() => setImageError(true)}
+              className="object-contain w-full h-full"
+              onError={handleImageError}
+              loading="lazy"
             />
           </div>
           

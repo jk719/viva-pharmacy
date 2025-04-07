@@ -37,6 +37,7 @@ const nextConfig = {
       process.env.S3_BUCKET_DOMAIN || 'vivapharmacy.s3.amazonaws.com',
       'localhost'
     ],
+    unoptimized: true,
   },
   env: {
     NEXTAUTH_URL: process.env.NEXT_PUBLIC_SITE_URL || 

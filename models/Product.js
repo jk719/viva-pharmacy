@@ -33,9 +33,19 @@ const productSchema = new mongoose.Schema({
   },
   
   // Image and Category Info
+  imageUrl: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  cloudinaryPublicId: {
+    type: String,
+    required: false,
+    trim: true
+  },
   imageKey: {
     type: String,
-    required: false  // Change to false since we're migrating to cloudinaryPublicId
+    required: false
   },
   category: {
     type: String,
@@ -188,16 +198,6 @@ const productSchema = new mongoose.Schema({
 
   // Add this to the productSchema
   categoryTagline: {
-    type: String,
-    required: false
-  },
-
-  // Add these fields to your productSchema
-  imageUrl: {
-    type: String,
-    required: false
-  },
-  cloudinaryPublicId: {
     type: String,
     required: false
   },
