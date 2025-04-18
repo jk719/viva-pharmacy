@@ -96,7 +96,7 @@ export async function GET(request) {
     console.log('Products API: Executing database query...');
     const products = await Product.find({})
       .lean()
-      .select('name description shortDescription price imageUrl cloudinaryPublicId imageKey category stock isNewProduct activeIngredients dosageForm slug item itemSlug isFeatured')
+      .select('name description shortDescription price imageUrl externalImageUrl cloudinaryPublicId imageKey category stock isNewProduct activeIngredients dosageForm slug item itemSlug isFeatured')
       .sort({ createdAt: -1 });
 
     console.log('Products API: Database query complete', {
@@ -108,21 +108,45 @@ export async function GET(request) {
     });
 
     const mappedProducts = products.map(product => {
+      // Get image URL with proper error handling
       const imageUrl = getCloudinaryUrl(product);
+      
+      // Sanitize Amazon URLs if needed
+      let processedImageUrl = imageUrl;
+      if (imageUrl && imageUrl.includes('amazon') && imageUrl.startsWith('http:')) {
+        processedImageUrl = imageUrl.replace('http://', 'https://');
+      }
+
+      // Active ingredients processing - handle both string and object formats
+      let activeIngredientsList = [];
+      if (product.activeIngredients && Array.isArray(product.activeIngredients)) {
+        activeIngredientsList = product.activeIngredients.map(ingredient => {
+          if (typeof ingredient === 'string') {
+            return ingredient;
+          } else if (typeof ingredient === 'object') {
+            return {
+              name: ingredient.name || 'Unknown',
+              amount: ingredient.amount || ''
+            };
+          }
+          return ingredient;
+        });
+      }
 
       return {
         ...product,
         _id: product._id.toString(),
-        imageUrl,
-        image: imageUrl, // For backward compatibility
+        imageUrl: processedImageUrl,
+        image: processedImageUrl, // For backward compatibility
         category: product.category,
         categoryTagline: categories.find(cat => 
           cat.name.toLowerCase() === product.category.toLowerCase()
         )?.tagline || product.category,
-        stock: product.stock,
-        isInStock: product.stock > 0,
+        categoryPath: `${product.category} / ${product.item || ''}`,
+        stock: product.stock || 0,
+        isInStock: (product.stock ?? 0) > 0,
         isNew: product.isNewProduct || false,
-        activeIngredients: product.activeIngredients || [],
+        activeIngredients: activeIngredientsList,
         dosageForm: product.dosageForm,
         slug: product.slug,
         item: product.item,
