@@ -164,7 +164,7 @@ export default function ClientProductView({ product }) {
               className="space-y-3 md:space-y-4"
             >
               <div>
-                <h1 id="product-details" className="text-lg md:text-2xl font-bold text-gray-800">
+                <h1 id="product-details" className="text-lg md:text-xl font-bold text-gray-800">
                   {product.name}
                 </h1>
                 <p className="text-xs md:text-sm text-gray-500">
@@ -182,7 +182,7 @@ export default function ClientProductView({ product }) {
                 )}
               </div>
 
-              <p className="text-xl md:text-3xl font-bold text-primary">
+              <p className="text-xl md:text-2xl font-bold text-primary">
                 ${product.price.toFixed(2)}
               </p>
 
