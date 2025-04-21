@@ -145,12 +145,10 @@ const AuthButtons = ({ isMobile = false }) => {
       
       // Sign out
       await signOut({ 
-        redirect: false,
+        redirect: true,
         callbackUrl: '/' 
       });
-      
-      // Client-side navigation to avoid full reload
-      router.push('/');
+      // No need for router.push('/') because redirect: true will handle it
       
     } catch (error) {
       console.error('Sign out error:', error);
@@ -198,6 +196,7 @@ const AuthButtons = ({ isMobile = false }) => {
         
         // Client-side navigation to avoid full reload
         router.push(result.url || '/');
+        router.refresh();
       }
     } catch (err) {
       console.error('🚫 Auth error:', {
