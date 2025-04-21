@@ -6,7 +6,7 @@ import { FiPlus, FiEdit2, FiTrash2, FiSearch, FiFolder, FiStar, FiBox, FiChevron
 import { HiOutlineFolderOpen, HiOutlineArchive, HiOutlineShoppingBag, HiOutlineCube, HiOutlineTag, HiOutlineCash, HiOutlineClipboardCheck } from 'react-icons/hi';
 import Image from 'next/image';
 import { getCloudinaryUrl } from '@/lib/cloudinary';
-import RecentProductEdits from './RecentProductEdits';
+
 import { motion } from 'framer-motion';
 import { categories } from '@/data/categories';
 
@@ -197,8 +197,6 @@ export default function ProductManagement() {
 
   return (
     <div className="w-full">
-      <RecentProductEdits />
-
       {/* Search and Add Product Bar */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
         <div className="flex-1">

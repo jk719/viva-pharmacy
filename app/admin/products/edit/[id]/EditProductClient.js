@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import { FiArrowLeft } from "react-icons/fi";
 import Link from "next/link";
 import EditHistoryModal from "@/components/admin/EditHistoryModal";
-import RecentEditsPanel from "@/components/admin/RecentEditsPanel";
+
 
 export default function EditProductClient({ productId }) {
   const { data: session, status } = useSession();
@@ -117,7 +117,7 @@ export default function EditProductClient({ productId }) {
 
         {/* Recent Edits Panel - Hidden on mobile */}
         <div className="hidden md:block">
-          <RecentEditsPanel />
+
         </div>
       </div>
 
