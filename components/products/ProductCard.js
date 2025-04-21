@@ -5,6 +5,7 @@ import { useCart } from '@/context/CartContext';
 import { useState, useRef, useEffect, useCallback, memo, useMemo } from 'react';
 import { FALLBACK_IMAGE, getCloudinaryUrl } from '@/lib/cloudinary';
 import { HiMinus, HiPlus } from 'react-icons/hi';
+import { FaHeart, FaStar } from 'react-icons/fa';
 import { debounce } from 'lodash';
 import QuantityControls from '@/components/common/QuantityControls';
 import { trackAddToCart, trackRemoveFromCart } from '@/lib/analytics/events';
@@ -17,6 +18,8 @@ import toast from 'react-hot-toast';
 const ProductCard = memo(({ product }) => {
   const { addToCart, updateItemQuantity, items } = useCart();
   const [isAdding, setIsAdding] = useState(false);
+  // Wishlist local state (UI only)
+  const [isWishlisted, setIsWishlisted] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [currentImageUrl, setCurrentImageUrl] = useState('');
   const addButtonRef = useRef(null);
@@ -124,6 +127,18 @@ const ProductCard = memo(({ product }) => {
 
   return (
     <div className="relative group bg-white">
+      {/* Wishlist/Favorite Icon */}
+      <button
+        className={`absolute top-2 right-2 z-20 p-1 rounded-full bg-white shadow transition-colors ${isWishlisted ? 'text-red-500' : 'text-gray-400 hover:text-red-400'}`}
+        aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsWishlisted((prev) => !prev);
+        }}
+      >
+        <FaHeart size={20} />
+      </button>
       {product.isNew && (
         <span className="absolute top-2 right-2 bg-blue-500 text-white px-2 py-1 rounded-full text-xs z-10">
           New
@@ -151,24 +166,11 @@ const ProductCard = memo(({ product }) => {
           <div className="mt-1 sm:mt-2">
             <h3 className="text-sm sm:text-lg font-semibold line-clamp-2">{product.name}</h3>
             <p className="text-xs sm:text-sm text-gray-600 mt-0.5 sm:mt-1">{product.categoryPath || product.category}</p>
-            <span className="text-base sm:text-lg font-bold mt-1 sm:mt-2 block">${product.price.toFixed(2)}</span>
-            {product.activeIngredients?.length > 0 && (
-              <div className="text-sm text-gray-600">
-                <p className="font-medium">Active Ingredients:</p>
-                <ul className="list-disc list-inside">
-                  {product.activeIngredients.slice(0, 2).map((ingredient, index) => (
-                    <li key={`${product._id}-ingredient-${index}`} className="truncate">
-                      {typeof ingredient === 'string' ? ingredient : `${ingredient.name}${ingredient.amount ? `: ${ingredient.amount}` : ''}`}
-                    </li>
-                  ))}
-                  {product.activeIngredients.length > 2 && (
-                    <li key={`${product._id}-more`} className="text-primary cursor-pointer">
-                      + more
-                    </li>
-                  )}
-                </ul>
-              </div>
+            {/* Short description (if available) */}
+            {product.shortDescription && (
+              <p className="text-xs sm:text-gray-500 mt-0.5 mb-1 line-clamp-2">{product.shortDescription}</p>
             )}
+            <span className="text-base sm:text-lg font-bold mt-1 sm:mt-2 block">${product.price.toFixed(2)}</span>
           </div>
         </div>
       </Link>
