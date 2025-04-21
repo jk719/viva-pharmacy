@@ -150,14 +150,38 @@ const ProductCard = memo(({ product }) => {
           
           <div className="mt-1 sm:mt-2">
             <h3 className="text-sm sm:text-lg font-semibold line-clamp-2">{product.name}</h3>
-            {product.shortDescription && (
-              <p className="text-xs sm:text-sm text-gray-600 mt-0.5 sm:mt-1 line-clamp-2">{product.shortDescription}</p>
-            )}
+            <p className="text-xs sm:text-sm text-gray-600 mt-0.5 sm:mt-1">{product.categoryPath || product.category}</p>
             <span className="text-base sm:text-lg font-bold mt-1 sm:mt-2 block">${product.price.toFixed(2)}</span>
+            {product.activeIngredients?.length > 0 && (
+              <div className="text-sm text-gray-600">
+                <p className="font-medium">Active Ingredients:</p>
+                <ul className="list-disc list-inside">
+                  {product.activeIngredients.slice(0, 2).map((ingredient, index) => (
+                    <li key={`${product._id}-ingredient-${index}`} className="truncate">
+                      {typeof ingredient === 'string' ? ingredient : `${ingredient.name}${ingredient.amount ? `: ${ingredient.amount}` : ''}`}
+                    </li>
+                  ))}
+                  {product.activeIngredients.length > 2 && (
+                    <li key={`${product._id}-more`} className="text-primary cursor-pointer">
+                      + more
+                    </li>
+                  )}
+                </ul>
+              </div>
+            )}
           </div>
         </div>
       </Link>
-
+      <QuantityControls
+        quantity={quantity}
+        onAdd={handleAddToCart}
+        onRemove={handleRemoveFromCart}
+        isInStock={product.isInStock}
+        isLoading={isAdding}
+        variant="card"
+        size="small"
+        className="absolute top-2 right-2 z-20"
+      />
     </div>
   );
 });
