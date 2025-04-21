@@ -149,8 +149,8 @@ const AuthButtons = ({ isMobile = false }) => {
         callbackUrl: '/' 
       });
       
-      // Single page refresh
-      window.location.href = '/';
+      // Client-side navigation to avoid full reload
+      router.push('/');
       
     } catch (error) {
       console.error('Sign out error:', error);
@@ -196,8 +196,8 @@ const AuthButtons = ({ isMobile = false }) => {
         toast.success('Successfully signed in!');
         trackUserLogin();
         
-        // Single page refresh
-        window.location.href = result.url || '/';
+        // Client-side navigation to avoid full reload
+        router.push(result.url || '/');
       }
     } catch (err) {
       console.error('🚫 Auth error:', {
