@@ -57,42 +57,19 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
   const submitTimeoutRef = useRef(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const { width, height } = useWindowSize();
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  // Removed showSuccessModal state as this is now handled in the success page
   const [orderDetails, setOrderDetails] = useState(null);
 
   // Add payment status tracking
   const [paymentStatus, setPaymentStatus] = useState('idle'); // 'idle' | 'processing' | 'succeeded' | 'failed'
 
-  // Add progress state
-  const [progress, setProgress] = useState(0);
-
   // Track begin checkout when component mounts
   useEffect(() => {
     trackBeginCheckout(items, amountDetails.total);
   }, [items, amountDetails.total]);
-
-  useEffect(() => {
-    if (paymentStatus === 'processing') {
-      // Start progress immediately
-      setProgress(0);
-      
-      // Animate progress faster (every 50ms instead of 100ms)
-      const interval = setInterval(() => {
-        setProgress(prev => {
-          if (prev >= 90) {
-            clearInterval(interval);
-            return 90;
-          }
-          return prev + 5; // Increase by 5% each time
-        });
-      }, 50);
-
-      return () => clearInterval(interval);
-    } else if (paymentStatus === 'succeeded') {
-      // Jump to 100% on success
-      setProgress(100);
-    }
-  }, [paymentStatus]);
+  
+  // No progress bar animation in payment form to avoid conflicts with
+  // the loyalty progress bar animation on the success page
 
   useEffect(() => {
     return () => {
@@ -113,9 +90,10 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
     try {
       console.log('🔄 Starting payment submission...');
       
+      // Confirm payment without redirect
       const { paymentIntent, error } = await stripe.confirmPayment({
         elements,
-        redirect: 'if_required',
+        redirect: 'if_required', // Only redirect for 3DS auth
         confirmParams: {
           return_url: `${window.location.origin}/checkout/success`,
         },
@@ -154,7 +132,7 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
         };
         setOrderDetails(orderDetails);
         setShowConfetti(true);
-        setShowSuccessModal(true);
+        // Modal is now shown on the success page instead
 
         // Store payment info
         sessionStorage.setItem('paymentProcessed', 'true');
@@ -166,12 +144,96 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
           await handleOrderConfirmation(paymentIntent);
           await clearCart();
           
-          // Redirect after a delay
-          setTimeout(() => {
-            router.push('/profile/orders');
-          }, 3000);
+          // Create the order details object that we need to pass to the success page
+          const orderData = {
+            orderId: paymentIntent.id,
+            points: Math.floor(amountDetails.total),
+            deliveryMethod: deliveryMethod || 'delivery', 
+            selectedTime: selectedTime || '',
+            timestamp: Date.now()
+          };
+          
+          // Store order details in sessionStorage as a reliable backup
+          console.log('💾 Storing order details in sessionStorage:', orderData);
+          sessionStorage.setItem('orderSuccessData', JSON.stringify(orderData));
+          
+          // Create URL with parameters
+          const params = new URLSearchParams();
+          Object.entries(orderData).forEach(([key, value]) => {
+            params.append(key, value);
+          });
+          
+          const successUrl = `/checkout/success?${params.toString()}`;
+          
+          console.log('🔀 Navigating to success page with params:', {
+            url: successUrl,
+            orderId: paymentIntent.id,
+            points: Math.floor(amountDetails.total)
+          });
+          
+          // PRIMARY APPROACH: Form submission - most reliable for full page navigation
+          console.log('📤 Creating form for navigation to success page');
+          const form = document.createElement('form');
+          form.method = 'post'; // Use POST to force page refresh
+          form.action = '/checkout/success';
+          form.style.display = 'none';
+          
+          // Add each parameter as a hidden input
+          const addParam = (name, value) => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = name;
+            input.value = value;
+            form.appendChild(input);
+          };
+          
+          // Add all parameters to the form
+          Object.entries(orderData).forEach(([key, value]) => {
+            addParam(key, String(value));
+          });
+        
+          // Add the form to the document and submit it
+          document.body.appendChild(form);
+          console.log('📤 Submitting form to navigate to success page');
+          
+          // Try form submission with fallbacks
+          try {
+            form.submit();
+            
+            // FALLBACK 1: If form submission doesn't redirect within 1 second, use direct location change
+            setTimeout(() => {
+              console.log('⚠️ Form submission may have failed, using direct location change');
+              // Set a flag to track navigation method used
+              sessionStorage.setItem('navigationMethod', 'direct');
+              window.location.href = successUrl;
+              
+              // FALLBACK 2: If direct location change doesn't work within 500ms, try location.replace
+              setTimeout(() => {
+                console.log('⚠️ Direct location change may have failed, using location.replace');
+                sessionStorage.setItem('navigationMethod', 'replace');
+                window.location.replace(successUrl);
+                
+                // FALLBACK 3: Last resort - open in new tab then close current
+                setTimeout(() => {
+                  console.log('🔴 All navigation methods failed, using anchor click');
+                  sessionStorage.setItem('navigationMethod', 'anchor');
+                  const a = document.createElement('a');
+                  a.href = successUrl;
+                  a.target = '_self';
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                }, 300);
+              }, 300);
+            }, 1000);
+          } catch (navErr) {
+            console.error('Form navigation failed:', navErr);
+            window.location.href = successUrl;
+          }
         } catch (err) {
           console.error('Post-payment error:', err);
+          // Even if there's an error in confirmation, try to navigate to success page
+          window.location.href = `/checkout/success?orderId=${paymentIntent.id}`;
         }
       }
     } catch (err) {
@@ -271,18 +333,7 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
           onConfettiComplete={() => setShowConfetti(false)}
         />
       )}
-      {showSuccessModal && (
-        <OrderSuccessModal
-          orderDetails={orderDetails}
-          onClose={() => {
-            setShowSuccessModal(false);
-            // Add a small delay before redirecting
-            setTimeout(() => {
-              router.push('/profile/orders');
-            }, 500);
-          }}
-        />
-      )}
+      {/* OrderSuccessModal removed from here - now displayed on success page */}
       <form onSubmit={handleSubmit} className="space-y-4">
         <PaymentElement />
         {error && (
@@ -291,18 +342,7 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
           </div>
         )}
         
-        {/* Update progress bar styling */}
-        {(paymentStatus === 'processing' || paymentStatus === 'succeeded') && (
-          <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-primary transition-all duration-300 ease-out"
-              style={{ 
-                width: `${progress}%`,
-                transition: 'width 0.3s ease-out'
-              }}
-            />
-          </div>
-        )}
+        {/* Removed progress bar animation to prevent visual conflicts with loyalty animation */}
 
         <button
           type="submit"
@@ -397,7 +437,7 @@ export default function PaymentForm({ amount, amountDetails, items, shippingAddr
   const [userData, setUserData] = useState(null);
   const [isLoadingUserData, setIsLoadingUserData] = useState(false);
   const [redemptionError, setRedemptionError] = useState(null);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  // Removed showSuccessModal state as this is now handled in the success page
   const [orderDetails, setOrderDetails] = useState(null);
 
   // Add payment status tracking
