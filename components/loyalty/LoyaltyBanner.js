@@ -29,14 +29,9 @@ const LoadingState = () => (
   </div>
 );
 
-export default function LoyaltyBanner() {
+export default function LoyaltyBanner({ onProgressBarAnimationComplete }) {
   const { data: session, status } = useSession();
-  const [mounted, setMounted] = useState(false);
-  
-  useEffect(() => {
-    setMounted(true);
-    return () => setMounted(false);
-  }, []);
+
 
   const { 
     userData,
@@ -47,7 +42,7 @@ export default function LoyaltyBanner() {
     isInitialized
   } = useLoyaltyData();
 
-  if (!mounted || status === "loading" || !session) return null;
+  if (status === "loading" || !session) return null;
 
   // Extract values with fallbacks
   const currentVivaBucks = userData?.vivaBucks ?? 0;
@@ -84,20 +79,24 @@ export default function LoyaltyBanner() {
             currentTier={currentTier}
             points={currentVivaBucks}
             multiplier={userData?.multiplier || 1}
-            animatePoints={animatePoints}
+            animate={animatePoints}
             isMobile={isMobile}
           />
           
             {progressInfo && (
             <ProgressBar 
+              key={`pb-${currentTier}-${progressPercent}-${lifetimeVivaBucks}`}
+              animationKey={`pb-${currentTier}-${progressPercent}-${lifetimeVivaBucks}`}
               progress={progressPercent}
               currentTier={currentTier}
               nextTier={nextTierName}
               pointsNeeded={pointsNeeded}
               currentPoints={lifetimeVivaBucks}
-              startPoints={TIER_CONFIG[currentTier]?.points || 0}
-              endPoints={TIER_CONFIG[nextTierName]?.points || lifetimeVivaBucks}
+              startPoints={progressInfo.startPoints}
+              endPoints={progressInfo.endPoints}
               isMobile={isMobile}
+              animate={animatePoints}
+              onAnimationComplete={onProgressBarAnimationComplete}
             />
             )}
           </div>

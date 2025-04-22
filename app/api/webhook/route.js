@@ -174,6 +174,50 @@ export async function POST(req) {
         const order = await createOrder(paymentIntent);
         console.log('📦 Order created:', order._id);
 
+        // --- Restore post-order logic ---
+        // 1. Update user rewards/points
+        try {
+            const basePoints = Math.floor(order.total); // 1 point per $1 spent (customize as needed)
+            const pointsUpdate = await User.findByIdAndUpdate(
+                userId,
+                { $inc: { vivaBucks: basePoints, rewardPoints: basePoints } },
+                { new: true }
+            );
+            console.log('🎁 Points updated for user:', userId, 'Points:', basePoints);
+        } catch (rewardsErr) {
+            console.error('❌ Error updating points for user:', userId, rewardsErr);
+        }
+
+        // 2. Send order confirmation email
+        try {
+            // You may want to fetch the user's email if not present in metadata
+            const user = await User.findById(userId);
+            if (user && user.email) {
+                await sendOrderConfirmationEmail(user.email, order);
+                console.log('✉️ Order confirmation email sent to:', user.email);
+            } else {
+                console.warn('⚠️ User email not found for order confirmation:', userId);
+            }
+        } catch (emailErr) {
+            console.error('❌ Error sending order confirmation email:', emailErr);
+        }
+
+        // 3. Emit points updated event
+        try {
+            await emitEvent(Events.POINTS_UPDATED, {
+                userId,
+                amount,
+                points: Math.floor(order.total),
+                animate: true,
+                afterPayment: true,
+                timestamp: new Date().toISOString()
+            });
+            console.log('🚀 POINTS_UPDATED event emitted for user:', userId);
+        } catch (eventErr) {
+            console.error('❌ Error emitting POINTS_UPDATED event:', eventErr);
+        }
+        // --- End restore ---
+
         return NextResponse.json({ 
             received: true,
             orderId: order._id

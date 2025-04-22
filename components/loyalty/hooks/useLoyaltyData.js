@@ -77,35 +77,20 @@ export default function useLoyaltyData() {
       const data = await fetchUserDataFresh();
       if (!data) return;
 
-      // Check if points have changed
-      const pointsChanged = previousPointsRef.current && (
-        previousPointsRef.current.vivaBucks !== data.vivaBucks ||
-        previousPointsRef.current.cumulativePoints !== data.cumulativePoints
-      );
-
-      if (pointsChanged) {
-        const pointsDiff = data.vivaBucks - previousPointsRef.current.vivaBucks;
-        if (pointsDiff > 0) {
-          trackLoyaltyPointsEarned(pointsDiff);
-          setAnimatePoints(true);
-          if (animationTimeoutRef.current) {
-            clearTimeout(animationTimeoutRef.current);
-          }
-          animationTimeoutRef.current = setTimeout(() => setAnimatePoints(false), 3000);
-        } else if (pointsDiff < 0) {
-          trackLoyaltyPointsRedeemed(Math.abs(pointsDiff));
-        }
+      // Only update state if data is different
+      const prev = previousPointsRef.current;
+      const pointsIncreased = prev && data.vivaBucks > prev.vivaBucks;
+      if (pointsIncreased) {
+        setAnimatePoints(true);
+        setTimeout(() => setAnimatePoints(false), 1500);
       }
-
-      // Update previous points reference
       previousPointsRef.current = {
         vivaBucks: data.vivaBucks,
         cumulativePoints: data.cumulativePoints
       };
-      
+
       setUserData(data);
       setIsInitialized(true);
-      
       if (data.cumulativePoints && typeof data.cumulativePoints === 'number') {
         try {
           const progress = calculateProgressToNextTier(data.cumulativePoints, TIER_CONFIG);
@@ -161,6 +146,7 @@ export default function useLoyaltyData() {
     };
 
     const handleLoyaltyUpdate = (data) => {
+      console.log('[useLoyaltyData] LOYALTY_UPDATE event received', data);
       if (data.isComplete) {
         queueUpdate(true);
       }

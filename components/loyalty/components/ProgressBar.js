@@ -36,6 +36,11 @@ export default function ProgressBar(props) {
             background: 'linear-gradient(90deg, #FFB347 0%, #FF6B00 100%)',
             boxShadow: '0 2px 8px rgba(255,107,0,0.15)'
           }}
+          onTransitionEnd={e => {
+            if (e.propertyName === 'width' && typeof props.onAnimationComplete === 'function') {
+              props.onAnimationComplete();
+            }
+          }}
         >
           <span className="absolute right-2 top-1/2 -translate-y-1/2 text-white font-bold text-xs drop-shadow">
             {currentPoints.toLocaleString()}

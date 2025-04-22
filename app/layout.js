@@ -10,6 +10,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from '@/lib/auth';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import ClientLayout from '@/components/ClientLayout';
+import SiteHeader from '@/components/SiteHeader';
 import SiteFooterWrapper from '@/components/SiteFooterWrapper';
 import GoogleAnalytics from '@/components/analytics/GoogleAnalytics';
 
@@ -43,6 +44,7 @@ export default async function RootLayout({ children }) {
       <body className="bg-white text-primary-color">
         <GoogleAnalytics />
         <Providers session={session}>
+          <SiteHeader />
           <ClientLayout>
             <main className="min-h-screen w-full flex-grow pt-[calc(var(--navbar-height)+var(--loyalty-banner-height))] md:pt-[calc(var(--navbar-height-md)+var(--loyalty-banner-height-md))]">
               <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">

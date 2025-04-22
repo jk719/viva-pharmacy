@@ -2,7 +2,6 @@
 
 import { motion } from 'framer-motion';
 import { FaCheckCircle, FaBox, FaEnvelope, FaGift } from 'react-icons/fa';
-import confetti from 'canvas-confetti';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { eventEmitter, Events } from '@/lib/eventEmitter';
@@ -16,27 +15,6 @@ export default function OrderSuccessModal({ orderDetails }) {
     const rewardsTimeout = setTimeout(() => {
       setShowRewards(true);
     }, 1000);
-
-    const duration = 3000;
-    const animationEnd = Date.now() + duration;
-
-    const confettiAnimation = () => {
-      const timeLeft = animationEnd - Date.now();
-      const particleCount = 50 * (timeLeft / duration);
-      
-      confetti({
-        particleCount,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#0066cc', '#4CAF50', '#FFC107'],
-      });
-
-      if (timeLeft > 0) {
-        requestAnimationFrame(confettiAnimation);
-      }
-    };
-
-    confettiAnimation();
 
     return () => clearTimeout(rewardsTimeout);
   }, []);

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import OrderSuccessModal from '@/components/checkout/OrderSuccessModal';
-import { eventEmitter, Events } from '@/lib/eventEmitter';
+import LoyaltyBanner from '@/components/loyalty/LoyaltyBanner';
 
 export default function OrderSuccessPage() {
   const router = useRouter();
@@ -31,6 +31,9 @@ export default function OrderSuccessPage() {
       deliveryMethod
     });
 
+    // Immediately trigger loyalty update so progress bar animates before modal
+    eventEmitter.emit(Events.LOYALTY_UPDATE, { isComplete: true });
+
     // Listen for loyalty update completion
     const handleLoyaltyUpdate = (data) => {
       if (data.isComplete) {
@@ -38,13 +41,7 @@ export default function OrderSuccessPage() {
       }
     };
 
-    // Listen for progress bar animation completion
-    const handleProgressBarComplete = () => {
-      setProgressBarComplete(true);
-    };
-
     eventEmitter.on(Events.LOYALTY_UPDATE, handleLoyaltyUpdate);
-    eventEmitter.on(Events.PROGRESS_BAR_ANIMATION_COMPLETE, handleProgressBarComplete);
 
     // Fallback timeout for safety
     const timeoutId = setTimeout(() => {
@@ -54,7 +51,6 @@ export default function OrderSuccessPage() {
 
     return () => {
       eventEmitter.off(Events.LOYALTY_UPDATE, handleLoyaltyUpdate);
-      eventEmitter.off(Events.PROGRESS_BAR_ANIMATION_COMPLETE, handleProgressBarComplete);
       clearTimeout(timeoutId);
     };
   }, [searchParams, router]);
@@ -73,11 +69,18 @@ export default function OrderSuccessPage() {
 
   if (!showModal) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex flex-col items-center justify-center">
+
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
   }
 
-  return <OrderSuccessModal orderDetails={orderDetails} />;
+  return (
+    <>
+
+      <OrderSuccessModal orderDetails={orderDetails} />
+    </>
+  );
 }
+

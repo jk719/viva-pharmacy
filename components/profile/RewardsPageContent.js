@@ -95,33 +95,6 @@ export default function RewardsPageContent({ user }) {
 
   return (
     <div className="min-h-screen bg-[#F5F7FA]">
-      {/* Top loyalty status bar */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-          <div className="flex items-center">
-            <div className="bg-[#FF9F43] rounded-full p-2">
-              <FaCoins className="h-5 w-5 text-white" />
-            </div>
-            <div className="ml-3 flex-grow">
-              <div className="flex items-center gap-2">
-                <span className="text-xl font-bold">{cumulativePoints.toLocaleString()}</span>
-                <span className="text-sm text-gray-500">Lifetime Points</span>
-                {currentTier && (
-                  <span className="bg-[#F0F4FF] text-[#6366F1] px-2 py-0.5 text-xs rounded-full font-medium uppercase">
-                    {currentTier}
-                  </span>
-                )}
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                <div
-                  className="bg-[#FF9F43] h-2 rounded-full"
-                  style={{ width: `${progressPercentage}%` }}
-                ></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Main content */}
       <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
