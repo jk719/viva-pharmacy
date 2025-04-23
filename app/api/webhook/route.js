@@ -127,7 +127,6 @@ const emitEvent = async (type, data) => {
         eventEmitter.emit(type, {
             ...data,
             type,
-            animate: true,
             timestamp: new Date().toISOString()
         });
         console.log(`✅ Successfully emitted ${type} event`);
@@ -208,7 +207,6 @@ export async function POST(req) {
                 userId,
                 amount,
                 points: Math.floor(order.total),
-                animate: true,
                 afterPayment: true,
                 timestamp: new Date().toISOString()
             });

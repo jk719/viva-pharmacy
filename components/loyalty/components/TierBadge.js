@@ -1,12 +1,12 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import { TIER_COLORS } from '../constants/tierConfig';
-import { ANIMATIONS } from '../constants/animations';
 
+/**
+ * Badge component displaying a loyalty tier
+ */
 export default function TierBadge({ 
-  tier, 
-  showAnimation = true,
+  tier = 'BRONZE',
   size = 'md',
   className = ''
 }) {
@@ -16,41 +16,23 @@ export default function TierBadge({
     lg: 'text-base px-4 py-1.5'
   };
 
-  const tierColors = TIER_COLORS[tier];
+  const tierColors = TIER_COLORS[tier] || TIER_COLORS.BRONZE;
   
-  const badge = (
-    <div className={`
-      inline-flex
-      items-center
-      rounded-full
-      ${sizeClasses[size]}
-      ${tierColors?.background || 'bg-gray-100'}
-      ${tierColors?.border || 'border-gray-200'}
-      ${tierColors?.text || 'text-gray-700'}
-      border
-      font-medium
-      transition-all
-      duration-200
-      ${className}
-    `}>
+  return (
+    <div 
+      className={`inline-flex items-center rounded-full ${sizeClasses[size]} ${tierColors?.background || 'bg-gray-100'} ${tierColors?.border || 'border-gray-200'} ${tierColors?.text || 'text-gray-700'} border font-medium ${className}`}
+      data-testid="tier-badge"
+    >
       <span className="whitespace-nowrap">
         {tier}
       </span>
     </div>
   );
-
-  if (!showAnimation) return badge;
-
-  return (
-    <motion.div
-      {...ANIMATIONS.scaleIn}
-    >
-      {badge}
-    </motion.div>
-  );
 }
 
-// Loading state component
+/**
+ * Skeleton loader for TierBadge
+ */
 export function TierBadgeSkeleton({ size = 'md' }) {
   const sizeClasses = {
     sm: 'w-16 h-6',
@@ -59,11 +41,10 @@ export function TierBadgeSkeleton({ size = 'md' }) {
   };
 
   return (
-    <div className={`
-      ${sizeClasses[size]}
-      rounded-full
-      bg-gray-200
-      animate-pulse
-    `} />
+    <div 
+      className={`${sizeClasses[size]} rounded-full bg-gray-200 animate-pulse`} 
+      data-testid="tier-badge-skeleton"
+      aria-hidden="true"
+    />
   );
 } 

@@ -2,29 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import { TIER_CONFIG } from '@/lib/loyalty/tierConfig';
+import { TIER_ICONS } from '@/components/loyalty/constants/tierConfig';
 import { calculateProgressToNextTier } from '@/lib/loyalty/loyaltyCalculator';
 import { 
   FaCoins, 
   FaGift, 
   FaTrophy,
   FaArrowUp,
-  FaGem,
-  FaCrown,
   FaCreditCard,
   FaTags
 } from 'react-icons/fa';
 import { motion } from 'framer-motion';
-
-// Map tier icons
-const TIER_ICONS = {
-  BRONZE: <FaGem className="h-5 w-5 text-amber-600" />,
-  SILVER: <FaGem className="h-5 w-5 text-slate-400" />,
-  GOLD: <FaGem className="h-5 w-5 text-yellow-500" />,
-  PLATINUM: <FaTrophy className="h-5 w-5 text-cyan-500" />,
-  DIAMOND: <FaGem className="h-5 w-5 text-blue-500" />,
-  SAPPHIRE: <FaGem className="h-5 w-5 text-indigo-500" />,
-  LEGEND: <FaCrown className="h-5 w-5 text-purple-500" />
-};
 
 export default function LoyaltyProgram({ user }) {
   const [progressData, setProgressData] = useState(null);

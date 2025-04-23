@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { FaUser, FaCoins, FaShoppingBag, FaGift, FaTrophy, FaChartLine, FaArrowRight } from 'react-icons/fa';
 import { TIER_CONFIG } from '@/lib/loyalty/tierConfig';
+import { calculateProgressToNextTier } from '@/lib/loyalty/loyaltyCalculator';
 
 export default function RewardsPageContent({ user }) {
   const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'history', 'rewards'
@@ -22,17 +23,13 @@ export default function RewardsPageContent({ user }) {
   const currentTier = serializedUser.currentTier || 'BRONZE';
   const pointsMultiplier = serializedUser.pointsMultiplier || 1;
 
-  // Get tier information
-  const tierKeys = Object.keys(TIER_CONFIG);
-  const currentTierIndex = tierKeys.indexOf(currentTier);
-  const nextTierKey = currentTierIndex < tierKeys.length - 1 ? tierKeys[currentTierIndex + 1] : null;
-  const nextTier = nextTierKey ? TIER_CONFIG[nextTierKey] : null;
+  // Use the centralized calculation function instead of duplicating logic
+  const progressInfo = calculateProgressToNextTier(cumulativePoints, TIER_CONFIG);
   
-  // Calculate progress to next tier
-  const pointsToNextTier = nextTier ? Math.max(0, nextTier.points - cumulativePoints) : 0;
-  const progressPercentage = nextTier 
-    ? Math.min(100, ((cumulativePoints - TIER_CONFIG[currentTier].points) / (nextTier.points - TIER_CONFIG[currentTier].points)) * 100) 
-    : 100;
+  // Extract values from the progress info
+  const nextTierKey = progressInfo.nextTier;
+  const pointsToNextTier = progressInfo.pointsNeeded;
+  const progressPercentage = progressInfo.progress;
 
   // Generate dummy tier benefits for display purposes
   const tierBenefits = {

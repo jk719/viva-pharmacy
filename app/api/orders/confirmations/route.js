@@ -193,7 +193,6 @@ export async function POST(request) {
               type: 'ORDER_COMPLETE',
               paymentIntentId: formattedData.orderNumber,
               amount: amount,
-              animate: true,
               isComplete: true,
               points: loyaltyBenefits.totalPoints,
               vivaBucks: user.vivaBucks,

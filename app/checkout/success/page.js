@@ -3,15 +3,12 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import OrderSuccessModal from '@/components/checkout/OrderSuccessModal';
-import LoyaltyBanner from '@/components/loyalty/LoyaltyBanner';
 import eventEmitter, { Events } from '@/lib/eventEmitter';
 
-// Define checkout state machine states
+// Define checkout state machine states - simplified without animation states
 const CHECKOUT_STATES = {
   INITIALIZING: 'initializing',      // Initial state, loading order details
-  READY: 'ready',                   // Order details loaded, ready to start animation
-  ANIMATING: 'animating',           // Loyalty animation is playing
-  ANIMATION_COMPLETE: 'animation_complete', // Animation has finished
+  READY: 'ready',                   // Order details loaded
   SHOWING_MODAL: 'showing_modal',   // Showing order confirmation modal
   ERROR: 'error'                    // Error state
 };
@@ -32,21 +29,6 @@ function checkoutReducer(state, action) {
         ...state,
         status: CHECKOUT_STATES.READY, 
         orderDetails: action.payload
-      };
-      
-    case CHECKOUT_STATES.ANIMATING:
-      return { 
-        ...state,
-        status: CHECKOUT_STATES.ANIMATING,
-        animationStartTime: new Date().getTime()
-      };
-      
-    case CHECKOUT_STATES.ANIMATION_COMPLETE:
-      return { 
-        ...state,
-        status: CHECKOUT_STATES.ANIMATION_COMPLETE,
-        animationEndTime: new Date().getTime(),
-        animationDuration: new Date().getTime() - state.animationStartTime
       };
       
     case CHECKOUT_STATES.SHOWING_MODAL:
@@ -77,18 +59,13 @@ export default function OrderSuccessPage() {
   const [state, dispatch] = useReducer(checkoutReducer, {
     status: CHECKOUT_STATES.INITIALIZING,
     orderDetails: null,
-    animationStartTime: null,
-    animationEndTime: null,
-    animationDuration: null,
     error: null
   });
 
   // Initialize checkout flow once when component mounts
   // Track if points have been updated in the backend
   const [pointsUpdated, setPointsUpdated] = useState(false);
-  // Track if animation was already forced and if the animation is complete
-  const animationForcedRef = useRef(false);
-  const animationCompleteRef = useRef(false);
+  // No longer tracking animation completion
 
   useEffect(() => {
     // Only run once
@@ -232,161 +209,26 @@ export default function OrderSuccessPage() {
         
         console.log('🔆 Setting up order details with points:', orderDetails.pointsEarned);
         
-        // First move to READY state with order details
+        // Move directly to READY state with order details then show modal
         dispatch({ type: CHECKOUT_STATES.READY, payload: orderDetails });
         
-        // Mark animation as forced to ensure progress bar animates
-        animationForcedRef.current = true;
-        
-        // Then use a small delay before starting animation to ensure component updates
+        // Small delay before showing the modal for better UX
         setTimeout(() => {
-          console.log('🔴 Starting animation with', orderDetails.pointsEarned, 'points');
-          
-          // Explicitly emit a loyalty update event to ensure the animation triggers
-          if (orderDetails.pointsEarned > 0) {
-            eventEmitter.safeEmit(Events.LOYALTY_UPDATE, {
-              forceAnimation: true,
-              points: orderDetails.pointsEarned,
-              timestamp: Date.now()
-            });
-          }
-          
-          // Move to animating state
-          dispatch({ type: CHECKOUT_STATES.ANIMATING });
-          
-          // Set a safety fallback timer in case animation callback doesn't fire
-          const fallbackTimer = setTimeout(() => {
-            if (state.status === CHECKOUT_STATES.ANIMATING && !animationCompleteRef.current) {
-              console.log('⏰ Animation safety timeout reached, forcing completion');
-              dispatch({ type: CHECKOUT_STATES.ANIMATION_COMPLETE });
-              
-              // Then show modal after a brief delay
-              setTimeout(() => {
-                dispatch({ type: CHECKOUT_STATES.SHOWING_MODAL });
-              }, 500);
-            }
-          }, 8000); // 8 second safety timeout
-          
-          // If no points to animate, skip directly to complete state
-          if (orderDetails.pointsEarned <= 0) {
-            console.log('💬 No points to animate, skipping to completion');
-            setTimeout(() => {
-              dispatch({ type: CHECKOUT_STATES.ANIMATION_COMPLETE });
-              
-              // Then show modal after a brief delay
-              setTimeout(() => {
-                dispatch({ type: CHECKOUT_STATES.SHOWING_MODAL });
-              }, 500);
-            }, 1000);
-          }
-        }, 500);
+          console.log('📱 Showing success modal directly without animation');
+          dispatch({ type: CHECKOUT_STATES.SHOWING_MODAL });
+        }, 800);
       } catch (err) {
         console.error('❌ Error initializing success page:', err);
         dispatch({ type: CHECKOUT_STATES.ERROR, payload: 'Error loading order details' });
       }
     } else if (state.status === CHECKOUT_STATES.READY && state.orderDetails) {
-      // Already have order details but haven't started animating
-      console.log('🔴 Triggering animation for existing order details:', state.orderDetails);
-      
-      // Mark animation as forced to ensure it plays
-      animationForcedRef.current = true;
-      
-      // Emit event to force animation if we have points
-      if (state.orderDetails.pointsEarned > 0) {
-        eventEmitter.safeEmit(Events.LOYALTY_UPDATE, {
-          forceAnimation: true,
-          points: state.orderDetails.pointsEarned,
-          timestamp: Date.now()
-        });
-      }
-      
-      // Move to animating state
-      dispatch({ type: CHECKOUT_STATES.ANIMATING });
+      // Already have order details, go directly to modal
+      console.log('📱 Showing success modal for existing order details');
+      dispatch({ type: CHECKOUT_STATES.SHOWING_MODAL });
     }
   }, [searchParams, router]);
 
-  // Monitor state changes and trigger next actions in the flow
-  useEffect(() => {
-    if (state.status === CHECKOUT_STATES.ANIMATION_COMPLETE) {
-      console.log(' Animation complete, showing success modal. Animation duration:', state.animationDuration, 'ms');
-      
-      // Only proceed if we haven't already shown the modal
-      if (state.status !== CHECKOUT_STATES.SHOWING_MODAL) {
-        setTimeout(() => {
-          console.log(' Transitioning to showing modal state');
-          dispatch({ type: CHECKOUT_STATES.SHOWING_MODAL });
-        }, 500); // Small delay for transition
-      }
-    }
-  }, [state.status]);
-
-  // Handle animation completion callback from LoyaltyBanner
-  const handleProgressBarAnimationComplete = () => {
-    console.log('🎉 Progress bar animation complete callback received');
-    
-    // Prevent duplicate state transitions
-    if (animationCompleteRef.current) {
-      console.log('⚠️ Animation already completed, ignoring duplicate callback');
-      return;
-    }
-    
-    // Mark as complete
-    animationCompleteRef.current = true;
-    
-    // Transition to animation complete state
-    dispatch({ type: CHECKOUT_STATES.ANIMATION_COMPLETE });
-    
-    // Add a small delay before showing the modal for a better UX
-    setTimeout(() => {
-      console.log('📱 Transitioning to SHOWING_MODAL state');
-      dispatch({ type: CHECKOUT_STATES.SHOWING_MODAL });
-    }, 500);
-  };
-  
-  // Add redundant event listeners for animation completion
-  // This ensures we capture the completion even if the direct callback fails
-  useEffect(() => {
-    // Only set up listeners if we're in the animating state
-    if (state.status !== CHECKOUT_STATES.ANIMATING) return;
-    
-    console.log('📻 Setting up redundant animation completion listeners');
-    
-    // Listen for custom DOM event from LoyaltyBanner
-    const handleDomEvent = (event) => {
-      console.log('📡 Received loyalty-animation-complete DOM event', event.detail);
-      handleProgressBarAnimationComplete();
-    };
-    
-    // Listen for eventEmitter event from LoyaltyBanner
-    const handleEmitterEvent = (data) => {
-      console.log('📡 Received LOYALTY_ANIMATION_COMPLETE event', data);
-      handleProgressBarAnimationComplete();
-    };
-    
-    // Add both event listeners
-    if (typeof window !== 'undefined') {
-      window.addEventListener('loyalty-animation-complete', handleDomEvent);
-      eventEmitter.on(Events.LOYALTY_ANIMATION_COMPLETE, handleEmitterEvent);
-    }
-    
-    // Set a safety timeout to ensure we show the modal eventually
-    // even if animation or callbacks fail completely
-    const safetyTimer = setTimeout(() => {
-      console.log('⏰ Safety timeout: Ensuring animation completion is captured');
-      if (state.status === CHECKOUT_STATES.ANIMATING && !animationCompleteRef.current) {
-        handleProgressBarAnimationComplete();
-      }
-    }, 10000); // 10 seconds safety timeout
-    
-    return () => {
-      // Clean up all listeners when effect is cleaned up
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('loyalty-animation-complete', handleDomEvent);
-        eventEmitter.off(Events.LOYALTY_ANIMATION_COMPLETE, handleEmitterEvent);
-      }
-      clearTimeout(safetyTimer);
-    };
-  }, [state.status]);
+  // No animation state monitoring or callbacks needed
 
   // Render loading state while initializing
   if (state.status === CHECKOUT_STATES.INITIALIZING) {
@@ -421,34 +263,8 @@ export default function OrderSuccessPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Overlay that blurs everything except the loyalty banner during animation */}
-      {state.status === CHECKOUT_STATES.ANIMATING && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-20 flex flex-col">
-          {/* The loyalty banner is not blurred and appears at the top */}
-          <div className="w-full z-30">
-            <LoyaltyBanner 
-              onProgressBarAnimationComplete={handleProgressBarAnimationComplete}
-              forceAnimation={true}
-              animationPoints={state.orderDetails?.pointsEarned || 0}
-              debugMode={true}
-              key={`loyalty-banner-${pointsUpdated ? 'updated' : 'initial'}-${state.status}-${state.orderDetails?.pointsEarned || 0}-${Date.now()}`}
-            />
-          </div>
-          
-          {/* Center content with prominent message */}
-          <div className="flex-grow flex flex-col items-center justify-center text-center p-4">
-            <h2 className="text-2xl font-bold text-white mb-4 drop-shadow-lg">Your VivaBucks Are Being Updated!</h2>
-            <p className="text-white text-lg">Watch your loyalty progress above</p>
-            <div className="mt-8 animate-pulse">
-              <div className="w-12 h-1 bg-orange-500 rounded-full mb-1 mx-auto"></div>
-              <div className="w-8 h-1 bg-orange-500 rounded-full mx-auto"></div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Main success page content */}
-      <div className={`py-8 transition-opacity duration-500 ${state.status === CHECKOUT_STATES.ANIMATING ? 'opacity-20' : 'opacity-100'}`}>
+      <div className="py-8">
         <div className="text-center mb-8">
           <div className="mb-4 text-green-500">
             <svg

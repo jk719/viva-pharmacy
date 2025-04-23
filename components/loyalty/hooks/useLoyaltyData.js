@@ -5,22 +5,23 @@ import { useSession } from 'next-auth/react';
 import { calculateProgressToNextTier } from '@/lib/loyalty/loyaltyCalculator';
 import { TIER_CONFIG } from '../constants/tierConfig';
 import eventEmitter, { Events } from '@/lib/eventEmitter';
-import { trackLoyaltyPointsEarned, trackLoyaltyPointsRedeemed } from '@/lib/analytics/events';
 
+/**
+ * Custom hook to fetch and manage user loyalty data
+ */
 export default function useLoyaltyData() {
   const { data: session } = useSession();
   const [userData, setUserData] = useState(null);
   const [progressInfo, setProgressInfo] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [animatePoints, setAnimatePoints] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
 
+  // Refs for tracking state across renders
   const previousPointsRef = useRef(null);
   const lastUpdateRef = useRef(0);
   const updateTimeoutRef = useRef(null);
-  const animationTimeoutRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
   const initialFetchDoneRef = useRef(false);
   const updateQueueRef = useRef([]);
@@ -77,20 +78,17 @@ export default function useLoyaltyData() {
       const data = await fetchUserDataFresh();
       if (!data) return;
 
-      // Only update state if data is different
-      const prev = previousPointsRef.current;
-      const pointsIncreased = prev && data.vivaBucks > prev.vivaBucks;
-      if (pointsIncreased) {
-        setAnimatePoints(true);
-        setTimeout(() => setAnimatePoints(false), 1500);
-      }
+      // Update refs with new data for comparison
       previousPointsRef.current = {
         vivaBucks: data.vivaBucks,
         cumulativePoints: data.cumulativePoints
       };
 
+      // Update state with fetched data
       setUserData(data);
       setIsInitialized(true);
+      
+      // Calculate tier progress if we have cumulative points
       if (data.cumulativePoints && typeof data.cumulativePoints === 'number') {
         try {
           const progress = calculateProgressToNextTier(data.cumulativePoints, TIER_CONFIG);
@@ -124,10 +122,11 @@ export default function useLoyaltyData() {
     processUpdateQueue();
   }, [processUpdateQueue]);
 
-  // Handle connection status changes and SSE events
+  // Handle connection status changes and visibility changes
   useEffect(() => {
     if (!session?.user?.id) return;
 
+    // Handle connection status updates
     const handleConnectionStatus = (data) => {
       if (data.status === 'reconnecting') {
         setConnectionStatus('reconnecting');
@@ -145,24 +144,16 @@ export default function useLoyaltyData() {
       }
     };
 
-    const handleLoyaltyUpdate = (data) => {
-      console.log('[useLoyaltyData] LOYALTY_UPDATE event received', data);
-      if (data.isComplete) {
-        queueUpdate(true);
-      }
-    };
-
     // Initial data fetch only if not already done
     if (!initialFetchDoneRef.current) {
       queueUpdate(true);
       initialFetchDoneRef.current = true;
     }
 
-    // Listen for loyalty updates
-    eventEmitter.on(Events.LOYALTY_UPDATE, handleLoyaltyUpdate);
+    // Listen for connection status changes
     eventEmitter.on(Events.CONNECTION_STATUS, handleConnectionStatus);
 
-    // Set up visibility change handler
+    // Refresh data when tab becomes visible and was disconnected
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && connectionStatus === 'disconnected') {
         queueUpdate(true);
@@ -171,27 +162,24 @@ export default function useLoyaltyData() {
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
+    // Clean up event listeners and timeouts
     return () => {
       if (updateTimeoutRef.current) {
         clearTimeout(updateTimeoutRef.current);
       }
-      if (animationTimeoutRef.current) {
-        clearTimeout(animationTimeoutRef.current);
-      }
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
-      eventEmitter.off(Events.LOYALTY_UPDATE, handleLoyaltyUpdate);
       eventEmitter.off(Events.CONNECTION_STATUS, handleConnectionStatus);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [session, queueUpdate, connectionStatus]);
 
+  // Return values and functions needed by components
   return {
     userData,
     progressInfo,
     isLoading,
-    animatePoints,
     isMobile,
     isInitialized,
     connectionStatus,

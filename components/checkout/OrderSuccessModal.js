@@ -1,10 +1,8 @@
 "use client";
 
-import { motion } from 'framer-motion';
 import { FaCheckCircle, FaBox, FaEnvelope, FaGift } from 'react-icons/fa';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { eventEmitter, Events } from '@/lib/eventEmitter';
 
 export default function OrderSuccessModal({ orderDetails }) {
   const router = useRouter();
@@ -20,26 +18,11 @@ export default function OrderSuccessModal({ orderDetails }) {
   }, []);
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
-    >
-      <motion.div
-        initial={{ scale: 0.9, y: 20 }}
-        animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.9, y: 20 }}
-        className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 text-center"
-      >
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", delay: 0.2 }}
-          className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6"
-        >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fadeIn">
+      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 text-center animate-scaleIn">
+        <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6 animate-bounceIn">
           <FaCheckCircle className="w-12 h-12 text-green-500" />
-        </motion.div>
+        </div>
 
         <h2 className="text-2xl font-bold text-gray-800 mb-2">
           Order Confirmed! 🎉
@@ -76,12 +59,7 @@ export default function OrderSuccessModal({ orderDetails }) {
           </div>
 
           {orderDetails?.pointsEarned && showRewards && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="bg-yellow-50 rounded-lg p-4"
-            >
+            <div className="bg-yellow-50 rounded-lg p-4 animate-slideUp">
               <div className="flex items-center gap-3 mb-2">
                 <FaGift className="text-yellow-600 text-xl" />
                 <h3 className="font-semibold text-gray-800">Rewards Earned</h3>
@@ -89,31 +67,27 @@ export default function OrderSuccessModal({ orderDetails }) {
               <p className="text-sm text-gray-600">
                 You earned {orderDetails.pointsEarned} VivaBucks! 🌟
               </p>
-            </motion.div>
+            </div>
           )}
         </div>
 
         <div className="flex gap-3">
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+          <button
             onClick={() => router.push('/profile/orders')}
             className="flex-1 py-3 px-6 bg-gray-100 text-gray-800 rounded-lg font-semibold
-                     hover:bg-gray-200 transition-colors"
+                     hover:bg-gray-200 transition-colors hover:scale-102 active:scale-98"
           >
             View Orders
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+          </button>
+          <button
             onClick={() => router.push('/')}
             className="flex-1 py-3 px-6 bg-primary text-white rounded-lg font-semibold
-                     hover:bg-primary/90 transition-colors"
+                     hover:bg-primary/90 transition-colors hover:scale-102 active:scale-98"
           >
             Continue Shopping
-          </motion.button>
+          </button>
         </div>
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 } 
