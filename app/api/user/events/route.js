@@ -109,11 +109,11 @@ export async function GET(request) {
       }
     }, 30000);
 
-    // Set up connection timeout (55 seconds to ensure we close before maxDuration)
+    // Set up reduced connection timeout (5 seconds for faster checkout flow)
     const connectionTimeout = setTimeout(() => {
       clearInterval(heartbeatInterval);
       writer.close();
-    }, 55000);
+    }, 5000);
 
     // Clean up on disconnect
     request.signal.addEventListener('abort', () => {

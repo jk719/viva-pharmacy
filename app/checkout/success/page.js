@@ -68,20 +68,28 @@ export default function OrderSuccessPage() {
   // No longer tracking animation completion
 
   useEffect(() => {
+    // Helper to persist timing logs in sessionStorage
+    const persistTimingLog = (msg) => {
+      const logs = JSON.parse(sessionStorage.getItem('checkoutTimingLogs') || '[]');
+      logs.push({ time: Date.now(), msg });
+      sessionStorage.setItem('checkoutTimingLogs', JSON.stringify(logs));
+    };
+    persistTimingLog('Success page useEffect mount');
+    console.log('[TIMING] Success page useEffect mount:', Date.now());
     // Only run once
     if (didInitialize.current) return;
     didInitialize.current = true;
     
     // Log the navigation path and current window location for debugging
-    console.log('📍 Success page initialization');
-    console.log('🌐 Current URL:', window.location.href);
-    console.log('🔍 Search params available:', searchParams ? 'yes' : 'no');
+    console.log(' Success page initialization');
+    console.log(' Current URL:', window.location.href);
+    console.log(' Search params available:', searchParams ? 'yes' : 'no');
     
     // Navigation method used (if tracked)
     if (typeof window !== 'undefined') {
       const navMethod = sessionStorage.getItem('navigationMethod');
       if (navMethod) {
-        console.log('🧭 Navigation method used:', navMethod);
+        console.log(' Navigation method used:', navMethod);
       }
     }
     
@@ -92,12 +100,12 @@ export default function OrderSuccessPage() {
     let deliveryMethod = searchParams.get('deliveryMethod');
     
     // Log what we got from URL params
-    console.log('🔗 URL parameters:', { orderId, points, selectedTime, deliveryMethod });
+    console.log(' URL parameters:', { orderId, points, selectedTime, deliveryMethod });
     
     // Check the URL search parameters directly for debugging
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
-      console.log('🔍 Direct URL search parameters:', Object.fromEntries(urlParams.entries()));
+      console.log(' Direct URL search parameters:', Object.fromEntries(urlParams.entries()));
     }
     
     // If ANY URL parameters are missing, try to get ALL from sessionStorage
@@ -107,7 +115,7 @@ export default function OrderSuccessPage() {
         const storedData = sessionStorage.getItem('orderSuccessData');
         if (storedData) {
           const orderData = JSON.parse(storedData);
-          console.log('📋 Retrieved order data from sessionStorage:', orderData);
+          console.log(' Retrieved order data from sessionStorage:', orderData);
           
           // Take ALL stored data to ensure consistency
           orderId = orderData.orderId;
@@ -115,16 +123,16 @@ export default function OrderSuccessPage() {
           selectedTime = orderData.selectedTime;
           deliveryMethod = orderData.deliveryMethod;
           
-          console.log('📦 Using complete data from sessionStorage:', { orderId, points, selectedTime, deliveryMethod });
+          console.log(' Using complete data from sessionStorage:', { orderId, points, selectedTime, deliveryMethod });
         } else {
-          console.log('⚠️ No data found in sessionStorage');
+          console.log(' No data found in sessionStorage');
         }
       } catch (err) {
-        console.error('❌ Error reading from sessionStorage:', err);
+        console.error(' Error reading from sessionStorage:', err);
       }
     }
     
-    console.log('🧾 Success page initializing with params:', {
+    console.log(' Success page initializing with params:', {
       orderId,
       points,
       selectedTime,
@@ -134,42 +142,45 @@ export default function OrderSuccessPage() {
       timestamp: new Date().toISOString()
     });
     
-    // Force refresh points data as soon as page loads
+    // Refresh loyalty data with a single optimized call
     const refreshLoyaltyData = async () => {
+      const loyaltyFetchStart = Date.now();
+      persistTimingLog('Loyalty data fetch START');
+      console.log('[TIMING] Loyalty data fetch START:', loyaltyFetchStart);
       try {
-        console.log('🔄 Force refreshing loyalty data before animation...');
-        // Force multiple cache-busting requests to ensure fresh data
-        for (let i = 0; i < 2; i++) {
-          const timestamp = Date.now() + i;
-          const random = Math.random().toString(36).substring(2, 15);
-          const response = await fetch(`/api/user/profile?nocache=${timestamp}&r=${random}`, {
-            method: 'GET',
-            headers: {
-              'Cache-Control': 'no-cache, no-store, must-revalidate',
-              'Pragma': 'no-cache',
-              'Expires': '0'
-            },
-            cache: 'no-store',
-            next: { revalidate: 0 }
+        console.log(' Refreshing loyalty data...');
+        const timestamp = Date.now();
+        const random = Math.random().toString(36).substring(2, 15);
+        
+        // Make a single API call with cache busting
+        const response = await fetch(`/api/user/profile?nocache=${timestamp}&r=${random}`, {
+          method: 'GET',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          },
+          cache: 'no-store'
+        });
+        
+        if (response.ok) {
+          const loyaltyFetchEnd = Date.now();
+          persistTimingLog(`Loyalty data fetch END (duration: ${loyaltyFetchEnd - loyaltyFetchStart} ms)`);
+          console.log('[TIMING] Loyalty data fetch END:', loyaltyFetchEnd, 'Duration:', loyaltyFetchEnd - loyaltyFetchStart, 'ms');
+          const data = await response.json();
+          console.log(' Current loyalty data:', {
+            vivaBucks: data?.vivaBucks,
+            cumulativePoints: data?.cumulativePoints,
+            currentTier: data?.currentTier
           });
           
-          if (response.ok) {
-            console.log(`✅ Refresh attempt ${i+1} successful`);
-            const data = await response.json();
-            console.log('📊 Current loyalty data:', {
-              vivaBucks: data?.vivaBucks,
-              cumulativePoints: data?.cumulativePoints,
-              currentTier: data?.currentTier
-            });
-          }
-          
-          // Small delay between requests
-          await new Promise(resolve => setTimeout(resolve, 300));
+          // Immediately mark as updated - no need to wait
+          setPointsUpdated(true);
+          console.log('✅ Loyalty data refresh completed!');
         }
-        console.log('✅ Loyalty data refresh completed!');
-        setPointsUpdated(true);
       } catch (err) {
         console.error('Error refreshing loyalty data:', err);
+        // Still mark as updated to avoid blocking the flow
+        setPointsUpdated(true);
       }
     };
     
@@ -212,11 +223,9 @@ export default function OrderSuccessPage() {
         // Move directly to READY state with order details then show modal
         dispatch({ type: CHECKOUT_STATES.READY, payload: orderDetails });
         
-        // Small delay before showing the modal for better UX
-        setTimeout(() => {
-          console.log('📱 Showing success modal directly without animation');
-          dispatch({ type: CHECKOUT_STATES.SHOWING_MODAL });
-        }, 800);
+        // Show modal immediately without delay
+        console.log('📱 Showing success modal directly without animation');
+        dispatch({ type: CHECKOUT_STATES.SHOWING_MODAL });
       } catch (err) {
         console.error('❌ Error initializing success page:', err);
         dispatch({ type: CHECKOUT_STATES.ERROR, payload: 'Error loading order details' });

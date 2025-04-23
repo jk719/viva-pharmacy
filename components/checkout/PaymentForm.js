@@ -87,10 +87,22 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
     setPaymentStatus('processing');
     const loadingToast = toast.loading('Processing payment...');
     
+    // Helper to persist timing logs in sessionStorage
+    const persistTimingLog = (msg) => {
+      const logs = JSON.parse(sessionStorage.getItem('checkoutTimingLogs') || '[]');
+      logs.push({ time: Date.now(), msg });
+      sessionStorage.setItem('checkoutTimingLogs', JSON.stringify(logs));
+    };
+
     try {
+      persistTimingLog('Payment submission started');
+      console.log('[TIMING] Payment submission started:', Date.now());
       console.log('🔄 Starting payment submission...');
       
       // Confirm payment without redirect
+      const confirmStart = Date.now();
+      persistTimingLog('stripe.confirmPayment called');
+      console.log('[TIMING] stripe.confirmPayment called at:', confirmStart);
       const { paymentIntent, error } = await stripe.confirmPayment({
         elements,
         redirect: 'if_required', // Only redirect for 3DS auth
@@ -106,6 +118,9 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
         return;
       }
 
+      const confirmEnd = Date.now();
+      persistTimingLog(`stripe.confirmPayment resolved (duration: ${confirmEnd - confirmStart} ms)`);
+      console.log('[TIMING] stripe.confirmPayment resolved at:', confirmEnd, 'Duration:', confirmEnd - confirmStart, 'ms');
       if (paymentIntent.status === 'succeeded') {
         console.log('✅ Payment succeeded:', paymentIntent.id);
         setPaymentStatus('succeeded');
@@ -141,9 +156,16 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
 
         try {
           toast.success('Payment successful!', { id: loadingToast });
+          persistTimingLog('Before handleOrderConfirmation');
+          const handleOrderStart = Date.now();
           await handleOrderConfirmation(paymentIntent);
+          persistTimingLog(`After handleOrderConfirmation (duration: ${Date.now() - handleOrderStart} ms)`);
+
+          persistTimingLog('Before clearCart');
+          const clearCartStart = Date.now();
           await clearCart();
-          
+          persistTimingLog(`After clearCart (duration: ${Date.now() - clearCartStart} ms)`);
+
           // Create the order details object that we need to pass to the success page
           const orderData = {
             orderId: paymentIntent.id,
@@ -164,72 +186,21 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
           });
           
           const successUrl = `/checkout/success?${params.toString()}`;
-          
-          console.log('🔀 Navigating to success page with params:', {
+                    console.log('🔀 Navigating to success page with params:', {
             url: successUrl,
             orderId: paymentIntent.id,
             points: Math.floor(amountDetails.total)
           });
           
-          // PRIMARY APPROACH: Form submission - most reliable for full page navigation
-          console.log('📤 Creating form for navigation to success page');
-          const form = document.createElement('form');
-          form.method = 'post'; // Use POST to force page refresh
-          form.action = '/checkout/success';
-          form.style.display = 'none';
+          const redirectTime = Date.now();
+          persistTimingLog(`Redirecting to success page (ms since confirmPayment: ${redirectTime - confirmEnd})`);
+          console.log('[TIMING] Redirecting to success page at:', redirectTime, 'ms since confirmPayment:', redirectTime - confirmEnd);
+          console.log('📤 Redirecting to success page');
+          sessionStorage.setItem('navigationMethod', 'direct');
           
-          // Add each parameter as a hidden input
-          const addParam = (name, value) => {
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = name;
-            input.value = value;
-            form.appendChild(input);
-          };
-          
-          // Add all parameters to the form
-          Object.entries(orderData).forEach(([key, value]) => {
-            addParam(key, String(value));
-          });
-        
-          // Add the form to the document and submit it
-          document.body.appendChild(form);
-          console.log('📤 Submitting form to navigate to success page');
-          
-          // Try form submission with fallbacks
-          try {
-            form.submit();
-            
-            // FALLBACK 1: If form submission doesn't redirect within 1 second, use direct location change
-            setTimeout(() => {
-              console.log('⚠️ Form submission may have failed, using direct location change');
-              // Set a flag to track navigation method used
-              sessionStorage.setItem('navigationMethod', 'direct');
-              window.location.href = successUrl;
-              
-              // FALLBACK 2: If direct location change doesn't work within 500ms, try location.replace
-              setTimeout(() => {
-                console.log('⚠️ Direct location change may have failed, using location.replace');
-                sessionStorage.setItem('navigationMethod', 'replace');
-                window.location.replace(successUrl);
-                
-                // FALLBACK 3: Last resort - open in new tab then close current
-                setTimeout(() => {
-                  console.log('🔴 All navigation methods failed, using anchor click');
-                  sessionStorage.setItem('navigationMethod', 'anchor');
-                  const a = document.createElement('a');
-                  a.href = successUrl;
-                  a.target = '_self';
-                  document.body.appendChild(a);
-                  a.click();
-                  document.body.removeChild(a);
-                }, 300);
-              }, 300);
-            }, 1000);
-          } catch (navErr) {
-            console.error('Form navigation failed:', navErr);
-            window.location.href = successUrl;
-          }
+          // Use location.href directly - the most reliable cross-browser approach
+          // No delays or cascading timeouts
+          window.location.href = successUrl;
         } catch (err) {
           console.error('Post-payment error:', err);
           // Even if there's an error in confirmation, try to navigate to success page
@@ -246,52 +217,68 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
   };
 
   const handleOrderConfirmation = async (paymentIntent) => {
+  const persistTimingLog = (msg) => {
+    const logs = JSON.parse(sessionStorage.getItem('checkoutTimingLogs') || '[]');
+    logs.push({ time: Date.now(), msg });
+    sessionStorage.setItem('checkoutTimingLogs', JSON.stringify(logs));
+  };
+  persistTimingLog('handleOrderConfirmation: start');
     // Format all numbers before sending
-    const formattedAmount = {
-      subtotal: parseFloat(amountDetails.subtotal || 0).toFixed(2),
-      tax: parseFloat(amountDetails.tax || 0).toFixed(2),
-      total: parseFloat(amountDetails.total || 0).toFixed(2),
-      deliveryFee: parseFloat(
-        deliveryMethod === 'delivery' ? amountDetails.deliveryFee : 0
-      ).toFixed(2)
-    };
+    persistTimingLog('handleOrderConfirmation: before format amounts/items');
+  const formattedAmount = {
+    subtotal: parseFloat(amountDetails.subtotal || 0).toFixed(2),
+    tax: parseFloat(amountDetails.tax || 0).toFixed(2),
+    total: parseFloat(amountDetails.total || 0).toFixed(2),
+    deliveryFee: parseFloat(
+      deliveryMethod === 'delivery' ? amountDetails.deliveryFee : 0
+    ).toFixed(2)
+  };
 
     const formattedItems = items.map(item => ({
-      name: item.name,
-      price: parseFloat(item.price || 0).toFixed(2),
-      quantity: parseInt(item.quantity || 1),
-      image: item.image,
-      hasImage: !!item.image,
-      productId: item._id || item.id // Include product ID
-    }));
+    name: item.name,
+    price: parseFloat(item.price || 0).toFixed(2),
+    quantity: parseInt(item.quantity || 1),
+    image: item.image,
+    hasImage: !!item.image,
+    productId: item._id || item.id // Include product ID
+  }));
+  persistTimingLog('handleOrderConfirmation: after format amounts/items');
 
-    const response = await fetch('/api/orders/confirmations', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        orderNumber: paymentIntent.id,
-        email: session?.user?.email,
-        items: formattedItems,
-        deliveryFee: formattedAmount.deliveryFee,
-        subtotal: formattedAmount.subtotal,
-        tax: formattedAmount.tax,
-        total: formattedAmount.total,
-        shippingAddress,
-        deliveryMethod,
-        selectedTime,
-        customerName: session?.user?.name || 'Valued Customer'
-      })
-    });
+    persistTimingLog('handleOrderConfirmation: before fetch');
+  const fetchStart = Date.now();
+  const response = await fetch('/api/orders/confirmations', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      orderNumber: paymentIntent.id,
+      email: session?.user?.email,
+      items: formattedItems,
+      deliveryFee: formattedAmount.deliveryFee,
+      subtotal: formattedAmount.subtotal,
+      tax: formattedAmount.tax,
+      total: formattedAmount.total,
+      shippingAddress,
+      deliveryMethod,
+      selectedTime,
+      customerName: session?.user?.name || 'Valued Customer'
+    })
+  });
+  persistTimingLog(`handleOrderConfirmation: after fetch (duration: ${Date.now() - fetchStart} ms)`);
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to send order confirmation');
-    }
+    persistTimingLog('handleOrderConfirmation: before response.json()');
+  if (!response.ok) {
+    const errorData = await response.json();
+    persistTimingLog('handleOrderConfirmation: response not ok');
+    throw new Error(errorData.error || 'Failed to send order confirmation');
+  }
+  const jsonStart = Date.now();
+  const result = await response.json();
+  persistTimingLog(`handleOrderConfirmation: after response.json() (duration: ${Date.now() - jsonStart} ms)`);
 
-    return response.json();
-  };
+  return result;
+};
 
   // Add cleanup for confetti
   useEffect(() => {

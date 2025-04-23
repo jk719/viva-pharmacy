@@ -10,6 +10,15 @@ export default function SSEProvider({ children }) {
 
   useEffect(() => {
     if (!session?.user?.id || status !== 'authenticated') return;
+    
+    // CRITICAL FIX: Skip SSE connection during checkout success to avoid delays
+    if (typeof window !== 'undefined') {
+      const isCheckoutSuccess = window.location.pathname.includes('/checkout/success');
+      if (isCheckoutSuccess) {
+        console.log('🚫 Skipping SSE connection during checkout success flow to avoid delays');
+        return;
+      }
+    }
 
     let cleanup;
     const initializeSSE = async () => {

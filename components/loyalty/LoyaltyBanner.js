@@ -10,6 +10,12 @@ import TierPointsDisplay from './components/TierPointsDisplay';
 // Import hooks and constants
 import useLoyaltyData from './hooks/useLoyaltyData';
 import { TIER_COLORS } from './constants/tierConfig';
+import { 
+  getCurrentPoints,
+  getLifetimePoints,
+  getCurrentTier,
+  getPointsMultiplier
+} from '@/lib/loyalty/userDataAccess';
 
 /**
  * Loading state component for loyalty banner
@@ -43,11 +49,11 @@ export default function LoyaltyBanner() {
   // Don't render anything if user is not logged in
   if (status === "loading" || !session) return null;
 
-  // Extract values with fallbacks
-  const currentVivaBucks = userData?.vivaBucks ?? 0;
-  const lifetimeVivaBucks = userData?.cumulativePoints ?? 0;
-  const currentTier = userData?.currentTier || 'BRONZE';
-  const multiplier = userData?.multiplier || 1;
+  // Extract values using the data access layer
+  const currentVivaBucks = getCurrentPoints(userData);
+  const lifetimeVivaBucks = getLifetimePoints(userData);
+  const currentTier = getCurrentTier(userData);
+  const multiplier = getPointsMultiplier(userData);
   
   // Extract progress info with fallbacks
   const nextTierName = progressInfo?.nextTier ?? 'SILVER';

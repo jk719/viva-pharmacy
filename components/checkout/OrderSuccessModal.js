@@ -9,12 +9,8 @@ export default function OrderSuccessModal({ orderDetails }) {
   const [showRewards, setShowRewards] = useState(false);
 
   useEffect(() => {
-    // Delay showing rewards section to allow loyalty bar to animate first
-    const rewardsTimeout = setTimeout(() => {
-      setShowRewards(true);
-    }, 1000);
-
-    return () => clearTimeout(rewardsTimeout);
+    // Show rewards immediately - no need to delay anymore
+    setShowRewards(true);
   }, []);
 
   return (
