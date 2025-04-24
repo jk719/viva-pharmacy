@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, createContext, useContext } from 'react';
 import { Elements } from '@stripe/react-stripe-js';
 import { PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import stripePromise from '@/lib/stripe/client';
@@ -15,6 +15,17 @@ import { FaGift, FaUndo } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import OrderSuccessModal from './OrderSuccessModal';
 import { trackBeginCheckout, trackPurchase } from '@/lib/analytics/events';
+
+// Create a context to share functions between components
+const PaymentContext = createContext(null);
+
+// Utility for timing logs - consolidated to avoid duplication
+const persistTimingLog = (msg) => {
+  const logs = JSON.parse(sessionStorage.getItem('checkoutTimingLogs') || '[]');
+  logs.push({ time: Date.now(), msg });
+  sessionStorage.setItem('checkoutTimingLogs', JSON.stringify(logs));
+  console.log(`[TIMING] ${msg}:`, Date.now());
+};
 
 // Add this custom hook
 const useWindowSize = () => {
@@ -46,6 +57,15 @@ const ANIMATION_DURATION = 2000;
 const REDIRECT_DELAY = 3000;
 
 const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryMethod, selectedTime }) => {
+  // Access shared context from parent PaymentForm
+  const { 
+    handleSuccessfulPayment, 
+    orderDetails, 
+    setOrderDetails, 
+    showConfetti, 
+    setShowConfetti 
+  } = useContext(PaymentContext) || {};
+  
   const router = useRouter();
   const stripe = useStripe();
   const elements = useElements();
@@ -55,10 +75,7 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
   const { clearCart } = useCart();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submitTimeoutRef = useRef(null);
-  const [showConfetti, setShowConfetti] = useState(false);
   const { width, height } = useWindowSize();
-  // Removed showSuccessModal state as this is now handled in the success page
-  const [orderDetails, setOrderDetails] = useState(null);
 
   // Add payment status tracking
   const [paymentStatus, setPaymentStatus] = useState('idle'); // 'idle' | 'processing' | 'succeeded' | 'failed'
@@ -87,152 +104,152 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
     setPaymentStatus('processing');
     const loadingToast = toast.loading('Processing payment...');
     
-    // Helper to persist timing logs in sessionStorage
-    const persistTimingLog = (msg) => {
-      const logs = JSON.parse(sessionStorage.getItem('checkoutTimingLogs') || '[]');
-      logs.push({ time: Date.now(), msg });
-      sessionStorage.setItem('checkoutTimingLogs', JSON.stringify(logs));
-    };
-
-    try {
-      persistTimingLog('Payment submission started');
-      console.log('[TIMING] Payment submission started:', Date.now());
-      console.log('🔄 Starting payment submission...');
+    // Using global persistTimingLog utility function
+    persistTimingLog('Payment submission started');
+    console.log('🔄 Starting payment submission...');
       
-      // Confirm payment without redirect
-      const confirmStart = Date.now();
-      persistTimingLog('stripe.confirmPayment called');
-      console.log('[TIMING] stripe.confirmPayment called at:', confirmStart);
-      const { paymentIntent, error } = await stripe.confirmPayment({
-        elements,
-        redirect: 'if_required', // Only redirect for 3DS auth
-        confirmParams: {
-          return_url: `${window.location.origin}/checkout/success`,
-        },
-      });
+    // Confirm payment without redirect
+    const confirmStart = Date.now();
+    persistTimingLog('stripe.confirmPayment called');
+    const { paymentIntent, error } = await stripe.confirmPayment({
+      elements,
+      redirect: 'if_required', // Only redirect for 3DS auth
+      confirmParams: {
+        return_url: `${window.location.origin}/checkout/success`,
+      },
+    });
 
-      if (error) {
-        console.error('❌ Payment error:', error);
-        toast.error(error.message, { id: loadingToast });
-        setPaymentStatus('failed');
-        return;
-      }
+    if (error) {
+      console.error('❌ Payment error:', error);
+      toast.error(error.message, { id: loadingToast });
+      setPaymentStatus('failed');
+      return;
+    }
 
-      const confirmEnd = Date.now();
-      persistTimingLog(`stripe.confirmPayment resolved (duration: ${confirmEnd - confirmStart} ms)`);
-      console.log('[TIMING] stripe.confirmPayment resolved at:', confirmEnd, 'Duration:', confirmEnd - confirmStart, 'ms');
-      if (paymentIntent.status === 'succeeded') {
-        console.log('✅ Payment succeeded:', paymentIntent.id);
-        setPaymentStatus('succeeded');
+    const confirmEnd = Date.now();
+    persistTimingLog(`stripe.confirmPayment resolved (duration: ${confirmEnd - confirmStart} ms)`);
+    if (paymentIntent.status === 'succeeded') {
+      console.log('✅ Payment succeeded:', paymentIntent.id);
+      setPaymentStatus('succeeded');
 
-        // Track successful purchase with enhanced data
-        trackPurchase(
-          paymentIntent.id,
-          items,
-          amountDetails.total,
-          amountDetails.deliveryFee || 0,
-          amountDetails.tax || 0
-        );
+      // Track successful purchase with enhanced data
+      trackPurchase(
+        paymentIntent.id,
+        items,
+        amountDetails.total,
+        amountDetails.deliveryFee || 0,
+        amountDetails.tax || 0
+      );
 
-        // Store order details
-        const orderDetails = {
+      // Store order details
+      const orderDetails = {
+        orderId: paymentIntent.id,
+        items: items,
+        total: amountDetails.total,
+        tax: amountDetails.tax,
+        shipping: amountDetails.deliveryFee,
+        deliveryMethod,
+        selectedTime,
+        pointsEarned: Math.floor(amountDetails.total)  // 1 point per dollar
+      };
+      setOrderDetails(orderDetails);
+      setShowConfetti(true);
+      // Don't show modal yet - wait for loyalty animation
+
+      // Store payment info in sessionStorage as a reliable backup
+      sessionStorage.setItem('paymentProcessed', 'true');
+      sessionStorage.setItem('paymentIntentId', paymentIntent.id);
+      sessionStorage.setItem('paymentAmount', amountDetails.total);
+
+      try {
+        toast.success('Payment successful!', { id: loadingToast });
+        persistTimingLog('Before handleOrderConfirmation');
+        const handleOrderStart = Date.now();
+        await handleOrderConfirmation(paymentIntent);
+        persistTimingLog(`After handleOrderConfirmation (duration: ${Date.now() - handleOrderStart} ms)`);
+
+        // Process loyalty points with proper event handling
+        persistTimingLog('Before loyalty points update');
+        const loyaltyStart = Date.now();
+        await handleSuccessfulPayment(paymentIntent);
+        persistTimingLog(`After loyalty points update (duration: ${Date.now() - loyaltyStart} ms)`);
+
+        persistTimingLog('Before clearCart');
+        const clearCartStart = Date.now();
+        await clearCart();
+        persistTimingLog(`After clearCart (duration: ${Date.now() - clearCartStart} ms)`);
+
+        // Create the order details object that we need to pass to the success page
+        const orderData = {
           orderId: paymentIntent.id,
-          items: items,
-          total: amountDetails.total,
-          tax: amountDetails.tax,
-          shipping: amountDetails.deliveryFee,
-          deliveryMethod,
-          selectedTime,
-          pointsEarned: Math.floor(amountDetails.total)  // 1 point per dollar
+          points: Math.floor(amountDetails.total),
+          deliveryMethod: deliveryMethod || 'delivery', 
+          selectedTime: selectedTime || '',
+          timestamp: Date.now()
         };
-        setOrderDetails(orderDetails);
-        setShowConfetti(true);
-        // Modal is now shown on the success page instead
-
-        // Store payment info
-        sessionStorage.setItem('paymentProcessed', 'true');
-        sessionStorage.setItem('paymentIntentId', paymentIntent.id);
-        sessionStorage.setItem('paymentAmount', amountDetails.total);
-
+        
+        // Store order details in sessionStorage as a reliable backup
+        console.log('💾 Storing order details in sessionStorage:', orderData);
+        sessionStorage.setItem('orderSuccessData', JSON.stringify(orderData));
+        
+        console.log('✅ Payment completed successfully:', {
+          orderId: paymentIntent.id,
+          points: Math.floor(amountDetails.total)
+        });
+        
+        const completionTime = Date.now();
+        persistTimingLog(`Payment completed (ms since confirmPayment: ${completionTime - confirmEnd})`);
+        
+        // Construct clean URL parameters for success page
+        const successParams = new URLSearchParams({
+          orderId: paymentIntent.id,
+          points: Math.floor(amountDetails.total),
+          deliveryMethod: deliveryMethod || 'delivery',
+          selectedTime: selectedTime || ''
+        }).toString();
+        
+        // Notify the system we're using push navigation
+        sessionStorage.setItem('navigationMethod', 'router.push');
+        console.log('🔜 Navigating to success page with params:', successParams);
+        
+        // Navigate to success page - this is critical to avoid getting stuck
+        router.push(`/checkout/success?${successParams}`);
+        
+        // No need for component unmount since we're navigating away
+      } catch (err) {
+        console.error('Post-payment error:', err);
+        // Even if there's an error, try to navigate to success page
         try {
-          toast.success('Payment successful!', { id: loadingToast });
-          persistTimingLog('Before handleOrderConfirmation');
-          const handleOrderStart = Date.now();
-          await handleOrderConfirmation(paymentIntent);
-          persistTimingLog(`After handleOrderConfirmation (duration: ${Date.now() - handleOrderStart} ms)`);
-
-          persistTimingLog('Before clearCart');
-          const clearCartStart = Date.now();
-          await clearCart();
-          persistTimingLog(`After clearCart (duration: ${Date.now() - clearCartStart} ms)`);
-
-          // Create the order details object that we need to pass to the success page
-          const orderData = {
+          // Create minimal success params with just the order ID
+          const fallbackParams = new URLSearchParams({
             orderId: paymentIntent.id,
-            points: Math.floor(amountDetails.total),
-            deliveryMethod: deliveryMethod || 'delivery', 
-            selectedTime: selectedTime || '',
-            timestamp: Date.now()
-          };
+            error: 'true'
+          }).toString();
           
-          // Store order details in sessionStorage as a reliable backup
-          console.log('💾 Storing order details in sessionStorage:', orderData);
-          sessionStorage.setItem('orderSuccessData', JSON.stringify(orderData));
-          
-          // Create URL with parameters
-          const params = new URLSearchParams();
-          Object.entries(orderData).forEach(([key, value]) => {
-            params.append(key, value);
-          });
-          
-          const successUrl = `/checkout/success?${params.toString()}`;
-                    console.log('🔀 Navigating to success page with params:', {
-            url: successUrl,
-            orderId: paymentIntent.id,
-            points: Math.floor(amountDetails.total)
-          });
-          
-          const redirectTime = Date.now();
-          persistTimingLog(`Redirecting to success page (ms since confirmPayment: ${redirectTime - confirmEnd})`);
-          console.log('[TIMING] Redirecting to success page at:', redirectTime, 'ms since confirmPayment:', redirectTime - confirmEnd);
-          console.log('📤 Redirecting to success page');
-          sessionStorage.setItem('navigationMethod', 'direct');
-          
-          // Use location.href directly - the most reliable cross-browser approach
-          // No delays or cascading timeouts
-          window.location.href = successUrl;
-        } catch (err) {
-          console.error('Post-payment error:', err);
-          // Even if there's an error in confirmation, try to navigate to success page
-          window.location.href = `/checkout/success?orderId=${paymentIntent.id}`;
+          console.log('⚠️ Error in payment completion, attempting to navigate to success page');
+          router.push(`/checkout/success?${fallbackParams}`);
+        } catch (navError) {
+          // Last resort: log the error if navigation fails
+          console.error('Navigation error:', navError);
+          // No fallback modal needed as we should never reach this point
         }
       }
-    } catch (err) {
-      console.error('❌ Payment submission error:', err);
-      toast.error('An unexpected error occurred', { id: loadingToast });
-      setPaymentStatus('failed');
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
   const handleOrderConfirmation = async (paymentIntent) => {
-  const persistTimingLog = (msg) => {
-    const logs = JSON.parse(sessionStorage.getItem('checkoutTimingLogs') || '[]');
-    logs.push({ time: Date.now(), msg });
-    sessionStorage.setItem('checkoutTimingLogs', JSON.stringify(logs));
-  };
-  persistTimingLog('handleOrderConfirmation: start');
+    // Using global persistTimingLog utility function
+    persistTimingLog('handleOrderConfirmation: start');
     // Format all numbers before sending
     persistTimingLog('handleOrderConfirmation: before format amounts/items');
-  const formattedAmount = {
-    subtotal: parseFloat(amountDetails.subtotal || 0).toFixed(2),
-    tax: parseFloat(amountDetails.tax || 0).toFixed(2),
-    total: parseFloat(amountDetails.total || 0).toFixed(2),
-    deliveryFee: parseFloat(
-      deliveryMethod === 'delivery' ? amountDetails.deliveryFee : 0
-    ).toFixed(2)
-  };
+    const formattedAmount = {
+      subtotal: parseFloat(amountDetails.subtotal || 0).toFixed(2),
+      tax: parseFloat(amountDetails.tax || 0).toFixed(2),
+      total: parseFloat(amountDetails.total || 0).toFixed(2),
+      deliveryFee: parseFloat(
+        deliveryMethod === 'delivery' ? amountDetails.deliveryFee : 0
+      ).toFixed(2)
+    };
 
     const formattedItems = items.map(item => ({
     name: item.name,
@@ -320,7 +337,6 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
           onConfettiComplete={() => setShowConfetti(false)}
         />
       )}
-      {/* OrderSuccessModal removed from here - now displayed on success page */}
       <form onSubmit={handleSubmit} className="space-y-4">
         <PaymentElement />
         {error && (
@@ -403,6 +419,8 @@ const OrderSummary = ({ amountDetails, redemptionApplied }) => {
   );
 };
 
+// Remove loyalty animation function - we're showing the modal directly
+
 export default function PaymentForm({ amount, amountDetails, items, shippingAddress, deliveryMethod, selectedTime }) {
   const { 
     getFormattedItems, 
@@ -412,23 +430,26 @@ export default function PaymentForm({ amount, amountDetails, items, shippingAddr
     pointsRedeemed 
   } = useCart();
   const { data: session } = useSession();
+  
+  // Define all state in one place to avoid duplication
   const [clientSecret, setClientSecret] = useState('');
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [paymentInitialized, setPaymentInitialized] = useState(false);
-  const [requestId] = useState(() => `${Date.now()}_${Math.random().toString(36).slice(2)}`);
-  const [availableCoupons, setAvailableCoupons] = useState([]);
   const [selectedCoupon, setSelectedCoupon] = useState(null);
-  const [discountedAmount, setDiscountedAmount] = useState(amount);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [availableCoupons, setAvailableCoupons] = useState([]);
   const [loyaltyBenefits, setLoyaltyBenefits] = useState(null);
   const [userData, setUserData] = useState(null);
   const [isLoadingUserData, setIsLoadingUserData] = useState(false);
   const [redemptionError, setRedemptionError] = useState(null);
-  // Removed showSuccessModal state as this is now handled in the success page
   const [orderDetails, setOrderDetails] = useState(null);
-
-  // Add payment status tracking
   const [paymentStatus, setPaymentStatus] = useState('idle'); // 'idle' | 'processing' | 'succeeded' | 'failed'
+  // Track discounted amount after applying coupons/loyalty
+  const [discountedAmount, setDiscountedAmount] = useState(amount);
+  // Generate a unique request ID for payment tracking
+  const [requestId] = useState(() => `${Date.now()}_${Math.random().toString(36).slice(2)}`);
+  
 
   // Add progress state
   const [progress, setProgress] = useState(0);
@@ -463,14 +484,14 @@ export default function PaymentForm({ amount, amountDetails, items, shippingAddr
           deliveryMethod,
           selectedTime,
           shippingAddress: formattedAddress,
-          requestId
+          requestId: requestId // Using the requestId from state
         };
 
         console.log('💰 Initializing payment:', {
           amountInDollars: amount,
           items: cartItems.length,
           delivery: deliveryMethod,
-          requestId
+          requestId: requestId // Using the requestId from state
         });
 
         const response = await fetch('/api/payments', {
@@ -568,15 +589,18 @@ export default function PaymentForm({ amount, amountDetails, items, shippingAddr
     }
   };
 
+  // Main loyalty processing function - made available via context
   const handleSuccessfulPayment = async (paymentIntent) => {
+    console.log('✅ Processing loyalty rewards for order:', paymentIntent.id);
     try {
-      // Update loyalty points
+      // Update loyalty points with consistent amount
+      const updatedAmount = typeof amount === 'undefined' ? amountDetails?.total : amount;
       await fetch('/api/loyalty/points', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           orderId: paymentIntent.id,
-          amount: amount
+          amount: updatedAmount
         })
       });
 
@@ -589,9 +613,15 @@ export default function PaymentForm({ amount, amountDetails, items, shippingAddr
         });
       }
 
-      // ... rest of success handling
+      console.log('✅ Loyalty points updated successfully');
+      // Emit event for loyalty update completed
+      eventEmitter.emit(Events.LOYALTY_POINTS_UPDATED, {
+        orderId: paymentIntent.id,
+        amount: updatedAmount
+      });
     } catch (error) {
       console.error('Error processing loyalty rewards:', error);
+      // Continue with checkout even if loyalty processing fails
     }
   };
 
@@ -630,8 +660,20 @@ export default function PaymentForm({ amount, amountDetails, items, shippingAddr
     if (!result.success) {
       setRedemptionError(result.error || 'Failed to redeem points. Please try again.');
     } else {
+      // Update the discounted amount when redemption is successful (100 points = $10)
+      setDiscountedAmount(prevAmount => prevAmount - 10);
       toast.success(`Redeemed 100 VivaBucks for $10 off!`);
     }
+  };
+
+  // Function to handle cancellation of loyalty redemption
+  const handleCancelRedemption = () => {
+    // Restore the original amount by adding $10 back (this assumes points were redeemed)
+    if (redemptionApplied) {
+      setDiscountedAmount(prevAmount => prevAmount + 10);
+    }
+    // Call the original cancelLoyaltyRedemption function
+    cancelLoyaltyRedemption();
   };
 
   if (isLoading) {
@@ -715,7 +757,7 @@ export default function PaymentForm({ amount, amountDetails, items, shippingAddr
                   <div className="bg-green-100 text-green-800 p-2 rounded flex justify-between items-center">
                     <span>100 VivaBucks redeemed for $10 discount</span>
                     <button 
-                      onClick={cancelLoyaltyRedemption}
+                      onClick={handleCancelRedemption}
                       className="text-red-600 hover:text-red-800"
                     >
                       <FaUndo className="text-lg" />
@@ -769,53 +811,61 @@ export default function PaymentForm({ amount, amountDetails, items, shippingAddr
       )}
 
       {clientSecret && (
-        <Elements 
-          stripe={stripePromise} 
-          options={{
-            clientSecret,
-            appearance: {
-              theme: 'stripe',
-              variables: {
-                colorPrimary: '#0066cc',
+        <PaymentContext.Provider value={{ 
+          handleSuccessfulPayment, 
+          orderDetails, 
+          setOrderDetails,
+          showConfetti, 
+          setShowConfetti
+        }}>
+          <Elements 
+            stripe={stripePromise} 
+            options={{
+              clientSecret,
+              appearance: {
+                theme: 'stripe',
+                variables: {
+                  colorPrimary: '#0066cc',
+                },
               },
-            },
-          }}
-        >
-          <div>
-            {availableCoupons.length > 0 && (
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold mb-2">Available Coupons</h3>
-                <div className="space-y-2">
-                  {availableCoupons.map((coupon) => (
-                    <button
-                      key={coupon.code}
-                      onClick={() => handleCouponSelect(coupon)}
-                      className={`w-full p-3 rounded-lg border ${
-                        selectedCoupon?.code === coupon.code
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:border-blue-500'
-                      }`}
-                    >
-                      <div className="flex justify-between items-center">
-                        <span>${coupon.amount} off your purchase</span>
-                        <span className="text-sm text-gray-500">{coupon.code}</span>
-                      </div>
-                    </button>
-                  ))}
+            }}
+          >
+            <div>
+              {availableCoupons.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold mb-2">Available Coupons</h3>
+                  <div className="space-y-2">
+                    {availableCoupons.map((coupon) => (
+                      <button
+                        key={coupon.code}
+                        onClick={() => handleCouponSelect(coupon)}
+                        className={`w-full p-3 rounded-lg border ${
+                          selectedCoupon?.code === coupon.code
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 hover:border-blue-500'
+                        }`}
+                      >
+                        <div className="flex justify-between items-center">
+                          <span>${coupon.amount} off your purchase</span>
+                          <span className="text-sm text-gray-500">{coupon.code}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-            
-            <CheckoutForm 
-              amount={discountedAmount}
-              amountDetails={amountDetails}
-              items={items}
-              shippingAddress={shippingAddress}
-              deliveryMethod={deliveryMethod}
-              selectedTime={selectedTime}
-            />
-          </div>
-        </Elements>
+              )}
+              
+              <CheckoutForm 
+                amount={discountedAmount}
+                amountDetails={amountDetails}
+                items={items}
+                shippingAddress={shippingAddress}
+                deliveryMethod={deliveryMethod}
+                selectedTime={selectedTime}
+              />
+            </div>
+          </Elements>
+        </PaymentContext.Provider>
       )}
     </div>
   );

@@ -2,15 +2,18 @@
 
 import { useEffect, useReducer, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+// Using the main OrderSuccessModal component, not the temporary fix version
 import OrderSuccessModal from '@/components/checkout/OrderSuccessModal';
+import LoyaltyBanner from '@/components/loyalty/LoyaltyBanner';
 import eventEmitter, { Events } from '@/lib/eventEmitter';
 
-// Define checkout state machine states - simplified without animation states
+// Define checkout state machine states with animation states
 const CHECKOUT_STATES = {
-  INITIALIZING: 'initializing',      // Initial state, loading order details
-  READY: 'ready',                   // Order details loaded
-  SHOWING_MODAL: 'showing_modal',   // Showing order confirmation modal
-  ERROR: 'error'                    // Error state
+  INITIALIZING: 'initializing',        // Initial state, loading order details
+  READY: 'ready',                     // Order details loaded
+  SHOWING_ANIMATION: 'showing_animation', // Showing loyalty animation
+  SHOWING_MODAL: 'showing_modal',     // Showing order confirmation modal
+  ERROR: 'error'                      // Error state
 };
 
 // State machine reducer function
@@ -30,11 +33,19 @@ function checkoutReducer(state, action) {
         status: CHECKOUT_STATES.READY, 
         orderDetails: action.payload
       };
+    
+    case CHECKOUT_STATES.SHOWING_ANIMATION:
+      return {
+        ...state,
+        status: CHECKOUT_STATES.SHOWING_ANIMATION,
+        showingLoyaltyAnimation: true
+      };
       
     case CHECKOUT_STATES.SHOWING_MODAL:
       return { 
         ...state,
-        status: CHECKOUT_STATES.SHOWING_MODAL 
+        status: CHECKOUT_STATES.SHOWING_MODAL,
+        showingLoyaltyAnimation: false
       };
       
     case CHECKOUT_STATES.ERROR:
@@ -53,20 +64,21 @@ function checkoutReducer(state, action) {
 export default function OrderSuccessPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [pointsUpdated, setPointsUpdated] = useState(false);
+  const [loyaltyAnimationComplete, setLoyaltyAnimationComplete] = useState(false);
   const didInitialize = useRef(false);
+  const animationTimeoutRef = useRef(null);
   
-  // Initialize state machine with initial state
+  // Initialize state machine
   const [state, dispatch] = useReducer(checkoutReducer, {
     status: CHECKOUT_STATES.INITIALIZING,
     orderDetails: null,
-    error: null
+    error: null,
+    showingLoyaltyAnimation: false
   });
 
   // Initialize checkout flow once when component mounts
   // Track if points have been updated in the backend
-  const [pointsUpdated, setPointsUpdated] = useState(false);
-  // No longer tracking animation completion
-
   useEffect(() => {
     // Helper to persist timing logs in sessionStorage
     const persistTimingLog = (msg) => {
@@ -175,7 +187,7 @@ export default function OrderSuccessPage() {
           
           // Immediately mark as updated - no need to wait
           setPointsUpdated(true);
-          console.log('✅ Loyalty data refresh completed!');
+          console.log(' Loyalty data refresh completed!');
         }
       } catch (err) {
         console.error('Error refreshing loyalty data:', err);
@@ -188,7 +200,7 @@ export default function OrderSuccessPage() {
 
     // IMPORTANT: Don't redirect automatically if no orderId - show a message instead
     if (!orderId) {
-      console.log('⚠️ No order ID found, but NOT redirecting automatically');
+      console.log(' No order ID found, but NOT redirecting automatically');
       dispatch({ 
         type: CHECKOUT_STATES.ERROR, 
         payload: 'No order details found. Please try again or check your order history.'
@@ -196,7 +208,7 @@ export default function OrderSuccessPage() {
       return;
     }
 
-    console.log('📍 Initializing checkout success flow:', {
+    console.log(' Initializing checkout success flow:', {
       orderId,
       points,
       selectedTime,
@@ -206,8 +218,8 @@ export default function OrderSuccessPage() {
     
     if (orderId && (!state.orderDetails || state.status === CHECKOUT_STATES.INITIALIZING)) {
       try {
-        console.log('📥 Initializing success page with order:', orderId);
-        console.log('📊 Points parameter received:', points);
+        console.log(' Initializing success page with order:', orderId);
+        console.log(' Points parameter received:', points);
         
         // Set the order details
         const orderDetails = {
@@ -218,26 +230,67 @@ export default function OrderSuccessPage() {
           pointsEarned: parseInt(points, 10) || 0
         };
         
-        console.log('🔆 Setting up order details with points:', orderDetails.pointsEarned);
-        
-        // Move directly to READY state with order details then show modal
+        console.log(' Setting up order details with points:', orderDetails.pointsEarned);
+
+        // Update the state with the order details
         dispatch({ type: CHECKOUT_STATES.READY, payload: orderDetails });
         
-        // Show modal immediately without delay
-        console.log('📱 Showing success modal directly without animation');
-        dispatch({ type: CHECKOUT_STATES.SHOWING_MODAL });
+        // If there are points earned, show loyalty animation first
+        if (orderDetails.pointsEarned > 0) {
+          console.log(' Showing loyalty animation for', orderDetails.pointsEarned, 'points');
+          dispatch({ type: CHECKOUT_STATES.SHOWING_ANIMATION });
+          
+          // Set a fallback timeout in case animation or callback fails
+          animationTimeoutRef.current = setTimeout(() => {
+            console.log(' Animation timeout reached, forcing modal display');
+            if (!loyaltyAnimationComplete) {
+              setLoyaltyAnimationComplete(true);
+              dispatch({ type: CHECKOUT_STATES.SHOWING_MODAL });
+            }
+          }, 5000); // 5 second fallback
+        } else {
+          // If no points earned, go straight to modal
+          console.log(' No points to animate, showing success modal directly');
+          dispatch({ type: CHECKOUT_STATES.SHOWING_MODAL });
+        }
       } catch (err) {
-        console.error('❌ Error initializing success page:', err);
+        console.error(' Error initializing success page:', err);
         dispatch({ type: CHECKOUT_STATES.ERROR, payload: 'Error loading order details' });
       }
     } else if (state.status === CHECKOUT_STATES.READY && state.orderDetails) {
       // Already have order details, go directly to modal
-      console.log('📱 Showing success modal for existing order details');
+      console.log(' Showing success modal for existing order details');
       dispatch({ type: CHECKOUT_STATES.SHOWING_MODAL });
     }
   }, [searchParams, router]);
 
-  // No animation state monitoring or callbacks needed
+  // Handle loyalty animation completion
+  const handleLoyaltyAnimationComplete = () => {
+    console.log('✨ Loyalty animation complete - modal will appear now');
+    
+    // Clear the fallback timeout
+    if (animationTimeoutRef.current) {
+      clearTimeout(animationTimeoutRef.current);
+      animationTimeoutRef.current = null;
+    }
+    
+    // Set state variables and transition to modal state
+    setLoyaltyAnimationComplete(true);
+    dispatch({ type: CHECKOUT_STATES.SHOWING_MODAL });
+    
+    // NOTE: We don't re-emit the LOYALTY_ANIMATION_COMPLETE event here
+    // This prevents circular events, as ProgressBar already emits this event
+    // and that's what triggers this callback in the first place
+  };
+  
+  // Effect to cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (animationTimeoutRef.current) {
+        clearTimeout(animationTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Render loading state while initializing
   if (state.status === CHECKOUT_STATES.INITIALIZING) {
@@ -273,6 +326,25 @@ export default function OrderSuccessPage() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Main success page content */}
+      {/* Loyalty Banner - Only shown during SHOWING_ANIMATION state */}
+      {state.status === CHECKOUT_STATES.SHOWING_ANIMATION && state.orderDetails && (
+        <div className="loyalty-animation-container mb-6">
+          <div className="text-center py-4">
+            <h3 className="text-lg font-medium text-gray-800 mb-2">
+              {state.orderDetails.pointsEarned > 0 ? (
+                <span>You earned {state.orderDetails.pointsEarned} VivaBucks!</span>
+              ) : (
+                <span>Processing your reward points...</span>
+              )}
+            </h3>
+          </div>
+          <LoyaltyBanner 
+            forceAnimation={true} 
+            onProgressBarAnimationComplete={handleLoyaltyAnimationComplete} 
+          />
+        </div>
+      )}
+      
       <div className="py-8">
         <div className="text-center mb-8">
           <div className="mb-4 text-green-500">
@@ -300,8 +372,8 @@ export default function OrderSuccessPage() {
       {/* Show the modal only in the SHOWING_MODAL state */}
       {state.status === CHECKOUT_STATES.SHOWING_MODAL && state.orderDetails && (
         <OrderSuccessModal 
-          isOpen={true} 
           orderDetails={state.orderDetails} 
+          onClose={() => router.push('/')} 
           key={`modal-${state.orderDetails.orderId}-${state.status}`}
         />
       )}

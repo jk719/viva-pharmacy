@@ -34,8 +34,11 @@ const LoadingState = () => (
 
 /**
  * Main loyalty banner component that displays user's tier and progress
+ * @param {Object} props Component properties
+ * @param {boolean} props.forceAnimation - Force animation even if not triggered by an event
+ * @param {Function} props.onProgressBarAnimationComplete - Callback when progress bar animation completes
  */
-export default function LoyaltyBanner() {
+export default function LoyaltyBanner({ forceAnimation = false, onProgressBarAnimationComplete }) {
   const { data: session, status } = useSession();
 
   // Use the custom hook to get loyalty data
@@ -45,6 +48,15 @@ export default function LoyaltyBanner() {
     isLoading, 
     isMobile
   } = useLoyaltyData();
+  
+  // Handle animation completion
+  const handleAnimationComplete = () => {
+    console.log('🔔 Loyalty banner progress bar animation completed');
+    if (typeof onProgressBarAnimationComplete === 'function') {
+      console.log('📣 Calling onProgressBarAnimationComplete callback');
+      onProgressBarAnimationComplete();
+    }
+  };
 
   // Don't render anything if user is not logged in
   if (status === "loading" || !session) return null;
@@ -103,13 +115,17 @@ export default function LoyaltyBanner() {
             isMobile={isMobile}
           />
           
-          {/* Progress bar */}
+          {/* Progress bar with animation */}
           {progressInfo && (
             <ProgressBar 
               progress={progressPercent}
               currentPoints={lifetimeVivaBucks}
               startPoints={startPoints}
               endPoints={endPoints}
+              animate={true}
+              forceAnimation={forceAnimation}
+              onAnimationComplete={handleAnimationComplete}
+              data-testid="animated-progress-bar"
             />
           )}
         </div>

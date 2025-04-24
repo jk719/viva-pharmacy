@@ -4,7 +4,7 @@ import { FaCheckCircle, FaBox, FaEnvelope, FaGift } from 'react-icons/fa';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-export default function OrderSuccessModal({ orderDetails }) {
+export default function OrderSuccessModal({ orderDetails, onClose }) {
   const router = useRouter();
   const [showRewards, setShowRewards] = useState(false);
 
@@ -69,14 +69,20 @@ export default function OrderSuccessModal({ orderDetails }) {
 
         <div className="flex gap-3">
           <button
-            onClick={() => router.push('/profile/orders')}
+            onClick={() => {
+              if (onClose) onClose();
+              router.push('/profile/orders');
+            }}
             className="flex-1 py-3 px-6 bg-gray-100 text-gray-800 rounded-lg font-semibold
                      hover:bg-gray-200 transition-colors hover:scale-102 active:scale-98"
           >
             View Orders
           </button>
           <button
-            onClick={() => router.push('/')}
+            onClick={() => {
+              if (onClose) onClose();
+              router.push('/');
+            }}
             className="flex-1 py-3 px-6 bg-primary text-white rounded-lg font-semibold
                      hover:bg-primary/90 transition-colors hover:scale-102 active:scale-98"
           >
