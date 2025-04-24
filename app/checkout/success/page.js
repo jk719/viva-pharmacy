@@ -77,6 +77,9 @@ export default function OrderSuccessPage() {
     showingLoyaltyAnimation: false
   });
 
+  // Key flag to indicate if component is freshly mounted (not from a Next.js client nav)
+  const isFirstMount = useRef(true);
+  
   // Initialize checkout flow once when component mounts
   // Track if points have been updated in the backend
   useEffect(() => {
@@ -88,14 +91,30 @@ export default function OrderSuccessPage() {
     };
     persistTimingLog('Success page useEffect mount');
     console.log('[TIMING] Success page useEffect mount:', Date.now());
+    console.log('🔔 First mount status:', isFirstMount.current ? 'FRESH MOUNT' : 'REMOUNT');
+    
     // Only run once
     if (didInitialize.current) return;
     didInitialize.current = true;
     
+    // Mark this as no longer a first mount for future renders
+    isFirstMount.current = false;
+    
+    // Set a max timeout to show the modal even if animation doesn't complete
+    // This is a safety measure to ensure users always see the confirmation
+    const MAX_WAIT_TIME = 6000; // 6 seconds max wait time
+    animationTimeoutRef.current = setTimeout(() => {
+      console.log('⚠️ Animation timeout reached - forcing modal display');
+      if (!loyaltyAnimationComplete && state.status !== CHECKOUT_STATES.SHOWING_MODAL) {
+        setLoyaltyAnimationComplete(true);
+        dispatch({ type: CHECKOUT_STATES.SHOWING_MODAL });
+      }
+    }, MAX_WAIT_TIME);
+    
     // Log the navigation path and current window location for debugging
-    console.log(' Success page initialization');
-    console.log(' Current URL:', window.location.href);
-    console.log(' Search params available:', searchParams ? 'yes' : 'no');
+    console.log('🔍 Success page initialization');
+    console.log('🔗 Current URL:', typeof window !== 'undefined' ? window.location.href : 'SSR');
+    console.log('🔄 Search params available:', searchParams ? 'yes' : 'no');
     
     // Navigation method used (if tracked)
     if (typeof window !== 'undefined') {
@@ -118,6 +137,11 @@ export default function OrderSuccessPage() {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       console.log(' Direct URL search parameters:', Object.fromEntries(urlParams.entries()));
+      
+      // Get the animation flag from URL or sessionStorage
+      const animateFromUrl = urlParams.get('animate') === 'true';
+      const animateFromStorage = sessionStorage.getItem('loyaltyAnimationPending') === 'true';
+      console.log(' Animation flags:', { animateFromUrl, animateFromStorage });
     }
     
     // If ANY URL parameters are missing, try to get ALL from sessionStorage
@@ -232,26 +256,65 @@ export default function OrderSuccessPage() {
         
         console.log(' Setting up order details with points:', orderDetails.pointsEarned);
 
-        // Update the state with the order details
-        dispatch({ type: CHECKOUT_STATES.READY, payload: orderDetails });
-        
-        // If there are points earned, show loyalty animation first
-        if (orderDetails.pointsEarned > 0) {
-          console.log(' Showing loyalty animation for', orderDetails.pointsEarned, 'points');
-          dispatch({ type: CHECKOUT_STATES.SHOWING_ANIMATION });
+        console.log('    // If we have order details, initialize the animation state machine');
+        if (orderDetails) {
+          console.log(' Order details loaded, initializing loyalty animation');
+          dispatch({ type: CHECKOUT_STATES.READY, payload: orderDetails });
           
-          // Set a fallback timeout in case animation or callback fails
-          animationTimeoutRef.current = setTimeout(() => {
-            console.log(' Animation timeout reached, forcing modal display');
-            if (!loyaltyAnimationComplete) {
-              setLoyaltyAnimationComplete(true);
-              dispatch({ type: CHECKOUT_STATES.SHOWING_MODAL });
+          // Force animation when coming from payment (either through URL param or sessionStorage)
+          // The ts parameter helps ensure we're getting a fresh page load from payment
+          const hasTimestamp = searchParams.get('ts') !== null;
+          const animateFromUrl = searchParams.get('animate') === 'true';
+          const animateFromStorage = typeof window !== 'undefined' && 
+                                    sessionStorage.getItem('loyaltyAnimationPending') === 'true';
+          
+          // Always animate on a direct page load with the animation flag
+          const shouldAnimate = (animateFromUrl && hasTimestamp) || animateFromStorage;
+          
+          console.log(' Animation decision factors:', { 
+            hasTimestamp, 
+            animateFromUrl, 
+            animateFromStorage,
+            shouldAnimate 
+          });
+          
+          // Check if points were earned to determine if animation should be shown
+          if (orderDetails.pointsEarned > 0 && shouldAnimate) {
+            console.log(' Points earned and animation flag present, showing loyalty animation');
+            
+            // Clear any lingering animation flags
+            if (typeof window !== 'undefined') {
+              // We'll clear this flag when animation completes
+              const paymentTime = parseInt(sessionStorage.getItem('paymentCompletedAt') || '0', 10);
+              const timeSincePayment = Date.now() - paymentTime;
+              console.log(` Time since payment completion: ${timeSincePayment}ms`);
             }
-          }, 5000); // 5 second fallback
-        } else {
-          // If no points earned, go straight to modal
-          console.log(' No points to animate, showing success modal directly');
-          dispatch({ type: CHECKOUT_STATES.SHOWING_MODAL });
+            
+            // Move to animation state immediately
+            dispatch({ type: CHECKOUT_STATES.SHOWING_ANIMATION });
+            refreshLoyaltyData();
+            
+            // Set a fallback timeout to show modal if animation doesn't complete
+            animationTimeoutRef.current = setTimeout(() => {
+              console.log(' Animation timeout reached, force showing modal');
+              if (!loyaltyAnimationComplete) {
+                setLoyaltyAnimationComplete(true);
+                dispatch({ type: CHECKOUT_STATES.SHOWING_MODAL });
+                // Clear pending animation flag
+                if (typeof window !== 'undefined') {
+                  sessionStorage.removeItem('loyaltyAnimationPending');
+                }
+              }
+            }, 5000); // Show modal after 5 seconds max
+          } else {
+            // No points earned or no animation flag, go directly to modal
+            console.log(' No points earned or no animation flag, showing modal directly');
+            dispatch({ type: CHECKOUT_STATES.SHOWING_MODAL });
+            // Clear any pending animation flags
+            if (typeof window !== 'undefined') {
+              sessionStorage.removeItem('loyaltyAnimationPending');
+            }
+          }  
         }
       } catch (err) {
         console.error(' Error initializing success page:', err);
@@ -264,14 +327,54 @@ export default function OrderSuccessPage() {
     }
   }, [searchParams, router]);
 
+  // Effect to listen for loyalty animation completed event
+  useEffect(() => {
+    // Only set up listeners if in animation state and not already completed
+    if (state.status === CHECKOUT_STATES.SHOWING_ANIMATION && !loyaltyAnimationComplete) {
+      console.log(' Setting up listener for loyalty animation completion');
+
+      const handleAnimationComplete = (data) => {
+        console.log(' Received animation complete event:', data);
+        handleLoyaltyAnimationComplete();
+      };
+
+      // Add event listener for animation completion
+      eventEmitter.on(Events.LOYALTY_ANIMATION_COMPLETE, handleAnimationComplete);
+      
+      // Check if we're in the correct state but the animation hasn't started
+      // This is a safety measure if normal LoyaltyBanner rendering fails
+      const checkAnimationStarted = setTimeout(() => {
+        console.log(' Checking if animation has started...');
+        const animationElement = document.querySelector('[data-testid="loyalty-progress-bar-fill"][data-animate="true"]');
+        if (!animationElement && state.status === CHECKOUT_STATES.SHOWING_ANIMATION) {
+          console.log(' Animation element not found or not animating, forcing state update');
+          // Force re-render of animation banner
+          dispatch({ type: CHECKOUT_STATES.SHOWING_ANIMATION }); 
+        }
+      }, 1000);
+
+      return () => {
+        // Remove listener and timeout on cleanup
+        eventEmitter.off(Events.LOYALTY_ANIMATION_COMPLETE, handleAnimationComplete);
+        clearTimeout(checkAnimationStarted);
+      };
+    }
+  }, [state.status, loyaltyAnimationComplete]);
+
   // Handle loyalty animation completion
   const handleLoyaltyAnimationComplete = () => {
-    console.log('✨ Loyalty animation complete - modal will appear now');
+    console.log(' Loyalty animation complete handler called on success page');
     
-    // Clear the fallback timeout
+    // Clear any existing animation timeout
     if (animationTimeoutRef.current) {
       clearTimeout(animationTimeoutRef.current);
       animationTimeoutRef.current = null;
+    }
+    
+    // Clear pending animation flag in sessionStorage
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('loyaltyAnimationPending');
+      console.log(' Cleared loyaltyAnimationPending flag');
     }
     
     // Set state variables and transition to modal state
@@ -340,7 +443,8 @@ export default function OrderSuccessPage() {
           </div>
           <LoyaltyBanner 
             forceAnimation={true} 
-            onProgressBarAnimationComplete={handleLoyaltyAnimationComplete} 
+            onProgressBarAnimationComplete={handleLoyaltyAnimationComplete}
+            key={`loyalty-banner-${Date.now()}`} // Force new component instance on each render
           />
         </div>
       )}

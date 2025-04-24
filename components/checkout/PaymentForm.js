@@ -14,6 +14,7 @@ import { LoyaltyCheckoutService } from '@/lib/checkout/loyaltyCheckoutServiceCli
 import { FaGift, FaUndo } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import OrderSuccessModal from './OrderSuccessModal';
+import LoyaltyBanner from '@/components/loyalty/LoyaltyBanner';
 import { trackBeginCheckout, trackPurchase } from '@/lib/analytics/events';
 
 // Create a context to share functions between components
@@ -200,38 +201,89 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
         const completionTime = Date.now();
         persistTimingLog(`Payment completed (ms since confirmPayment: ${completionTime - confirmEnd})`);
         
-        // Construct clean URL parameters for success page
-        const successParams = new URLSearchParams({
+        // Set up data for animation and success page
+        const earnedPoints = Math.round(amountDetails.total);
+        setPointsEarned(earnedPoints);
+
+        // Store order data for later use
+        const paymentOrderData = {
           orderId: paymentIntent.id,
-          points: Math.floor(amountDetails.total),
-          deliveryMethod: deliveryMethod || 'delivery',
-          selectedTime: selectedTime || ''
-        }).toString();
+          points: earnedPoints,
+          deliveryMethod: deliveryMethod,
+          selectedTime,
+          timestamp: Date.now()
+        };
         
-        // Notify the system we're using push navigation
-        sessionStorage.setItem('navigationMethod', 'router.push');
-        console.log('🔜 Navigating to success page with params:', successParams);
-        
-        // Navigate to success page - this is critical to avoid getting stuck
-        router.push(`/checkout/success?${successParams}`);
+        // Store in sessionStorage for the success page
+        sessionStorage.setItem('orderSuccessData', JSON.stringify(paymentOrderData));
+        sessionStorage.setItem('paymentCompletedAt', Date.now().toString());
+
+        // Show loyalty animation if points were earned
+        if (earnedPoints > 0) {
+          console.log('🎁 Showing loyalty animation before redirect');
+          setShowLoyaltyAnimation(true);
+          
+          // Set timeout to navigate after animation (or immediately if animation fails)
+          const redirectTimer = setTimeout(() => {
+            try {
+              // Create URL params for success page
+              const successParams = new URLSearchParams({
+                orderId: paymentIntent.id,
+                points: earnedPoints,
+                deliveryMethod: deliveryMethod || 'delivery',
+                selectedTime: selectedTime || '',
+                ts: Date.now() // Timestamp to prevent caching issues
+              }).toString();
+              
+              console.log('🔜 Navigating to success page after animation');
+              window.location.href = `/checkout/success?${successParams}`;
+            } catch (redirectError) {
+              console.error('Error during redirect:', redirectError);
+              // Fallback to minimal params
+              window.location.href = `/checkout/success?orderId=${paymentIntent.id}&error=true`;
+            }
+          }, loyaltyAnimationCompleted ? 0 : 2500); // Wait 2.5s for animation if not already completed
+        } else {
+          // No points earned, redirect immediately
+          try {
+            const successParams = new URLSearchParams({
+              orderId: paymentIntent.id,
+              points: 0,
+              deliveryMethod: deliveryMethod || 'delivery',
+              selectedTime: selectedTime || '',
+              ts: Date.now()
+            }).toString();
+            
+            console.log('🔜 No points earned, redirecting immediately');
+            window.location.href = `/checkout/success?${successParams}`;
+          } catch (redirectError) {
+            console.error('Error during immediate redirect:', redirectError);
+            // Fallback to minimal params
+            window.location.href = `/checkout/success?orderId=${paymentIntent.id}`;
+          }
+        }
         
         // No need for component unmount since we're navigating away
       } catch (err) {
-        console.error('Post-payment error:', err);
+        // Better error handling - stringify the error if possible
+        const errorMessage = err ? (err.message || JSON.stringify(err)) : 'Unknown error';
+        console.error('Post-payment error:', errorMessage);
+        
+        // Show an error toast to the user
+        toast.error('Payment completed but there was an issue with processing rewards');
+        
         // Even if there's an error, try to navigate to success page
         try {
-          // Create minimal success params with just the order ID
-          const fallbackParams = new URLSearchParams({
-            orderId: paymentIntent.id,
-            error: 'true'
-          }).toString();
+          // Error case - create minimal success params
+          // Make the params as simple as possible to avoid further errors
+          console.log('⚠️ Error in payment completion flow, using minimal redirect');
           
-          console.log('⚠️ Error in payment completion, attempting to navigate to success page');
-          router.push(`/checkout/success?${fallbackParams}`);
+          // Use the simplest possible redirect to avoid further errors
+          window.location.href = `/checkout/success?orderId=${paymentIntent.id}&error=true`;
         } catch (navError) {
-          // Last resort: log the error if navigation fails
-          console.error('Navigation error:', navError);
-          // No fallback modal needed as we should never reach this point
+          // Last resort - show error modal
+          console.error('Fatal navigation error:', navError);
+          toast.error('Unable to redirect to confirmation page');
         }
       }
     }
@@ -449,6 +501,10 @@ export default function PaymentForm({ amount, amountDetails, items, shippingAddr
   const [discountedAmount, setDiscountedAmount] = useState(amount);
   // Generate a unique request ID for payment tracking
   const [requestId] = useState(() => `${Date.now()}_${Math.random().toString(36).slice(2)}`);
+  // Animation states
+  const [showLoyaltyAnimation, setShowLoyaltyAnimation] = useState(false);
+  const [loyaltyAnimationCompleted, setLoyaltyAnimationCompleted] = useState(false);
+  const [pointsEarned, setPointsEarned] = useState(0);
   
 
   // Add progress state
@@ -806,6 +862,43 @@ export default function PaymentForm({ amount, amountDetails, items, shippingAddr
               <span>Total</span>
               <span>${amountDetails.total.toFixed(2)}</span>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showLoyaltyAnimation && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center flex-col">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full text-center">
+            <h2 className="text-2xl font-bold mb-4">Payment Complete! 🎉</h2>
+            <p className="mb-6">You earned {pointsEarned} VivaBucks!</p>
+            
+            {/* Use the existing LoyaltyBanner with forceAnimation */}
+            <div className="w-full mb-8">
+              <LoyaltyBanner 
+                forceAnimation={true} 
+                onProgressBarAnimationComplete={() => {
+                  console.log('✅ Animation completed in payment form');
+                  setLoyaltyAnimationCompleted(true);
+                  
+                  // Force a redirect after animation completes as a safeguard
+                  try {
+                    const safeParams = new URLSearchParams({
+                      orderId: paymentIntent?.id || sessionStorage.getItem('currentOrderId'),
+                      points: pointsEarned,
+                      ts: Date.now()
+                    }).toString();
+                    console.log('🔁 Forcing redirect after animation completion');
+                    setTimeout(() => {
+                      window.location.href = `/checkout/success?${safeParams}`;
+                    }, 500);
+                  } catch (e) {
+                    console.error('Error in animation completion redirect:', e);
+                  }
+                }}
+              />
+            </div>
+            
+            <p className="text-sm text-gray-500">Redirecting to confirmation page...</p>
           </div>
         </div>
       )}

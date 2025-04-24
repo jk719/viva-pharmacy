@@ -52,10 +52,29 @@ export default function LoyaltyBanner({ forceAnimation = false, onProgressBarAni
   // Handle animation completion
   const handleAnimationComplete = () => {
     console.log('🔔 Loyalty banner progress bar animation completed');
-    if (typeof onProgressBarAnimationComplete === 'function') {
-      console.log('📣 Calling onProgressBarAnimationComplete callback');
-      onProgressBarAnimationComplete();
-    }
+    // Use setTimeout to prevent any potential race conditions
+    setTimeout(() => {
+      if (typeof onProgressBarAnimationComplete === 'function') {
+        try {
+          console.log('📣 Calling onProgressBarAnimationComplete callback');
+          onProgressBarAnimationComplete();
+        } catch (error) {
+          console.error('Error in onProgressBarAnimationComplete callback:', error);
+          // If callback fails, try direct event emission as fallback
+          try {
+            console.log('⚠️ Fallback: directly emitting LOYALTY_ANIMATION_COMPLETE event');
+            eventEmitter.emit(Events.LOYALTY_ANIMATION_COMPLETE, {
+              timestamp: Date.now(),
+              source: 'loyalty_banner_fallback',
+              completed: true,
+              absolutePriority: true
+            });
+          } catch (emitError) {
+            console.error('Error in fallback event emission:', emitError);
+          }
+        }
+      }
+    }, 50); // Small delay to ensure proper sequence
   };
 
   // Don't render anything if user is not logged in
