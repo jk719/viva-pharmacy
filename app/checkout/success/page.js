@@ -65,6 +65,8 @@ export default function OrderSuccessPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [pointsUpdated, setPointsUpdated] = useState(false);
+  const [displayPoints, setDisplayPoints] = useState(0);
+  const [actualPoints, setActualPoints] = useState(null); // Will be populated from server
   const [loyaltyAnimationComplete, setLoyaltyAnimationComplete] = useState(false);
   const didInitialize = useRef(false);
   const animationTimeoutRef = useRef(null);
@@ -89,6 +91,14 @@ export default function OrderSuccessPage() {
       logs.push({ time: Date.now(), msg });
       sessionStorage.setItem('checkoutTimingLogs', JSON.stringify(logs));
     };
+    
+    // Get the estimated points from URL params (client-side calculation)
+    const pointsEstimate = searchParams.get('pointsEstimate');
+    if (pointsEstimate) {
+      const pointsValue = parseInt(pointsEstimate, 10) || 0;
+      setDisplayPoints(pointsValue);
+      console.log('🔮 Using estimated points for initial display:', pointsValue);
+    }
     persistTimingLog('Success page useEffect mount');
     console.log('[TIMING] Success page useEffect mount:', Date.now());
     console.log('🔔 First mount status:', isFirstMount.current ? 'FRESH MOUNT' : 'REMOUNT');
@@ -100,11 +110,20 @@ export default function OrderSuccessPage() {
     // Mark this as no longer a first mount for future renders
     isFirstMount.current = false;
     
+    // Check if we should force animation (explicitly requested by PaymentForm)
+    const params = new URLSearchParams(window.location.search);
+    const shouldAnimate = params.get('animate') === 'true';
+    if (shouldAnimate) {
+      console.log('🎬 Animation explicitly requested from payment form');
+      persistTimingLog('Animation requested from payment form');
+    }
+    
     // Set a max timeout to show the modal even if animation doesn't complete
     // This is a safety measure to ensure users always see the confirmation
-    const MAX_WAIT_TIME = 6000; // 6 seconds max wait time
+    const MAX_WAIT_TIME = 5000; // 5 seconds max wait time (reduced from 6s)
     animationTimeoutRef.current = setTimeout(() => {
       console.log('⚠️ Animation timeout reached - forcing modal display');
+      persistTimingLog('Animation timeout - forcing modal');
       if (!loyaltyAnimationComplete && state.status !== CHECKOUT_STATES.SHOWING_MODAL) {
         setLoyaltyAnimationComplete(true);
         dispatch({ type: CHECKOUT_STATES.SHOWING_MODAL });
@@ -211,6 +230,17 @@ export default function OrderSuccessPage() {
           
           // Immediately mark as updated - no need to wait
           setPointsUpdated(true);
+          // Update actual points from server when available
+          if (data.points) {
+            setActualPoints(data.points);
+            console.log('✅ Received actual points from server:', data.points);
+            // If actual points are significantly different from display points, show a notification
+            const displayPointsVal = parseInt(displayPoints, 10) || 0;
+            if (Math.abs(data.points - displayPointsVal) > 20) {
+              console.log('⚠️ Points discrepancy detected:', 
+                { estimated: displayPointsVal, actual: data.points });
+            }
+          }
           console.log(' Loyalty data refresh completed!');
         }
       } catch (err) {
@@ -248,8 +278,11 @@ export default function OrderSuccessPage() {
         // Set the order details
         const orderDetails = {
           orderId,
-          deliveryMethod,
-          selectedTime,
+          type: 'ORDER_COMPLETE',
+          loyaltyUpdateReceived: true,
+          points: data.points || 0,
+          // Update the actual points from server
+          actualPoints: data.points || 0,
           // If passed in points param, use it for animation
           pointsEarned: parseInt(points, 10) || 0
         };
@@ -363,19 +396,22 @@ export default function OrderSuccessPage() {
 
   // Handle loyalty animation completion
   const handleLoyaltyAnimationComplete = () => {
-    console.log(' Loyalty animation complete handler called on success page');
-    
-    // Clear any existing animation timeout
+    // Clear animation timeout since animation completed naturally
     if (animationTimeoutRef.current) {
       clearTimeout(animationTimeoutRef.current);
       animationTimeoutRef.current = null;
     }
     
-    // Clear pending animation flag in sessionStorage
-    if (typeof window !== 'undefined') {
-      sessionStorage.removeItem('loyaltyAnimationPending');
-      console.log(' Cleared loyaltyAnimationPending flag');
+    console.log('🎉 Loyalty animation completed in success page');
+    
+    // Safety check to prevent duplicate state changes
+    if (loyaltyAnimationComplete) {
+      console.log('⚠️ Animation already completed, ignoring duplicate call');
+      return;
     }
+    
+    // Log completion for debugging
+    persistTimingLog('Animation completed naturally');
     
     // Set state variables and transition to modal state
     setLoyaltyAnimationComplete(true);
@@ -434,17 +470,21 @@ export default function OrderSuccessPage() {
         <div className="loyalty-animation-container mb-6">
           <div className="text-center py-4">
             <h3 className="text-lg font-medium text-gray-800 mb-2">
-              {state.orderDetails.pointsEarned > 0 ? (
-                <span>You earned {state.orderDetails.pointsEarned} VivaBucks!</span>
+              {actualPoints ? (
+                <span>You earned {actualPoints} VivaBucks!</span>
+              ) : displayPoints > 0 ? (
+                <span>You earned approximately {displayPoints} VivaBucks!</span>
               ) : (
                 <span>Processing your reward points...</span>
               )}
             </h3>
           </div>
+          {/* Add debug info to ensure we know which key is being used */}
+          {console.log(`🔑 Rendering LoyaltyBanner with key timestamp: ${Date.now()}`)}
           <LoyaltyBanner 
             forceAnimation={true} 
             onProgressBarAnimationComplete={handleLoyaltyAnimationComplete}
-            key={`loyalty-banner-${Date.now()}`} // Force new component instance on each render
+            key={`loyalty-banner-forced-${Date.now()}`} // Force new component instance with clear name
           />
         </div>
       )}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, memo } from 'react';
 import eventEmitter, { Events } from '@/lib/eventEmitter';
 
 /**
@@ -14,7 +14,7 @@ import eventEmitter, { Events } from '@/lib/eventEmitter';
  * @param {Function} props.onAnimationComplete - Callback when animation completes
  * @param {boolean} props.forceAnimation - Force animation even if animate is false
  */
-export default function ProgressBar({
+function ProgressBar({
   progress,
   currentPoints = 0,
   startPoints = 0,
@@ -26,34 +26,71 @@ export default function ProgressBar({
   // Clamp progress between 0 and 100
   const clampedProgress = Math.max(0, Math.min(progress, 100));
   
+  // Calculate display values for high-point users (above 10,000)
+  const showExtendedTier = currentPoints >= 10000;
+  const extendedTierStart = showExtendedTier ? Math.floor(currentPoints / 2000) * 2000 : startPoints;
+  const extendedTierEnd = showExtendedTier ? extendedTierStart + 2000 : endPoints;
+  
+  // Use either standard tier or extended tier based on points
+  const displayStartPoints = showExtendedTier ? extendedTierStart : startPoints;
+  const displayEndPoints = showExtendedTier ? extendedTierEnd : endPoints;
+  
+  // Calculate progress percentage for display
+  const displayProgress = showExtendedTier
+    ? Math.min(100, Math.max(0, ((currentPoints - displayStartPoints) / (displayEndPoints - displayStartPoints)) * 100))
+    : clampedProgress;
+  
   // Track animation state
   const [animatedProgress, setAnimatedProgress] = useState(0);
   const animationRef = useRef(null);
   const animationCompleted = useRef(false);
   
-  // Determine if we should animate
-  const shouldAnimate = animate || forceAnimation;
+  // Determine if we should animate - treat 0 as valid starting point
+  const shouldAnimate = (animate || forceAnimation) && displayProgress >= 0;
+  
+  // Use a ref to track if this is the first mount
+  const isFirstMount = useRef(true);
   
   useEffect(() => {
-    // Skip animation if not needed
-    if (!shouldAnimate) {
-      setAnimatedProgress(clampedProgress);
+    // Skip animation if not needed or if this is a re-render but not a force animation
+    if (!shouldAnimate || (!isFirstMount.current && !forceAnimation)) {
+      setAnimatedProgress(displayProgress);
       return;
     }
     
-    console.log('🎬 Starting loyalty progress bar animation from 0 to', clampedProgress);
+    // Mark that we've mounted
+    isFirstMount.current = false;
+    
+    console.log('🎬 Starting loyalty progress bar animation from 0 to', displayProgress, 
+      showExtendedTier ? `(Extended tier: ${displayStartPoints} to ${displayEndPoints})` : '');
     let startTime;
     const ANIMATION_DURATION = 2400; // 2.4 seconds animation - slower for smoother effect
     let timeoutRef = null; // Backup timeout reference
     
-    // Cancel any existing animation
+    // Helper to clear timeouts - define this BEFORE calling it
+    const clearExistingTimeouts = () => {
+      if (timeoutRef) {
+        clearTimeout(timeoutRef);
+        timeoutRef = null;
+      }
+    };
+    
+    // Ensure we start with clean animation state
+    // Cancel any existing animation FIRST before resetting state
     if (animationRef.current) {
       cancelAnimationFrame(animationRef.current);
+      animationRef.current = null;
     }
     
-    // Reset animation state
+    // Clear any existing safety timeouts
+    clearExistingTimeouts();
+    
+    // Reset animation state AFTER canceling animation frame
     setAnimatedProgress(0);
     animationCompleted.current = false;
+    
+    // Log animation start for debugging
+    console.log(`📊 Animation initialized: shouldAnimate=${shouldAnimate}, forceAnimation=${forceAnimation}`);
     
     // Set a safety fallback timeout in case animation frame callbacks fail
     // This ensures the animation completion events will fire even if requestAnimationFrame fails
@@ -66,24 +103,41 @@ export default function ProgressBar({
     }, SAFETY_TIMEOUT);
     
     // Function to handle animation completion and event emission
+    // Make this callback idempotent (can be called multiple times safely)
     const completeAnimation = () => {
-      if (animationCompleted.current) return; // Prevent duplicate calls
+      // Prevent duplicate calls
+      if (animationCompleted.current) {
+        console.log('🛑 Animation already completed, ignoring repeat call');
+        return;
+      }
       
+      // Mark as completed first to prevent race conditions
       animationCompleted.current = true;
-      setAnimatedProgress(clampedProgress); // Ensure progress is complete
+      
+      // Ensure progress is visually complete
+      setAnimatedProgress(displayProgress);
       console.log('✅ Loyalty progress bar animation completed');
       
-      // Call the callback if provided
+      // ONLY call the callback OR emit event, not both
+      // This is to prevent duplicate notifications
       if (typeof onAnimationComplete === 'function') {
         console.log('📣 Calling onAnimationComplete callback');
         try {
+          // Call the callback, which should handle all necessary state updates
           onAnimationComplete();
         } catch (error) {
           console.error('Error in animation complete callback:', error);
+          // Only fall back to event emission if callback fails
+          emitCompletionEvent();
         }
+      } else {
+        // No callback provided, so emit the event
+        emitCompletionEvent();
       }
-      
-      // Emit a single consolidated animation complete event with high priority
+    };
+    
+    // Separate event emission to avoid duplication
+    const emitCompletionEvent = () => {
       console.log('📣 Emitting LOYALTY_ANIMATION_COMPLETE event');
       try {
         eventEmitter.emit(Events.LOYALTY_ANIMATION_COMPLETE, {
@@ -124,7 +178,8 @@ export default function ProgressBar({
         easedProgress = 0.1 + 0.75 * p;
       }
       
-      const newProgress = Math.min(100, easedProgress * clampedProgress);
+      // Calculate the current progress value
+      const newProgress = easedProgress * displayProgress;
       
       setAnimatedProgress(newProgress);
       
@@ -132,7 +187,7 @@ export default function ProgressBar({
         // Continue animation
         animationRef.current = requestAnimationFrame(animateProgress);
       } else {
-        // Animation complete
+        // Complete immediately
         completeAnimation();
       }
     };
@@ -140,24 +195,31 @@ export default function ProgressBar({
     // Start the animation
     animationRef.current = requestAnimationFrame(animateProgress);
     
-    // Cleanup animation on unmount
+    // Cleanup animation on unmount and when dependencies change
     return () => {
+      console.log('🧹 Cleaning up progress bar animation resources');
+      // Cancel any running animation frames
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
       }
-      if (timeoutRef) {
-        clearTimeout(timeoutRef);
-      }
+      // Clear any safety timeouts
+      clearExistingTimeouts();
     };
   }, [clampedProgress, shouldAnimate, onAnimationComplete]);
 
   return (
     <div className="w-full py-2" data-testid="loyalty-progress-bar">
       {/* Start and End Points */}
-      <div className="flex justify-between text-xs text-gray-500 mb-1">
-        <span>{startPoints.toLocaleString()}</span>
-        <span>{endPoints.toLocaleString()}</span>
-      </div>
+        <div className="text-xs md:text-sm font-medium text-slate-600 flex justify-between mt-1">
+          <span>{displayStartPoints.toLocaleString()}</span>
+          <span>{displayEndPoints.toLocaleString()}</span>
+        </div>
+        {showExtendedTier && (
+          <div className="text-xs text-slate-500 mt-1 text-center">
+            {currentPoints >= 10000 ? "Extended Tier" : ""}
+          </div>
+        )}
       
       {/* Bar Container */}
       <div className="relative w-full h-5 bg-gray-200 rounded-full overflow-hidden shadow-inner">
@@ -188,3 +250,21 @@ export default function ProgressBar({
     </div>
   );
 }
+
+// Memoize the component to prevent unnecessary re-renders
+export default memo(ProgressBar, (prevProps, nextProps) => {
+  // Only re-render if critical props change
+  const criticalPropsEqual = 
+    prevProps.progress === nextProps.progress &&
+    prevProps.currentPoints === nextProps.currentPoints &&
+    prevProps.startPoints === nextProps.startPoints &&
+    prevProps.endPoints === nextProps.endPoints &&
+    prevProps.animate === nextProps.animate;
+  
+  // Always re-render if forceAnimation is true
+  if (nextProps.forceAnimation) {
+    return false; // Do not memoize, force a re-render
+  }
+  
+  return criticalPropsEqual;
+});

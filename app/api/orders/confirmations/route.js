@@ -123,6 +123,14 @@ export async function POST(request) {
       // Loyalty
       if (session?.user?.id) {
         try {
+          // Log request to help debug
+          console.log('💯 Processing loyalty for order:', {
+            orderId: formattedData.orderNumber,
+            clientEstimate: data.pointsEstimate,
+            calculatedOnClient: data.calculatedOnClient,
+            total: formattedData.total
+          });
+          
           const user = await User.findById(session.user.id);
           if (!user) throw new Error('User not found');
           const amount = parseFloat(formattedData.total);
@@ -134,6 +142,16 @@ export async function POST(request) {
           user.rewardHistory = user.rewardHistory || [];
           const oldPoints = user.vivaBucks;
           const oldLifetimePoints = user.cumulativePoints;
+          // Log points calculation to help debug
+          console.log('📊 Loyalty points calculation:', { 
+            basePoints: loyaltyBenefits.basePoints,
+            tierMultiplier: loyaltyBenefits.tierMultiplier,
+            totalPoints: loyaltyBenefits.totalPoints,
+            currentTier: user.currentTier,
+            appliedEvents: loyaltyBenefits.appliedEvents?.length || 0
+          });
+          
+          // Server-side is the source of truth - we add points here
           user.vivaBucks += loyaltyBenefits.totalPoints;
           user.cumulativePoints += loyaltyBenefits.totalPoints;
           user.rewardHistory.push({

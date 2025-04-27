@@ -2,6 +2,8 @@
 
 import { useSession } from "next-auth/react";
 import { FaSpinner } from 'react-icons/fa';
+import { useState, useEffect, memo } from 'react';
+import eventEmitter, { Events } from '@/lib/eventEmitter';
 
 // Import components
 import ProgressBar from './components/ProgressBar';
@@ -38,7 +40,7 @@ const LoadingState = () => (
  * @param {boolean} props.forceAnimation - Force animation even if not triggered by an event
  * @param {Function} props.onProgressBarAnimationComplete - Callback when progress bar animation completes
  */
-export default function LoyaltyBanner({ forceAnimation = false, onProgressBarAnimationComplete }) {
+function LoyaltyBanner({ forceAnimation = false, onProgressBarAnimationComplete }) {
   const { data: session, status } = useSession();
 
   // Use the custom hook to get loyalty data
@@ -49,32 +51,39 @@ export default function LoyaltyBanner({ forceAnimation = false, onProgressBarAni
     isMobile
   } = useLoyaltyData();
   
-  // Handle animation completion
+  // Track animation state for deduplication
+  const [animationInProgress, setAnimationInProgress] = useState(false);
+  const [animationCompleted, setAnimationCompleted] = useState(false);
+  
+  // Effect to log component mount/unmount for debugging
+  useEffect(() => {
+    console.log('🏁 LoyaltyBanner mounted with forceAnimation =', forceAnimation);
+    return () => console.log('🚫 LoyaltyBanner unmounted');
+  }, [forceAnimation]);
+  
+  // Handle animation completion - simplified to avoid duplicate events
   const handleAnimationComplete = () => {
     console.log('🔔 Loyalty banner progress bar animation completed');
-    // Use setTimeout to prevent any potential race conditions
-    setTimeout(() => {
-      if (typeof onProgressBarAnimationComplete === 'function') {
-        try {
-          console.log('📣 Calling onProgressBarAnimationComplete callback');
-          onProgressBarAnimationComplete();
-        } catch (error) {
-          console.error('Error in onProgressBarAnimationComplete callback:', error);
-          // If callback fails, try direct event emission as fallback
-          try {
-            console.log('⚠️ Fallback: directly emitting LOYALTY_ANIMATION_COMPLETE event');
-            eventEmitter.emit(Events.LOYALTY_ANIMATION_COMPLETE, {
-              timestamp: Date.now(),
-              source: 'loyalty_banner_fallback',
-              completed: true,
-              absolutePriority: true
-            });
-          } catch (emitError) {
-            console.error('Error in fallback event emission:', emitError);
-          }
-        }
+    
+    // Prevent duplicate completions
+    if (animationCompleted) {
+      console.log('⚠️ Animation already completed, ignoring duplicate completion');
+      return;
+    }
+    
+    // Mark animation as completed
+    setAnimationCompleted(true);
+    setAnimationInProgress(false);
+    
+    // Call the callback directly - ProgressBar no longer handles event emission
+    if (typeof onProgressBarAnimationComplete === 'function') {
+      console.log('📣 Calling onProgressBarAnimationComplete callback');
+      try {
+        onProgressBarAnimationComplete();
+      } catch (error) {
+        console.error('Error in animation completion callback:', error);
       }
-    }, 50); // Small delay to ensure proper sequence
+    }
   };
 
   // Don't render anything if user is not logged in
@@ -95,8 +104,12 @@ export default function LoyaltyBanner({ forceAnimation = false, onProgressBarAni
   // Get background accent color based on tier
   const bannerAccentColor = TIER_COLORS[currentTier]?.bg || TIER_COLORS.BRONZE.bg;
 
+  // Use a stable key to prevent unmounting/remounting
+  const stableKey = `loyalty-banner-${currentTier || 'unknown'}`;
+  
   return (
     <div 
+      key={stableKey}
       className="loyalty-banner w-full py-1 md:py-2 px-2 md:px-6 relative overflow-hidden border-b"
       style={{
         background: "white",
@@ -144,6 +157,7 @@ export default function LoyaltyBanner({ forceAnimation = false, onProgressBarAni
               animate={true}
               forceAnimation={forceAnimation}
               onAnimationComplete={handleAnimationComplete}
+              key={`progress-bar-${forceAnimation ? 'forced' : 'normal'}`} /* Use a stable key to prevent unmounting/remounting */
               data-testid="animated-progress-bar"
             />
           )}
@@ -153,4 +167,13 @@ export default function LoyaltyBanner({ forceAnimation = false, onProgressBarAni
       )}
     </div>
   );
-} 
+}
+
+// Export a memoized version of the component to prevent unnecessary re-renders
+export default memo(LoyaltyBanner, (prevProps, nextProps) => {
+  // Only re-render if forceAnimation changes or if the callback changes
+  return (
+    prevProps.forceAnimation === nextProps.forceAnimation &&
+    prevProps.onProgressBarAnimationComplete === nextProps.onProgressBarAnimationComplete
+  );
+});

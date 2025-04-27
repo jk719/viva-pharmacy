@@ -64,7 +64,12 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
     orderDetails, 
     setOrderDetails, 
     showConfetti, 
-    setShowConfetti 
+    setShowConfetti,
+    pointsEarned,
+    setPointsEarned,
+    userData, // Add userData to the destructured context values
+    showLoyaltyAnimation,
+    setShowLoyaltyAnimation // Add animation control state
   } = useContext(PaymentContext) || {};
   
   const router = useRouter();
@@ -202,13 +207,29 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
         persistTimingLog(`Payment completed (ms since confirmPayment: ${completionTime - confirmEnd})`);
         
         // Set up data for animation and success page
-        const earnedPoints = Math.round(amountDetails.total);
-        setPointsEarned(earnedPoints);
+        // Add default multiplier value (1) to prevent 'multiplier is not defined' error
+        const defaultMultiplier = 1;
+        // Use userData from context if available or fallback to a default calculation
+        const pointsMultiplier = userData?.tier?.pointsMultiplier || defaultMultiplier;
+        
+        // DISPLAY ONLY: Calculate estimated points for UI display purposes
+        // The actual points will be calculated and added by the server
+        console.log(`💰 Estimating display points with multiplier: ${pointsMultiplier}`);
+        const estimatedPoints = Math.floor(amountDetails.subtotal * 10);
+        
+        // Make sure setPointsEarned is available before calling it
+        if (typeof setPointsEarned === 'function') {
+          setPointsEarned(estimatedPoints);
+          console.log(`🎁 Set estimated ${estimatedPoints} points for display only`);
+        } else {
+          console.warn('⚠️ setPointsEarned not available');
+        }
 
         // Store order data for later use
         const paymentOrderData = {
           orderId: paymentIntent.id,
-          points: earnedPoints,
+          pointsEstimate: estimatedPoints, // Renamed to make it clear this is just an estimate
+          calculatedOnClient: false, // Flag to tell server this is just an estimate
           deliveryMethod: deliveryMethod,
           selectedTime,
           timestamp: Date.now()
@@ -218,52 +239,45 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
         sessionStorage.setItem('orderSuccessData', JSON.stringify(paymentOrderData));
         sessionStorage.setItem('paymentCompletedAt', Date.now().toString());
 
-        // Show loyalty animation if points were earned
-        if (earnedPoints > 0) {
-          console.log('🎁 Showing loyalty animation before redirect');
-          setShowLoyaltyAnimation(true);
-          
-          // Set timeout to navigate after animation (or immediately if animation fails)
-          const redirectTimer = setTimeout(() => {
-            try {
-              // Create URL params for success page
-              const successParams = new URLSearchParams({
-                orderId: paymentIntent.id,
-                points: earnedPoints,
-                deliveryMethod: deliveryMethod || 'delivery',
-                selectedTime: selectedTime || '',
-                ts: Date.now() // Timestamp to prevent caching issues
-              }).toString();
-              
-              console.log('🔜 Navigating to success page after animation');
-              window.location.href = `/checkout/success?${successParams}`;
-            } catch (redirectError) {
-              console.error('Error during redirect:', redirectError);
-              // Fallback to minimal params
-              window.location.href = `/checkout/success?orderId=${paymentIntent.id}&error=true`;
-            }
-          }, loyaltyAnimationCompleted ? 0 : 2500); // Wait 2.5s for animation if not already completed
-        } else {
-          // No points earned, redirect immediately
+        // Helper function for redirecting to success page to avoid duplication
+        const redirectToSuccessPage = (points, orderId) => {
           try {
+            // Create URL params for success page
             const successParams = new URLSearchParams({
-              orderId: paymentIntent.id,
-              points: 0,
+              orderId: orderId,
+              pointsEstimate: points, // Renamed to make it clear this is just an estimate
+              displayOnly: 'true', // Flag indicating these points are for display only
               deliveryMethod: deliveryMethod || 'delivery',
               selectedTime: selectedTime || '',
-              ts: Date.now()
+              ts: Date.now(), // Timestamp to prevent caching issues
+              animate: 'true' // Request animation on success page
             }).toString();
             
-            console.log('🔜 No points earned, redirecting immediately');
+            console.log('🔜 Navigating to success page with earned points:', points);
             window.location.href = `/checkout/success?${successParams}`;
           } catch (redirectError) {
-            console.error('Error during immediate redirect:', redirectError);
+            console.error('Error during redirect:', redirectError);
             // Fallback to minimal params
-            window.location.href = `/checkout/success?orderId=${paymentIntent.id}`;
+            window.location.href = `/checkout/success?orderId=${orderId}&error=true`;
           }
-        }
+        };
         
-        // No need for component unmount since we're navigating away
+        // Skip animation in payment form, just show loading screen before redirect
+        // Make sure setShowLoyaltyAnimation is available before calling it
+        if (typeof setShowLoyaltyAnimation === 'function') {
+          setShowLoyaltyAnimation(true);
+          console.log('⏩ Showing loading screen before redirect to success page');
+          
+          // Set timeout to navigate after a short delay for visual feedback
+          setTimeout(() => {
+            redirectToSuccessPage(estimatedPoints, paymentIntent.id);
+          }, 800);
+        } else {
+          console.warn('⚠️ setShowLoyaltyAnimation not available, using direct redirect');
+          // Use immediate redirect as fallback
+          redirectToSuccessPage(estimatedPoints, paymentIntent.id);
+        }
+  
       } catch (err) {
         // Better error handling - stringify the error if possible
         const errorMessage = err ? (err.message || JSON.stringify(err)) : 'Unknown error';
@@ -471,7 +485,7 @@ const OrderSummary = ({ amountDetails, redemptionApplied }) => {
   );
 };
 
-// Remove loyalty animation function - we're showing the modal directly
+// Remove loyalty animation from PaymentForm - only show it on success page to avoid duplicates
 
 export default function PaymentForm({ amount, amountDetails, items, shippingAddress, deliveryMethod, selectedTime }) {
   const { 
@@ -872,33 +886,33 @@ export default function PaymentForm({ amount, amountDetails, items, shippingAddr
             <h2 className="text-2xl font-bold mb-4">Payment Complete! 🎉</h2>
             <p className="mb-6">You earned {pointsEarned} VivaBucks!</p>
             
-            {/* Use the existing LoyaltyBanner with forceAnimation */}
-            <div className="w-full mb-8">
-              <LoyaltyBanner 
-                forceAnimation={true} 
-                onProgressBarAnimationComplete={() => {
-                  console.log('✅ Animation completed in payment form');
-                  setLoyaltyAnimationCompleted(true);
-                  
-                  // Force a redirect after animation completes as a safeguard
-                  try {
-                    const safeParams = new URLSearchParams({
-                      orderId: paymentIntent?.id || sessionStorage.getItem('currentOrderId'),
-                      points: pointsEarned,
-                      ts: Date.now()
-                    }).toString();
-                    console.log('🔁 Forcing redirect after animation completion');
-                    setTimeout(() => {
-                      window.location.href = `/checkout/success?${safeParams}`;
-                    }, 500);
-                  } catch (e) {
-                    console.error('Error in animation completion redirect:', e);
-                  }
-                }}
-              />
+            {/* REMOVED: LoyaltyBanner animation to avoid duplication with success page */}
+            {/* We'll show a loading spinner instead */}
+            <div className="w-full mb-8 flex justify-center items-center py-4">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
             </div>
             
             <p className="text-sm text-gray-500">Redirecting to confirmation page...</p>
+            
+            {/* Immediate redirect without waiting for animation */}
+            {(() => {
+              console.log('🔁 Redirecting to success page without waiting for animation');
+              // Use setTimeout to ensure this runs after render
+              setTimeout(() => {
+                try {
+                  const safeParams = new URLSearchParams({
+                    orderId: paymentIntent?.id || sessionStorage.getItem('currentOrderId'),
+                    points: pointsEarned,
+                    ts: Date.now(),
+                    animate: "true" // Signal to success page that animation should be shown
+                  }).toString();
+                  window.location.href = `/checkout/success?${safeParams}`;
+                } catch (e) {
+                  console.error('Error in payment success redirect:', e);
+                }
+              }, 800); // Short delay for visual feedback
+              return null;
+            })()}
           </div>
         </div>
       )}
@@ -909,7 +923,12 @@ export default function PaymentForm({ amount, amountDetails, items, shippingAddr
           orderDetails, 
           setOrderDetails,
           showConfetti, 
-          setShowConfetti
+          setShowConfetti,
+          pointsEarned,
+          setPointsEarned,
+          userData, // Make userData available through context
+          showLoyaltyAnimation,
+          setShowLoyaltyAnimation // Make animation control available through context
         }}>
           <Elements 
             stripe={stripePromise} 
