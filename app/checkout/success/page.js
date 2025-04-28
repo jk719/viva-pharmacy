@@ -2,10 +2,10 @@
 
 import { useEffect, useReducer, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-// Using the main OrderSuccessModal component, not the temporary fix version
 import OrderSuccessModal from '@/components/checkout/OrderSuccessModal';
 import LoyaltyBanner from '@/components/loyalty/LoyaltyBanner';
 import eventEmitter, { Events } from '@/lib/eventEmitter';
+import checkoutService from '@/lib/checkout/checkoutService';
 
 // Define checkout state machine states with animation states
 const CHECKOUT_STATES = {
@@ -61,6 +61,15 @@ function checkoutReducer(state, action) {
   }
 }
 
+// Helper function to persist timing logs in sessionStorage
+const persistTimingLog = (msg) => {
+  if (typeof window === 'undefined') return;
+  
+  const logs = JSON.parse(sessionStorage.getItem('checkoutTimingLogs') || '[]');
+  logs.push({ time: Date.now(), msg });
+  sessionStorage.setItem('checkoutTimingLogs', JSON.stringify(logs));
+};
+
 export default function OrderSuccessPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -79,347 +88,177 @@ export default function OrderSuccessPage() {
     showingLoyaltyAnimation: false
   });
 
-  // Key flag to indicate if component is freshly mounted (not from a Next.js client nav)
+  // Key flag to indicate if component is freshly mounted
   const isFirstMount = useRef(true);
   
   // Initialize checkout flow once when component mounts
-  // Track if points have been updated in the backend
   useEffect(() => {
-    // Helper to persist timing logs in sessionStorage
-    const persistTimingLog = (msg) => {
-      const logs = JSON.parse(sessionStorage.getItem('checkoutTimingLogs') || '[]');
-      logs.push({ time: Date.now(), msg });
-      sessionStorage.setItem('checkoutTimingLogs', JSON.stringify(logs));
-    };
+    // Log timing data
+    const timestamp = Date.now();
+    console.log('[TIMING] Success page mounted:', timestamp);
     
-    // Get the estimated points from URL params (client-side calculation)
-    const pointsEstimate = searchParams.get('pointsEstimate');
-    if (pointsEstimate) {
-      const pointsValue = parseInt(pointsEstimate, 10) || 0;
-      setDisplayPoints(pointsValue);
-      console.log('🔮 Using estimated points for initial display:', pointsValue);
-    }
-    persistTimingLog('Success page useEffect mount');
-    console.log('[TIMING] Success page useEffect mount:', Date.now());
-    console.log('🔔 First mount status:', isFirstMount.current ? 'FRESH MOUNT' : 'REMOUNT');
-    
-    // Only run once
+    // Only run initialization once
     if (didInitialize.current) return;
     didInitialize.current = true;
     
-    // Mark this as no longer a first mount for future renders
-    isFirstMount.current = false;
+    // Get orderId from URL parameters
+    const orderId = searchParams.get('orderId');
+    const hasError = searchParams.get('error') === 'true';
+    
+    // Handle error cases
+    if (hasError) {
+      dispatch({
+        type: CHECKOUT_STATES.ERROR,
+        payload: 'There was an issue processing your order'
+      });
+      return;
+    }
+    
+    if (!orderId) {
+      dispatch({
+        type: CHECKOUT_STATES.ERROR,
+        payload: 'Missing order ID. Unable to display order details.'
+      });
+      return;
+    }
+    
+    // Use checkout service to get order data from a single source of truth
+    const orderData = checkoutService.getStoredOrderData();
+    console.log('📦 Retrieved order data:', orderData);
+    
+    if (orderData && orderData.pointsEstimate) {
+      // Set display points for immediate feedback
+      setDisplayPoints(orderData.pointsEstimate);
+      console.log('🔮 Using estimated points:', orderData.pointsEstimate);
+    }
+    
+    // Use the order details we extracted or create minimal data if needed
+    const finalOrderDetails = orderData || { orderId, items: [] };
+    
+    // Set order details in state
+    dispatch({ type: CHECKOUT_STATES.READY, payload: finalOrderDetails });
     
     // Check if we should force animation (explicitly requested by PaymentForm)
     const params = new URLSearchParams(window.location.search);
     const shouldAnimate = params.get('animate') === 'true';
     if (shouldAnimate) {
-      console.log('🎬 Animation explicitly requested from payment form');
-      persistTimingLog('Animation requested from payment form');
+      console.log(' Force animation parameter detected, will show animation');
     }
     
-    // Set a max timeout to show the modal even if animation doesn't complete
-    // This is a safety measure to ensure users always see the confirmation
-    const MAX_WAIT_TIME = 5000; // 5 seconds max wait time (reduced from 6s)
+    // Start animation timer for safety fallback
+    // This ensures that we eventually show the modal even if animation logic fails
+    const MAX_WAIT_TIME = 8000; // 8 seconds max wait time
     animationTimeoutRef.current = setTimeout(() => {
-      console.log('⚠️ Animation timeout reached - forcing modal display');
+      console.log(' Animation timeout reached! Forcing modal display');
       persistTimingLog('Animation timeout - forcing modal');
       if (!loyaltyAnimationComplete && state.status !== CHECKOUT_STATES.SHOWING_MODAL) {
         setLoyaltyAnimationComplete(true);
         dispatch({ type: CHECKOUT_STATES.SHOWING_MODAL });
       }
     }, MAX_WAIT_TIME);
+
+    // Always show loyalty animation first (based on previous debugging)
+    console.log(' Starting loyalty animation sequence');
+    setTimeout(() => {
+      dispatch({ type: CHECKOUT_STATES.SHOWING_ANIMATION });
+    }, 100); // Small delay to ensure state is processed
     
-    // Log the navigation path and current window location for debugging
-    console.log('🔍 Success page initialization');
-    console.log('🔗 Current URL:', typeof window !== 'undefined' ? window.location.href : 'SSR');
-    console.log('🔄 Search params available:', searchParams ? 'yes' : 'no');
-    
-    // Navigation method used (if tracked)
-    if (typeof window !== 'undefined') {
-      const navMethod = sessionStorage.getItem('navigationMethod');
-      if (navMethod) {
-        console.log(' Navigation method used:', navMethod);
-      }
-    }
-    
-    // First try to get order details from URL parameters
-    let orderId = searchParams.get('orderId');
-    let points = parseInt(searchParams.get('points') || '0', 10);
-    let selectedTime = searchParams.get('selectedTime');
-    let deliveryMethod = searchParams.get('deliveryMethod');
-    
-    // Log what we got from URL params
-    console.log(' URL parameters:', { orderId, points, selectedTime, deliveryMethod });
-    
-    // Check the URL search parameters directly for debugging
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      console.log(' Direct URL search parameters:', Object.fromEntries(urlParams.entries()));
+    // Fetch latest loyalty data from server
+    refreshLoyaltyData(orderId);
+  }, [searchParams, dispatch, setDisplayPoints, setPointsUpdated]);
+
+  // Refresh loyalty data from server
+  const refreshLoyaltyData = async (orderId) => {
+    try {
+      console.log('♻️ Refreshing loyalty data from server');
+      const timestamp = Date.now();
+      const cacheKey = Math.random().toString(36).substring(2, 10);
       
-      // Get the animation flag from URL or sessionStorage
-      const animateFromUrl = urlParams.get('animate') === 'true';
-      const animateFromStorage = sessionStorage.getItem('loyaltyAnimationPending') === 'true';
-      console.log(' Animation flags:', { animateFromUrl, animateFromStorage });
-    }
-    
-    // If ANY URL parameters are missing, try to get ALL from sessionStorage
-    // This ensures we have complete data
-    if ((!orderId || !points || points === 0) && typeof window !== 'undefined') {
-      try {
-        const storedData = sessionStorage.getItem('orderSuccessData');
-        if (storedData) {
-          const orderData = JSON.parse(storedData);
-          console.log(' Retrieved order data from sessionStorage:', orderData);
-          
-          // Take ALL stored data to ensure consistency
-          orderId = orderData.orderId;
-          points = parseInt(orderData.points || '0', 10);
-          selectedTime = orderData.selectedTime;
-          deliveryMethod = orderData.deliveryMethod;
-          
-          console.log(' Using complete data from sessionStorage:', { orderId, points, selectedTime, deliveryMethod });
-        } else {
-          console.log(' No data found in sessionStorage');
-        }
-      } catch (err) {
-        console.error(' Error reading from sessionStorage:', err);
-      }
-    }
-    
-    console.log(' Success page initializing with params:', {
-      orderId,
-      points,
-      selectedTime,
-      deliveryMethod,
-      fromUrl: !!searchParams.get('orderId'),
-      fromStorage: !searchParams.get('orderId') && !!orderId,
-      timestamp: new Date().toISOString()
-    });
-    
-    // Refresh loyalty data with a single optimized call
-    const refreshLoyaltyData = async () => {
-      const loyaltyFetchStart = Date.now();
-      persistTimingLog('Loyalty data fetch START');
-      console.log('[TIMING] Loyalty data fetch START:', loyaltyFetchStart);
-      try {
-        console.log(' Refreshing loyalty data...');
-        const timestamp = Date.now();
-        const random = Math.random().toString(36).substring(2, 15);
-        
-        // Make a single API call with cache busting
-        const response = await fetch(`/api/user/profile?nocache=${timestamp}&r=${random}`, {
-          method: 'GET',
-          headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache'
-          },
-          cache: 'no-store'
+      // Fetch user profile with points data
+      const response = await fetch(`/api/user/profile?nocache=${timestamp}&key=${cacheKey}`, {
+        headers: { 'Cache-Control': 'no-cache' },
+        cache: 'no-store'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Loyalty data retrieved:', {
+          vivaBucks: data?.vivaBucks,
+          tier: data?.currentTier
         });
         
-        if (response.ok) {
-          const loyaltyFetchEnd = Date.now();
-          persistTimingLog(`Loyalty data fetch END (duration: ${loyaltyFetchEnd - loyaltyFetchStart} ms)`);
-          console.log('[TIMING] Loyalty data fetch END:', loyaltyFetchEnd, 'Duration:', loyaltyFetchEnd - loyaltyFetchStart, 'ms');
-          const data = await response.json();
-          console.log(' Current loyalty data:', {
-            vivaBucks: data?.vivaBucks,
-            cumulativePoints: data?.cumulativePoints,
-            currentTier: data?.currentTier
-          });
-          
-          // Immediately mark as updated - no need to wait
-          setPointsUpdated(true);
-          // Update actual points from server when available
-          if (data.points) {
-            setActualPoints(data.points);
-            console.log('✅ Received actual points from server:', data.points);
-            // If actual points are significantly different from display points, show a notification
-            const displayPointsVal = parseInt(displayPoints, 10) || 0;
-            if (Math.abs(data.points - displayPointsVal) > 20) {
-              console.log('⚠️ Points discrepancy detected:', 
-                { estimated: displayPointsVal, actual: data.points });
-            }
-          }
-          console.log(' Loyalty data refresh completed!');
-        }
-      } catch (err) {
-        console.error('Error refreshing loyalty data:', err);
-        // Still mark as updated to avoid blocking the flow
+        // Mark points as updated
         setPointsUpdated(true);
-      }
-    };
-    
-    refreshLoyaltyData();
-
-    // IMPORTANT: Don't redirect automatically if no orderId - show a message instead
-    if (!orderId) {
-      console.log(' No order ID found, but NOT redirecting automatically');
-      dispatch({ 
-        type: CHECKOUT_STATES.ERROR, 
-        payload: 'No order details found. Please try again or check your order history.'
-      });
-      return;
-    }
-
-    console.log(' Initializing checkout success flow:', {
-      orderId,
-      points,
-      selectedTime,
-      deliveryMethod,
-      timestamp: new Date().toISOString()
-    });
-    
-    if (orderId && (!state.orderDetails || state.status === CHECKOUT_STATES.INITIALIZING)) {
-      try {
-        console.log(' Initializing success page with order:', orderId);
-        console.log(' Points parameter received:', points);
         
-        // Set the order details
-        const orderDetails = {
-          orderId,
-          type: 'ORDER_COMPLETE',
-          loyaltyUpdateReceived: true,
-          points: data.points || 0,
-          // Update the actual points from server
-          actualPoints: data.points || 0,
-          // If passed in points param, use it for animation
-          pointsEarned: parseInt(points, 10) || 0
-        };
-        
-        console.log(' Setting up order details with points:', orderDetails.pointsEarned);
-
-        console.log('    // If we have order details, initialize the animation state machine');
-        if (orderDetails) {
-          console.log(' Order details loaded, initializing loyalty animation');
-          dispatch({ type: CHECKOUT_STATES.READY, payload: orderDetails });
-          
-          // Force animation when coming from payment (either through URL param or sessionStorage)
-          // The ts parameter helps ensure we're getting a fresh page load from payment
-          const hasTimestamp = searchParams.get('ts') !== null;
-          const animateFromUrl = searchParams.get('animate') === 'true';
-          const animateFromStorage = typeof window !== 'undefined' && 
-                                    sessionStorage.getItem('loyaltyAnimationPending') === 'true';
-          
-          // Always animate on a direct page load with the animation flag
-          const shouldAnimate = (animateFromUrl && hasTimestamp) || animateFromStorage;
-          
-          console.log(' Animation decision factors:', { 
-            hasTimestamp, 
-            animateFromUrl, 
-            animateFromStorage,
-            shouldAnimate 
-          });
-          
-          // Check if points were earned to determine if animation should be shown
-          if (orderDetails.pointsEarned > 0 && shouldAnimate) {
-            console.log(' Points earned and animation flag present, showing loyalty animation');
-            
-            // Clear any lingering animation flags
-            if (typeof window !== 'undefined') {
-              // We'll clear this flag when animation completes
-              const paymentTime = parseInt(sessionStorage.getItem('paymentCompletedAt') || '0', 10);
-              const timeSincePayment = Date.now() - paymentTime;
-              console.log(` Time since payment completion: ${timeSincePayment}ms`);
-            }
-            
-            // Move to animation state immediately
-            dispatch({ type: CHECKOUT_STATES.SHOWING_ANIMATION });
-            refreshLoyaltyData();
-            
-            // Set a fallback timeout to show modal if animation doesn't complete
-            animationTimeoutRef.current = setTimeout(() => {
-              console.log(' Animation timeout reached, force showing modal');
-              if (!loyaltyAnimationComplete) {
-                setLoyaltyAnimationComplete(true);
-                dispatch({ type: CHECKOUT_STATES.SHOWING_MODAL });
-                // Clear pending animation flag
-                if (typeof window !== 'undefined') {
-                  sessionStorage.removeItem('loyaltyAnimationPending');
-                }
-              }
-            }, 5000); // Show modal after 5 seconds max
-          } else {
-            // No points earned or no animation flag, go directly to modal
-            console.log(' No points earned or no animation flag, showing modal directly');
-            dispatch({ type: CHECKOUT_STATES.SHOWING_MODAL });
-            // Clear any pending animation flags
-            if (typeof window !== 'undefined') {
-              sessionStorage.removeItem('loyaltyAnimationPending');
-            }
-          }  
+        // Set actual points if available
+        if (data.vivaBucks) {
+          setActualPoints(data.vivaBucks);
         }
-      } catch (err) {
-        console.error(' Error initializing success page:', err);
-        dispatch({ type: CHECKOUT_STATES.ERROR, payload: 'Error loading order details' });
       }
-    } else if (state.status === CHECKOUT_STATES.READY && state.orderDetails) {
-      // Already have order details, go directly to modal
-      console.log(' Showing success modal for existing order details');
-      dispatch({ type: CHECKOUT_STATES.SHOWING_MODAL });
+    } catch (err) {
+      console.error('Error refreshing loyalty data:', err);
+      // Continue with estimated points if actual points can't be fetched
+      setPointsUpdated(true);
     }
-  }, [searchParams, router]);
+  };
 
-  // Effect to listen for loyalty animation completed event
+  // Set up event listener for animation completion
   useEffect(() => {
-    // Only set up listeners if in animation state and not already completed
+    // Only set up if we're in animation state and animation isn't complete
     if (state.status === CHECKOUT_STATES.SHOWING_ANIMATION && !loyaltyAnimationComplete) {
-      console.log(' Setting up listener for loyalty animation completion');
-
-      const handleAnimationComplete = (data) => {
-        console.log(' Received animation complete event:', data);
+      console.log('🔔 Setting up animation completion listener');
+      
+      // Handle event emitted when animation completes
+      const handleAnimationCompleteEvent = (eventData) => {
+        console.log('🎉 Animation complete event received:', eventData);
         handleLoyaltyAnimationComplete();
       };
-
-      // Add event listener for animation completion
-      eventEmitter.on(Events.LOYALTY_ANIMATION_COMPLETE, handleAnimationComplete);
       
-      // Check if we're in the correct state but the animation hasn't started
-      // This is a safety measure if normal LoyaltyBanner rendering fails
-      const checkAnimationStarted = setTimeout(() => {
-        console.log(' Checking if animation has started...');
-        const animationElement = document.querySelector('[data-testid="loyalty-progress-bar-fill"][data-animate="true"]');
-        if (!animationElement && state.status === CHECKOUT_STATES.SHOWING_ANIMATION) {
-          console.log(' Animation element not found or not animating, forcing state update');
-          // Force re-render of animation banner
-          dispatch({ type: CHECKOUT_STATES.SHOWING_ANIMATION }); 
+      // Add event listener
+      eventEmitter.on(Events.LOYALTY_ANIMATION_COMPLETE, handleAnimationCompleteEvent);
+      
+      // Safety timeout - show modal if animation takes too long
+      const safetyTimeout = setTimeout(() => {
+        if (!loyaltyAnimationComplete) {
+          console.log('⚠️ Animation timeout reached - showing modal');
+          handleLoyaltyAnimationComplete();
         }
-      }, 1000);
-
+      }, 5000); // 5 second safety
+      
+      // Cleanup on unmount or state change
       return () => {
-        // Remove listener and timeout on cleanup
-        eventEmitter.off(Events.LOYALTY_ANIMATION_COMPLETE, handleAnimationComplete);
-        clearTimeout(checkAnimationStarted);
+        eventEmitter.off(Events.LOYALTY_ANIMATION_COMPLETE, handleAnimationCompleteEvent);
+        clearTimeout(safetyTimeout);
       };
     }
   }, [state.status, loyaltyAnimationComplete]);
 
   // Handle loyalty animation completion
   const handleLoyaltyAnimationComplete = () => {
-    // Clear animation timeout since animation completed naturally
+    console.log('🎊 Loyalty animation complete - transitioning to modal');
+    
+    // Clear any pending timeouts
     if (animationTimeoutRef.current) {
       clearTimeout(animationTimeoutRef.current);
       animationTimeoutRef.current = null;
     }
     
-    console.log('🎉 Loyalty animation completed in success page');
+    // Mark animation as complete
+    setLoyaltyAnimationComplete(true);
     
-    // Safety check to prevent duplicate state changes
-    if (loyaltyAnimationComplete) {
-      console.log('⚠️ Animation already completed, ignoring duplicate call');
-      return;
-    }
+    // Show the order confirmation modal after a short delay
+    setTimeout(() => {
+      dispatch({ type: CHECKOUT_STATES.SHOWING_MODAL });
+      
+      // Emit completion event (helpful for testing/debugging)
+      eventEmitter.emit(Events.LOYALTY_ANIMATION_COMPLETE, {
+        timestamp: Date.now(),
+        completed: true
+      });
+    }, 300);
     
     // Log completion for debugging
-    persistTimingLog('Animation completed naturally');
-    
-    // Set state variables and transition to modal state
-    setLoyaltyAnimationComplete(true);
-    dispatch({ type: CHECKOUT_STATES.SHOWING_MODAL });
-    
-    // NOTE: We don't re-emit the LOYALTY_ANIMATION_COMPLETE event here
-    // This prevents circular events, as ProgressBar already emits this event
-    // and that's what triggers this callback in the first place
+    persistTimingLog('Animation completed');
   };
   
   // Effect to cleanup on unmount
@@ -479,12 +318,12 @@ export default function OrderSuccessPage() {
               )}
             </h3>
           </div>
-          {/* Add debug info to ensure we know which key is being used */}
-          {console.log(`🔑 Rendering LoyaltyBanner with key timestamp: ${Date.now()}`)}
+          {/* Add debug info to ensure proper rendering */}
+          {console.log(`🔑 Rendering LoyaltyBanner with forceAnimation=true`)}
           <LoyaltyBanner 
-            forceAnimation={true} 
+            forceAnimation={true} /* Force animation based on previous debugging */
             onProgressBarAnimationComplete={handleLoyaltyAnimationComplete}
-            key={`loyalty-banner-forced-${Date.now()}`} // Force new component instance with clear name
+            key={`loyalty-banner-forced-${Date.now()}`} /* Force new instance */
           />
         </div>
       )}

@@ -15,7 +15,7 @@ import { FaGift, FaUndo } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import OrderSuccessModal from './OrderSuccessModal';
 import LoyaltyBanner from '@/components/loyalty/LoyaltyBanner';
-import { trackBeginCheckout, trackPurchase } from '@/lib/analytics/events';
+import checkoutService from '@/lib/checkout/checkoutService';
 
 // Create a context to share functions between components
 const PaymentContext = createContext(null);
@@ -54,6 +54,82 @@ const useWindowSize = () => {
   return windowSize;
 };
 
+// Analytics tracking functions
+const trackBeginCheckout = (items, total) => {
+  try {
+    // Track checkout with GA if available
+    if (typeof window !== 'undefined' && window.gtag) {
+      console.log('📊 Tracking begin_checkout event');
+      window.gtag('event', 'begin_checkout', {
+        currency: 'USD',
+        value: total,
+        items: items.map(item => ({
+          item_id: item.productId,
+          item_name: item.name,
+          price: item.price,
+          quantity: item.quantity
+        }))
+      });
+    }
+    
+    // If using Firebase analytics
+    if (typeof window !== 'undefined' && window.firebase && window.firebase.analytics) {
+      window.firebase.analytics().logEvent('begin_checkout', {
+        currency: 'USD',
+        value: total,
+        items: items.length
+      });
+    }
+  } catch (err) {
+    console.error('Error tracking checkout event:', err);
+    // Non-blocking - we don't want analytics to prevent checkout
+  }
+};
+
+// Track successful purchase completion
+const trackPurchase = (transactionId, items, total, shipping = 0, tax = 0) => {
+  try {
+    console.log('📊 Tracking purchase event:', { transactionId, total });
+    
+    // Format items for GA
+    const formattedItems = items.map(item => ({
+      item_id: item.productId,
+      item_name: item.name,
+      price: item.price,
+      quantity: item.quantity
+    }));
+    
+    // Google Analytics purchase tracking
+    if (typeof window !== 'undefined' && window.gtag) {
+      window.gtag('event', 'purchase', {
+        transaction_id: transactionId,
+        value: total,
+        currency: 'USD',
+        tax: tax,
+        shipping: shipping,
+        items: formattedItems
+      });
+    }
+    
+    // Firebase Analytics purchase tracking
+    if (typeof window !== 'undefined' && window.firebase && window.firebase.analytics) {
+      window.firebase.analytics().logEvent('purchase', {
+        transaction_id: transactionId,
+        value: total,
+        currency: 'USD',
+        tax: tax,
+        shipping: shipping,
+        items: items.length
+      });
+    }
+    
+    console.log('✅ Purchase tracking complete for order:', transactionId);
+  } catch (err) {
+    console.error('Error tracking purchase event:', err);
+    // Non-blocking - we don't want analytics to prevent checkout flow completion
+  }
+};
+
 const ANIMATION_DURATION = 2000;
 const REDIRECT_DELAY = 3000;
 
@@ -89,6 +165,9 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
   // Track begin checkout when component mounts
   useEffect(() => {
     trackBeginCheckout(items, amountDetails.total);
+    
+    // Log the checkout initiation for debugging
+    console.log('🛒 Begin checkout tracking for', items.length, 'items totaling', amountDetails.total);
   }, [items, amountDetails.total]);
   
   // No progress bar animation in payment form to avoid conflicts with
@@ -146,26 +225,35 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
         amountDetails.deliveryFee || 0,
         amountDetails.tax || 0
       );
+      
+      // Log the successful transaction for debugging
+      console.log('💳 Processing successful payment:', {
+        paymentId: paymentIntent.id,
+        amount: amountDetails.total,
+        items: items.length
+      });
 
-      // Store order details
-      const orderDetails = {
-        orderId: paymentIntent.id,
+      // Use the centralized checkout service to process the payment
+      const orderData = {
         items: items,
         total: amountDetails.total,
+        subtotal: amountDetails.subtotal, // Important for points calculation
         tax: amountDetails.tax,
         shipping: amountDetails.deliveryFee,
         deliveryMethod,
-        selectedTime,
-        pointsEarned: Math.floor(amountDetails.total)  // 1 point per dollar
+        selectedTime
       };
-      setOrderDetails(orderDetails);
+      
+      // Process payment through checkout service
+      const processedOrder = checkoutService.processSuccessfulPayment(paymentIntent, orderData);
+      
+      // Update state with processed order details
+      setOrderDetails(processedOrder);
       setShowConfetti(true);
-      // Don't show modal yet - wait for loyalty animation
-
-      // Store payment info in sessionStorage as a reliable backup
-      sessionStorage.setItem('paymentProcessed', 'true');
-      sessionStorage.setItem('paymentIntentId', paymentIntent.id);
-      sessionStorage.setItem('paymentAmount', amountDetails.total);
+      
+      // Get estimated points for display
+      const estimatedPoints = processedOrder.pointsEstimate;
+      setPointsEarned(estimatedPoints);
 
       try {
         toast.success('Payment successful!', { id: loadingToast });
@@ -174,29 +262,20 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
         await handleOrderConfirmation(paymentIntent);
         persistTimingLog(`After handleOrderConfirmation (duration: ${Date.now() - handleOrderStart} ms)`);
 
-        // Process loyalty points with proper event handling
+        // Process loyalty point-related actions (e.g., coupon usage)
         persistTimingLog('Before loyalty points update');
         const loyaltyStart = Date.now();
         await handleSuccessfulPayment(paymentIntent);
         persistTimingLog(`After loyalty points update (duration: ${Date.now() - loyaltyStart} ms)`);
 
+        // Clear cart data
         persistTimingLog('Before clearCart');
         const clearCartStart = Date.now();
         await clearCart();
         persistTimingLog(`After clearCart (duration: ${Date.now() - clearCartStart} ms)`);
-
-        // Create the order details object that we need to pass to the success page
-        const orderData = {
-          orderId: paymentIntent.id,
-          points: Math.floor(amountDetails.total),
-          deliveryMethod: deliveryMethod || 'delivery', 
-          selectedTime: selectedTime || '',
-          timestamp: Date.now()
-        };
         
-        // Store order details in sessionStorage as a reliable backup
-        console.log('💾 Storing order details in sessionStorage:', orderData);
-        sessionStorage.setItem('orderSuccessData', JSON.stringify(orderData));
+        // Clear checkout-specific data (not the completed order)
+        checkoutService.clearCheckoutData();
         
         console.log('✅ Payment completed successfully:', {
           orderId: paymentIntent.id,
@@ -206,77 +285,29 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
         const completionTime = Date.now();
         persistTimingLog(`Payment completed (ms since confirmPayment: ${completionTime - confirmEnd})`);
         
-        // Set up data for animation and success page
-        // Add default multiplier value (1) to prevent 'multiplier is not defined' error
-        const defaultMultiplier = 1;
-        // Use userData from context if available or fallback to a default calculation
-        const pointsMultiplier = userData?.tier?.pointsMultiplier || defaultMultiplier;
-        
-        // DISPLAY ONLY: Calculate estimated points for UI display purposes
-        // The actual points will be calculated and added by the server
-        console.log(`💰 Estimating display points with multiplier: ${pointsMultiplier}`);
-        const estimatedPoints = Math.floor(amountDetails.subtotal * 10);
-        
-        // Make sure setPointsEarned is available before calling it
-        if (typeof setPointsEarned === 'function') {
-          setPointsEarned(estimatedPoints);
-          console.log(`🎁 Set estimated ${estimatedPoints} points for display only`);
-        } else {
-          console.warn('⚠️ setPointsEarned not available');
-        }
+        // Log completion
+        console.log(`🎁 Using estimated ${pointsEarned} points for display`);
 
-        // Store order data for later use
-        const paymentOrderData = {
-          orderId: paymentIntent.id,
-          pointsEstimate: estimatedPoints, // Renamed to make it clear this is just an estimate
-          calculatedOnClient: false, // Flag to tell server this is just an estimate
-          deliveryMethod: deliveryMethod,
-          selectedTime,
-          timestamp: Date.now()
-        };
-        
-        // Store in sessionStorage for the success page
-        sessionStorage.setItem('orderSuccessData', JSON.stringify(paymentOrderData));
-        sessionStorage.setItem('paymentCompletedAt', Date.now().toString());
-
-        // Helper function for redirecting to success page to avoid duplication
-        const redirectToSuccessPage = (points, orderId) => {
+        // Use checkout service for redirect URL creation
+        const redirectToSuccessPage = () => {
           try {
-            // Create URL params for success page
-            const successParams = new URLSearchParams({
-              orderId: orderId,
-              pointsEstimate: points, // Renamed to make it clear this is just an estimate
-              displayOnly: 'true', // Flag indicating these points are for display only
-              deliveryMethod: deliveryMethod || 'delivery',
-              selectedTime: selectedTime || '',
-              ts: Date.now(), // Timestamp to prevent caching issues
-              animate: 'true' // Request animation on success page
-            }).toString();
-            
-            console.log('🔜 Navigating to success page with earned points:', points);
-            window.location.href = `/checkout/success?${successParams}`;
+            // Get redirect URL from checkout service
+            const redirectUrl = checkoutService.createSuccessRedirectUrl(paymentIntent.id);
+            console.log('🔜 Navigating to success page');
+            window.location.href = redirectUrl;
           } catch (redirectError) {
             console.error('Error during redirect:', redirectError);
-            // Fallback to minimal params
-            window.location.href = `/checkout/success?orderId=${orderId}&error=true`;
+            // Fallback to simplest path
+            window.location.href = `/checkout/success?orderId=${paymentIntent.id}`;
           }
         };
         
-        // Skip animation in payment form, just show loading screen before redirect
-        // Make sure setShowLoyaltyAnimation is available before calling it
-        if (typeof setShowLoyaltyAnimation === 'function') {
-          setShowLoyaltyAnimation(true);
-          console.log('⏩ Showing loading screen before redirect to success page');
-          
-          // Set timeout to navigate after a short delay for visual feedback
-          setTimeout(() => {
-            redirectToSuccessPage(estimatedPoints, paymentIntent.id);
-          }, 800);
-        } else {
-          console.warn('⚠️ setShowLoyaltyAnimation not available, using direct redirect');
-          // Use immediate redirect as fallback
-          redirectToSuccessPage(estimatedPoints, paymentIntent.id);
-        }
+        // Show loading spinner before redirect
+        setShowLoyaltyAnimation(true);
+        console.log('⏩ Showing loading screen before redirect to success page');
+        
+        // Short delay for visual feedback
+        setTimeout(redirectToSuccessPage, 500);
   
       } catch (err) {
         // Better error handling - stringify the error if possible
@@ -288,14 +319,10 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
         
         // Even if there's an error, try to navigate to success page
         try {
-          // Error case - create minimal success params
-          // Make the params as simple as possible to avoid further errors
           console.log('⚠️ Error in payment completion flow, using minimal redirect');
-          
-          // Use the simplest possible redirect to avoid further errors
+          // Use the simplest possible redirect with error flag
           window.location.href = `/checkout/success?orderId=${paymentIntent.id}&error=true`;
         } catch (navError) {
-          // Last resort - show error modal
           console.error('Fatal navigation error:', navError);
           toast.error('Unable to redirect to confirmation page');
         }
@@ -659,17 +686,15 @@ export default function PaymentForm({ amount, amountDetails, items, shippingAddr
     }
   };
 
-  // Main loyalty processing function - made available via context
+  // Simplified to only handle coupon usage - event emission is now handled by checkout service
   const handleSuccessfulPayment = async (paymentIntent) => {
     console.log('✅ Processing order completion for payment:', paymentIntent.id);
     try {
-      // IMPORTANT: Loyalty points are now ONLY calculated and added in the server-side
-      // order confirmation API (app/api/orders/confirmations/route.js)
-      // The direct call to /api/loyalty/points has been removed to prevent duplicate points
-      const updatedAmount = typeof amount === 'undefined' ? amountDetails?.total : amount;
-      console.log('💡 Skipping client-side points calculation - now handled server-side only');
+      // IMPORTANT: Loyalty points are ONLY calculated and added server-side
+      // in the order confirmation API (app/api/orders/confirmations/route.js)
+      console.log('💡 Skipping client-side points calculation - handled server-side only');
 
-      // Mark coupon as used if one was applied
+      // Handle coupon usage if applicable (this is the only client-side action needed)
       if (selectedCoupon) {
         await fetch('/api/loyalty/coupons', {
           method: 'PUT',
@@ -677,13 +702,8 @@ export default function PaymentForm({ amount, amountDetails, items, shippingAddr
           body: JSON.stringify({ couponCode: selectedCoupon.code })
         });
       }
-
+      
       console.log('✅ Order processing completed successfully');
-      // Emit event for order completed
-      eventEmitter.emit(Events.ORDER_COMPLETED, {
-        orderId: paymentIntent.id,
-        amount: updatedAmount
-      });
     } catch (error) {
       console.error('Error processing loyalty rewards:', error);
       // Continue with checkout even if loyalty processing fails
