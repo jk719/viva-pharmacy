@@ -101,9 +101,10 @@ export default function OrderSuccessPage() {
     if (didInitialize.current) return;
     didInitialize.current = true;
     
-    // Get orderId from URL parameters
+    // Get orderId and other parameters from URL
     const orderId = searchParams.get('orderId');
     const hasError = searchParams.get('error') === 'true';
+    const skipAnimation = searchParams.get('animate') === 'false'; // Check if animation was already shown
     
     // Handle error cases
     if (hasError) {
@@ -138,30 +139,34 @@ export default function OrderSuccessPage() {
     // Set order details in state
     dispatch({ type: CHECKOUT_STATES.READY, payload: finalOrderDetails });
     
-    // Check if we should force animation (explicitly requested by PaymentForm)
+    // Check if we should skip animation (already shown in PaymentForm)
     const params = new URLSearchParams(window.location.search);
-    const shouldAnimate = params.get('animate') === 'true';
-    if (shouldAnimate) {
-      console.log(' Force animation parameter detected, will show animation');
-    }
+    const shouldAnimate = params.get('animate') !== 'false';
     
-    // Start animation timer for safety fallback
-    // This ensures that we eventually show the modal even if animation logic fails
-    const MAX_WAIT_TIME = 8000; // 8 seconds max wait time
-    animationTimeoutRef.current = setTimeout(() => {
-      console.log(' Animation timeout reached! Forcing modal display');
-      persistTimingLog('Animation timeout - forcing modal');
-      if (!loyaltyAnimationComplete && state.status !== CHECKOUT_STATES.SHOWING_MODAL) {
-        setLoyaltyAnimationComplete(true);
-        dispatch({ type: CHECKOUT_STATES.SHOWING_MODAL });
-      }
-    }, MAX_WAIT_TIME);
-
-    // Always show loyalty animation first (based on previous debugging)
-    console.log(' Starting loyalty animation sequence');
-    setTimeout(() => {
-      dispatch({ type: CHECKOUT_STATES.SHOWING_ANIMATION });
-    }, 100); // Small delay to ensure state is processed
+    if (!shouldAnimate) {
+      console.log('⏭️ Skipping animation as it was already shown in PaymentForm');
+      // Go directly to modal state since animation was already shown
+      dispatch({ type: CHECKOUT_STATES.SHOWING_MODAL });
+    } else {
+      console.log('🎬 Starting loyalty animation sequence');
+      
+      // Start animation timer for safety fallback
+      // This ensures that we eventually show the modal even if animation logic fails
+      const MAX_WAIT_TIME = 8000; // 8 seconds max wait time
+      animationTimeoutRef.current = setTimeout(() => {
+        console.log('⌛ Animation timeout reached! Forcing modal display');
+        persistTimingLog('Animation timeout - forcing modal');
+        if (!loyaltyAnimationComplete && state.status !== CHECKOUT_STATES.SHOWING_MODAL) {
+          setLoyaltyAnimationComplete(true);
+          dispatch({ type: CHECKOUT_STATES.SHOWING_MODAL });
+        }
+      }, MAX_WAIT_TIME);
+      
+      // Show loyalty animation with a small delay to ensure state is processed
+      setTimeout(() => {
+        dispatch({ type: CHECKOUT_STATES.SHOWING_ANIMATION });
+      }, 100);
+    }
     
     // Fetch latest loyalty data from server
     refreshLoyaltyData(orderId);

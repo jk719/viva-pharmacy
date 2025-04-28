@@ -8,7 +8,6 @@ import eventEmitter, { Events } from '@/lib/eventEmitter';
 import { useSession } from "next-auth/react";
 import { useCart } from '@/context/CartContext';
 import { useRouter } from 'next/navigation';
-import ReactConfetti from 'react-confetti';
 import toast from 'react-hot-toast';
 import { LoyaltyCheckoutService } from '@/lib/checkout/loyaltyCheckoutServiceClient';
 import { FaGift, FaUndo } from 'react-icons/fa';
@@ -302,12 +301,12 @@ const CheckoutForm = ({ amount, amountDetails, items, shippingAddress, deliveryM
           }
         };
         
-        // Show loading spinner before redirect
+        // Show loyalty animation with progress bar before redirect
         setShowLoyaltyAnimation(true);
-        console.log('⏩ Showing loading screen before redirect to success page');
+        console.log('⏩ Showing loyalty animation with progress bar before redirect');
         
-        // Short delay for visual feedback
-        setTimeout(redirectToSuccessPage, 500);
+        // No immediate redirect - we'll wait for animation to complete
+        // The redirect happens in the onProgressBarAnimationComplete callback
   
       } catch (err) {
         // Better error handling - stringify the error if possible
@@ -901,33 +900,32 @@ export default function PaymentForm({ amount, amountDetails, items, shippingAddr
             <h2 className="text-2xl font-bold mb-4">Payment Complete! 🎉</h2>
             <p className="mb-6">You earned {pointsEarned} VivaBucks!</p>
             
-            {/* REMOVED: LoyaltyBanner animation to avoid duplication with success page */}
-            {/* We'll show a loading spinner instead */}
-            <div className="w-full mb-8 flex justify-center items-center py-4">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            {/* Show the LoyaltyBanner with progress bar animation */}
+            <div className="w-full mb-8">
+              <LoyaltyBanner 
+                forceAnimation={true}
+                onProgressBarAnimationComplete={() => {
+                  console.log('✅ Progress bar animation completed in PaymentForm');
+                  // Redirect to success page after animation completes
+                  try {
+                    const safeParams = new URLSearchParams({
+                      orderId: paymentIntent?.id || sessionStorage.getItem('currentOrderId'),
+                      points: pointsEarned,
+                      ts: Date.now(),
+                      animate: "false" // Signal to success page that animation already shown
+                    }).toString();
+                    window.location.href = `/checkout/success?${safeParams}`;
+                  } catch (e) {
+                    console.error('Error in payment success redirect:', e);
+                    // Fallback redirect if there's an error
+                    window.location.href = `/checkout/success?orderId=${paymentIntent?.id || ''}`;
+                  }
+                }}
+                key={`payment-loyalty-banner-${Date.now()}`} /* Force new instance */
+              />
             </div>
             
-            <p className="text-sm text-gray-500">Redirecting to confirmation page...</p>
-            
-            {/* Immediate redirect without waiting for animation */}
-            {(() => {
-              console.log('🔁 Redirecting to success page without waiting for animation');
-              // Use setTimeout to ensure this runs after render
-              setTimeout(() => {
-                try {
-                  const safeParams = new URLSearchParams({
-                    orderId: paymentIntent?.id || sessionStorage.getItem('currentOrderId'),
-                    points: pointsEarned,
-                    ts: Date.now(),
-                    animate: "true" // Signal to success page that animation should be shown
-                  }).toString();
-                  window.location.href = `/checkout/success?${safeParams}`;
-                } catch (e) {
-                  console.error('Error in payment success redirect:', e);
-                }
-              }, 800); // Short delay for visual feedback
-              return null;
-            })()}
+            <p className="text-sm text-gray-500">Preparing your confirmation...</p>
           </div>
         </div>
       )}
