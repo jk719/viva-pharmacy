@@ -123,6 +123,21 @@ export async function POST(request) {
       // Loyalty
       if (session?.user?.id) {
         try {
+          // Check if this orderNumber has already had points processed
+          // This prevents duplicate points if the confirmation is processed multiple times
+          const existingOrder = await Order.findOne({ 
+            orderNumber: formattedData.orderNumber,
+            loyaltyPointsProcessed: true
+          });
+          
+          if (existingOrder) {
+            console.log('⚠️ Loyalty points already processed for this order, skipping.');
+            return NextResponse.json({
+              success: true,
+              message: 'Order already processed',
+              timings: backendTimingLog
+            });
+          }
           // Log request to help debug
           console.log('💯 Processing loyalty for order:', {
             orderId: formattedData.orderNumber,
@@ -181,7 +196,15 @@ export async function POST(request) {
             });
           }
           await user.save();
-          logTime('User loyalty updated');
+          
+          // Mark the order as having had loyalty points processed
+          await Order.findOneAndUpdate(
+            { orderNumber: formattedData.orderNumber },
+            { loyaltyPointsProcessed: true },
+            { new: true }
+          );
+          
+          logTime('User loyalty updated and order marked as processed');
           setTimeout(async () => {
             try {
               await loyaltyEventsService.emitLoyaltyUpdate(user._id, {

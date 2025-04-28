@@ -173,19 +173,14 @@ export async function POST(req) {
         const order = await createOrder(paymentIntent);
         console.log('📦 Order created:', order._id);
 
-        // --- Restore post-order logic ---
-        // 1. Update user rewards/points
-        try {
-            const basePoints = Math.floor(order.total); // 1 point per $1 spent (customize as needed)
-            const pointsUpdate = await User.findByIdAndUpdate(
-                userId,
-                { $inc: { vivaBucks: basePoints, rewardPoints: basePoints } },
-                { new: true }
-            );
-            console.log('🎁 Points updated for user:', userId, 'Points:', basePoints);
-        } catch (rewardsErr) {
-            console.error('❌ Error updating points for user:', userId, rewardsErr);
-        }
+        // --- Post-order logic ---
+        // IMPORTANT: Points calculation is now ONLY handled in the order confirmation API
+        // (app/api/orders/confirmations/route.js) to prevent duplicate points being awarded
+        // The previous implementation here caused points to be added twice:
+        // 1. Once in order confirmation API (10 points per $1 with tier multipliers)
+        // 2. Again here in the webhook (1 point per $1)
+        // The code that added points here has been removed to fix this duplication
+        console.log('🔍 Skipping points calculation in webhook - now handled only in order confirmation API');
 
         // 2. Send order confirmation email
         try {
@@ -201,19 +196,10 @@ export async function POST(req) {
             console.error('❌ Error sending order confirmation email:', emailErr);
         }
 
-        // 3. Emit points updated event
-        try {
-            await emitEvent(Events.POINTS_UPDATED, {
-                userId,
-                amount,
-                points: Math.floor(order.total),
-                afterPayment: true,
-                timestamp: new Date().toISOString()
-            });
-            console.log('🚀 POINTS_UPDATED event emitted for user:', userId);
-        } catch (eventErr) {
-            console.error('❌ Error emitting POINTS_UPDATED event:', eventErr);
-        }
+        // NOTE: We no longer emit a POINTS_UPDATED event here as it could trigger additional 
+        // points processing elsewhere. The order confirmation API already emits the necessary
+        // events for loyalty updates.
+        console.log('🔷 Skipping webhook POINTS_UPDATED event to prevent duplicate processing');
         // --- End restore ---
 
         return NextResponse.json({ 
