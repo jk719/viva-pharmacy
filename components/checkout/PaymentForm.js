@@ -661,18 +661,13 @@ export default function PaymentForm({ amount, amountDetails, items, shippingAddr
 
   // Main loyalty processing function - made available via context
   const handleSuccessfulPayment = async (paymentIntent) => {
-    console.log('✅ Processing loyalty rewards for order:', paymentIntent.id);
+    console.log('✅ Processing order completion for payment:', paymentIntent.id);
     try {
-      // Update loyalty points with consistent amount
+      // IMPORTANT: Loyalty points are now ONLY calculated and added in the server-side
+      // order confirmation API (app/api/orders/confirmations/route.js)
+      // The direct call to /api/loyalty/points has been removed to prevent duplicate points
       const updatedAmount = typeof amount === 'undefined' ? amountDetails?.total : amount;
-      await fetch('/api/loyalty/points', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          orderId: paymentIntent.id,
-          amount: updatedAmount
-        })
-      });
+      console.log('💡 Skipping client-side points calculation - now handled server-side only');
 
       // Mark coupon as used if one was applied
       if (selectedCoupon) {
@@ -683,9 +678,9 @@ export default function PaymentForm({ amount, amountDetails, items, shippingAddr
         });
       }
 
-      console.log('✅ Loyalty points updated successfully');
-      // Emit event for loyalty update completed
-      eventEmitter.emit(Events.LOYALTY_POINTS_UPDATED, {
+      console.log('✅ Order processing completed successfully');
+      // Emit event for order completed
+      eventEmitter.emit(Events.ORDER_COMPLETED, {
         orderId: paymentIntent.id,
         amount: updatedAmount
       });
