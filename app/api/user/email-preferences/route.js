@@ -1,43 +1,44 @@
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { NextResponse } from 'next/server';
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
 
-export async function GET() {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export async function GET(request) {
+  const token = request.nextauth?.token;
 
+  if (!token) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
     await dbConnect();
-    const user = await User.findById(session.user.id)
+    const user = await User.findById(token.sub)
       .select('emailPreferences')
       .lean();
 
     if (!user) {
-      return Response.json({ error: "User not found" }, { status: 404 });
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    return Response.json({ emailPreferences: user.emailPreferences });
+    return NextResponse.json({ emailPreferences: user.emailPreferences });
   } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
-export async function PUT(req) {
+export async function PUT(request) {
+  const token = request.nextauth?.token;
+
+  if (!token) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     await dbConnect();
-    const { emailPreferences } = await req.json();
+    const { emailPreferences } = await request.json();
 
-    const user = await User.findById(session.user.id);
+    const user = await User.findById(token.sub);
     if (!user) {
-      return Response.json({ error: "User not found" }, { status: 404 });
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     user.emailPreferences = {
@@ -47,11 +48,11 @@ export async function PUT(req) {
 
     await user.save();
 
-    return Response.json({ 
+    return NextResponse.json({ 
       message: "Preferences updated successfully",
       emailPreferences: user.emailPreferences 
     });
   } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 } 

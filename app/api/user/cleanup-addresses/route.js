@@ -1,5 +1,4 @@
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import User from '@/models/User';
 
@@ -9,10 +8,7 @@ export async function GET() {
     const user = await User.findOne({ email: 'y3jamil@gmail.com' });
     
     if (!user) {
-      return new Response(JSON.stringify({ error: 'User not found' }), { 
-        status: 404,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     // Create a map to store unique addresses
@@ -46,19 +42,13 @@ export async function GET() {
 
     await user.save();
 
-    return new Response(JSON.stringify({ 
+    return NextResponse.json({ 
       success: true,
       addressCount: user.addresses.length,
       addresses: user.addresses 
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    }, { status: 200 });
   } catch (error) {
     console.error('Cleanup error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 } 

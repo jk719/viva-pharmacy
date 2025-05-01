@@ -1,4 +1,3 @@
-import { getServerSession } from "next-auth/next";
 import { authOptions } from '@/lib/auth';
 import dbConnect from "@/lib/dbConnect";
 import Order from "@/models/Order";
@@ -25,22 +24,20 @@ export async function GET(request) {
         await dbConnect();
         console.log('API: Connected to database');
 
-        // 3. Validate session
-        const session = await getServerSession(authOptions);
-        console.log('API: Session check:', !!session);
+        // 3. Get token from middleware
+        const token = request.nextauth?.token;
+        console.log('API: Token check:', !!token);
 
-        if (!session) {
-            console.error('API: No valid session found');
-            return new Response(
-                JSON.stringify({ error: "Not authenticated" }), 
-                { status: 401 }
-            );
+        if (!token) {
+            // This check might be redundant if middleware correctly protects /api/orders/*
+            console.error('API: No valid token found after middleware');
+            return new Response(JSON.stringify({ error: "Not authenticated" }), { status: 401 });
         }
 
         // 4. Validate that the requesting user matches the userId
-        if (session.user.id !== userId) {
+        if (token.id !== userId) {
             console.error('API: User ID mismatch', {
-                sessionUserId: session.user.id,
+                sessionUserId: token.id,
                 requestedUserId: userId
             });
             return new Response(

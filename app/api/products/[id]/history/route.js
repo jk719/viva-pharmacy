@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
 import dbConnect from '@/lib/dbConnect';
 import getProductModel from '@/models/Product';
 import { authOptions } from '@/lib/auth';
 
 export async function GET(request, context) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.role || !['ADMIN', 'MANAGER'].includes(session.user.role)) {
+    // Middleware might not protect this specific GET path, so we check auth and role here.
+    const token = request.nextauth?.token;
+    if (!token?.role || !['ADMIN', 'MANAGER'].includes(token.role)) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 403 });
     }
 

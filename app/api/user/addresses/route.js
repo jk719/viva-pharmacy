@@ -1,78 +1,60 @@
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
+import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import User from '@/models/User';
+import { getToken } from "next-auth/jwt";
 
-export async function GET(req) {
+const secret = process.env.NEXTAUTH_SECRET;
+
+export async function GET(request) {
+  const token = await getToken({ req: request, secret });
+
+  if (!token || !token.sub) {
+    console.error('Authentication failed: Token or sub missing in addresses GET');
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  const userId = token.sub;
+
   try {
-    const session = await getServerSession(authOptions);
-    console.log('Session in GET:', session);
-    
-    if (!session) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
     await dbConnect();
 
-    // Find user by email instead of ID
-    const user = await User.findOne({ email: session.user.email });
-    console.log('Looking for user with email:', session.user.email);
-    console.log('Found user:', user ? 'Yes' : 'No');
+    const user = await User.findById(userId).select('addresses').lean();
 
     if (!user) {
-      return new Response(JSON.stringify({ error: 'User not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      console.error(`User not found for ID: ${userId} in addresses GET`);
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    return new Response(JSON.stringify({ addresses: user.addresses || [] }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return NextResponse.json({ addresses: user.addresses || [] }, { status: 200 });
   } catch (error) {
-    console.error('Error in GET:', error);
-    return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    console.error('Error fetching addresses:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 
-export async function POST(req) {
-  try {
-    const session = await getServerSession(authOptions);
-    console.log('Session in POST:', session);
-    
-    if (!session) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
+export async function POST(request) {
+  const token = await getToken({ req: request, secret });
 
-    const address = await req.json();
-    console.log('Received address:', address);
+  if (!token || !token.sub) {
+    console.error('Authentication failed: Token or sub missing in addresses POST');
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  const userId = token.sub;
+
+  try {
+    const address = await request.json();
 
     await dbConnect();
-    const user = await User.findOne({ email: session.user.email });
+    const user = await User.findById(userId);
     
     if (!user) {
-      return new Response(JSON.stringify({ error: 'User not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      console.error(`User not found for ID: ${userId} in addresses POST`);
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Initialize addresses array if it doesn't exist
     if (!user.addresses) {
       user.addresses = [];
     }
 
-    // Check for duplicate address
     const addressKey = `${address.street}-${address.apartment}-${address.city}-${address.state}-${address.zipCode}`.toLowerCase();
     const isDuplicate = user.addresses.some(addr => {
       const existingKey = `${addr.street}-${addr.apartment}-${addr.city}-${addr.state}-${addr.zipCode}`.toLowerCase();
@@ -80,17 +62,12 @@ export async function POST(req) {
     });
 
     if (isDuplicate) {
-      console.log('Duplicate address detected');
-      return new Response(JSON.stringify({ 
+      return NextResponse.json({ 
         error: 'This address already exists',
         status: 'duplicate'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      }, { status: 400 });
     }
 
-    // Create new address object
     const newAddress = {
       fullName: address.fullName,
       street: address.street,
@@ -99,33 +76,24 @@ export async function POST(req) {
       state: address.state,
       zipCode: address.zipCode,
       phone: address.phone,
-      isDefault: user.addresses.length === 0, // Make first address default
+      isDefault: user.addresses.length === 0,
       createdAt: new Date()
     };
 
-    // Add new address
     user.addresses.push(newAddress);
-    console.log('Saving new address:', newAddress);
     
     await user.save();
-    console.log('Address saved successfully');
 
-    return new Response(JSON.stringify({ 
+    return NextResponse.json({ 
       success: true, 
       address: newAddress
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    }, { status: 200 });
 
   } catch (error) {
-    console.error('Error in POST:', error);
-    return new Response(JSON.stringify({ 
+    console.error('Error adding address:', error);
+    return NextResponse.json({ 
       error: 'Internal Server Error',
       details: error.message 
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    }, { status: 500 });
   }
 }

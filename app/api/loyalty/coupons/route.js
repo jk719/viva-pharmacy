@@ -1,29 +1,31 @@
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { NextResponse } from 'next/server';
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
 
-export async function GET(req) {
+export async function GET(request) {
+  const token = request.nextauth?.token;
+
+  if (!token) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     await dbConnect();
-    const user = await User.findById(session.user.id);
+    const user = await User.findById(token.sub)
+      .select('loyalty.coupons')
+      .lean();
+
     if (!user) {
-      return Response.json({ error: "User not found" }, { status: 404 });
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Filter valid coupons
-    const validCoupons = user.loyaltyProgram?.coupons?.filter(
+    const validCoupons = user.loyalty?.coupons?.filter(
       coupon => !coupon.isUsed && new Date(coupon.expiryDate) > new Date()
     ) || [];
 
-    return Response.json({ coupons: validCoupons });
+    return NextResponse.json({ coupons: validCoupons });
   } catch (error) {
     console.error('Error fetching coupons:', error);
-    return Response.json({ error: "Failed to fetch coupons", coupons: [] }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch coupons", coupons: [] }, { status: 500 });
   }
 } 

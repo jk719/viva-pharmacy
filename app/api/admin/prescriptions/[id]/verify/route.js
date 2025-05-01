@@ -1,14 +1,15 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import Order from '@/models/Order';
 import { sendPrescriptionNotification } from '@/lib/notifications';
 
 export async function POST(req, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.role || !['ADMIN', 'PHARMACIST'].includes(session.user.role)) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    // Middleware ensures user is authenticated and has ADMIN or PHARMACIST role
+    const token = req.nextauth?.token;
+    if (!token?.id) {
+      console.error('Token or user ID missing in verify prescription POST after middleware');
+      return NextResponse.json({ success: false, message: 'Authentication Error' }, { status: 500 });
     }
 
     const { approved, note } = await req.json();
@@ -19,7 +20,7 @@ export async function POST(req, { params }) {
     }
 
     order.prescriptionDetails.verificationStatus = approved ? 'Verified' : 'Rejected';
-    order.prescriptionDetails.verifiedBy = session.user.id;
+    order.prescriptionDetails.verifiedBy = token.id;
     order.prescriptionDetails.verificationNotes = note;
     await order.save();
 

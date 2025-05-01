@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import Stripe from 'stripe';
 import crypto from 'crypto';
 import User from '@/models/User';
 import eventEmitter, { Events } from '@/lib/eventEmitter';
 import Order from '@/models/Order';
+import { getToken } from "next-auth/jwt";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const secret = process.env.NEXTAUTH_SECRET;
 
 // Add at the top of the file
 const PAYMENT_INTENT_CACHE = new Map();
@@ -75,10 +76,17 @@ async function getOrCreateStripeCustomer(userId, email) {
 
 export async function POST(req) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    // Use getToken ONCE to retrieve the token directly
+    const token = await getToken({ req, secret });
+
+    // Check for token and required properties (e.g., sub for user ID)
+    if (!token || !token.sub) {
+      console.error('Authentication failed: Token or token.sub missing in payments POST');
+      return NextResponse.json({ success: false, message: 'Authentication required' }, { status: 401 });
     }
+    
+    // Use userId derived from token.sub consistently
+    const userId = token.sub; 
 
     const { amount, prescriptionId, deliveryOption } = await req.json();
 
@@ -97,7 +105,7 @@ export async function POST(req) {
     if (prescriptionId) {
       const prescription = await Order.findOne({
         _id: prescriptionId,
-        userId: session.user.id,
+        userId: userId, // Use userId variable consistently
         isPrescriptionOrder: true
       });
 
@@ -109,12 +117,12 @@ export async function POST(req) {
       }
     }
 
-    // Create Stripe payment intent with the properly formatted amount
+    // Create Stripe payment intent
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: amountInCents, // Use the rounded integer amount
+      amount: amountInCents, 
       currency: 'usd',
       metadata: {
-        userId: session.user.id,
+        userId: userId, // Use userId variable consistently
         prescriptionId: prescriptionId || null,
         deliveryOption
       }

@@ -181,15 +181,16 @@ export async function GET(request) {
 }
 
 export async function POST(request) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.role || !['ADMIN', 'MANAGER'].includes(session.user.role)) {
-      return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
-        { status: 403 }
-      );
-    }
+  const token = request.nextauth?.token;
 
+  if (!token || !token.role || !['ADMIN', 'MANAGER'].includes(token.role)) {
+    return NextResponse.json(
+      { success: false, message: 'Unauthorized' },
+      { status: 403 }
+    );
+  }
+
+  try {
     await dbConnect();
     const Product = getProductModel();
 
@@ -324,7 +325,7 @@ export async function POST(request) {
       subcategory: category.name, // Same as category
       item: item.name,
       categoryPath: `${category.name} > ${item.name}`,
-      createdBy: session.user.id
+      createdBy: token.sub
     };
 
     const product = await Product.create(productData);
@@ -348,6 +349,8 @@ export async function POST(request) {
 }
 
 export async function PUT(request) {
+  const token = request.nextauth?.token;
+
   try {
     const rateLimitResult = await rateLimit.check(request, 15);
     if (!rateLimitResult.success) {
@@ -364,8 +367,7 @@ export async function PUT(request) {
       });
     }
 
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.role || !['ADMIN', 'MANAGER'].includes(session.user.role)) {
+    if (!token || !token.role || !['ADMIN', 'MANAGER'].includes(token.role)) {
       return NextResponse.json({ 
         success: false, 
         message: 'Unauthorized' 
@@ -514,6 +516,8 @@ function generateSEOData(product, category, item) {
 }
 
 export async function DELETE(request) {
+  const token = request.nextauth?.token;
+
   try {
     const rateLimitResult = await rateLimit.check(request, 10);
     if (!rateLimitResult.success) {
@@ -530,9 +534,7 @@ export async function DELETE(request) {
       });
     }
 
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.role || !['ADMIN', 'MANAGER'].includes(session.user.role)) {
+    if (!token || !token.role || !['ADMIN', 'MANAGER'].includes(token.role)) {
       return NextResponse.json({ 
         success: false, 
         message: 'Unauthorized' 

@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import Order from '@/models/Order';
 import dbConnect from '@/lib/dbConnect';
@@ -11,12 +10,11 @@ export async function POST(req) {
   try {
     await dbConnect();
     
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json(
-        { success: false, message: 'Unauthorized' }, 
-        { status: 401 }
-      );
+    // Middleware ensures user is authenticated
+    const token = req.nextauth?.token;
+    if (!token?.id) {
+      console.error('Token or user ID missing in prescription POST after middleware');
+      return NextResponse.json({ success: false, message: 'Authentication Error' }, { status: 500 });
     }
 
     const formData = await req.formData();
@@ -24,7 +22,7 @@ export async function POST(req) {
     const details = JSON.parse(formData.get('details') || '{}');
 
     // Get the user to access their default address
-    const user = await User.findById(session.user.id).select('addresses');
+    const user = await User.findById(token.id).select('addresses');
     const defaultAddress = user?.addresses?.find(addr => addr.isDefault) || user?.addresses[0];
 
     if (!defaultAddress) {
@@ -36,7 +34,7 @@ export async function POST(req) {
 
     // Create prescription order
     const order = await Order.create({
-      userId: session.user.id,
+      userId: token.id,
       orderNumber: `RX-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       items: [],
       total: 0,
@@ -66,7 +64,7 @@ export async function POST(req) {
       // Track the prescription event
       await prescriptionTracker.trackEvent('PRESCRIPTION_UPLOADED', {
         prescriptionId: order._id,
-        userId: session.user.id,
+        userId: token.id,
         metadata: {
           doctorName: details.doctorName,
           status: 'Pending'
@@ -80,7 +78,7 @@ export async function POST(req) {
     try {
       // Send notification
       await sendNotification('PRESCRIPTION_UPLOADED', {
-        userId: session.user.id,
+        userId: token.id,
         prescriptionId: order._id
       });
     } catch (notificationError) {
@@ -112,16 +110,15 @@ export async function GET(req) {
   try {
     await dbConnect();
     
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json(
-        { success: false, message: 'Unauthorized' }, 
-        { status: 401 }
-      );
+    // Middleware ensures user is authenticated
+    const token = req.nextauth?.token;
+    if (!token?.id) {
+      console.error('Token or user ID missing in prescription GET after middleware');
+      return NextResponse.json({ success: false, message: 'Authentication Error' }, { status: 500 });
     }
 
     const prescriptions = await Order.find({
-      userId: session.user.id,
+      userId: token.id,
       isPrescriptionOrder: true
     })
     .sort({ createdAt: -1 })

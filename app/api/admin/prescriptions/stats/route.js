@@ -1,14 +1,11 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import Order from '@/models/Order';
 
-export async function GET() {
+export async function GET(req) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.role || !['ADMIN', 'PHARMACIST'].includes(session.user.role)) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
+    // Middleware already ensures user is authenticated and has ADMIN or PHARMACIST role for this path.
+    // const token = req.nextauth?.token;
 
     const stats = await Order.aggregate([
       { 

@@ -1,18 +1,19 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import Order from '@/models/Order';
 
 export async function GET(req, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    // Middleware ensures user is authenticated
+    const token = req.nextauth?.token;
+    if (!token?.id) {
+      console.error('Token or user ID missing in prescription status GET after middleware');
+      return NextResponse.json({ success: false, message: 'Authentication Error' }, { status: 500 });
     }
 
     const order = await Order.findOne({
       _id: params.id,
-      userId: session.user.id,
+      userId: token.id, // Use token.id
       isPrescriptionOrder: true
     });
 

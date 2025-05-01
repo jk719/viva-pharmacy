@@ -1,4 +1,3 @@
-import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
@@ -6,8 +5,10 @@ import { calculateMetrics, calculateTrendData } from "@/lib/loyalty/analyticsSer
 
 export async function GET(req) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== 'ADMIN') {
+    const token = req.nextauth?.token;
+    // Middleware ensures token exists and user is ADMIN or MANAGER.
+    // This route specifically requires ADMIN.
+    if (!token || token.role !== 'ADMIN') {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 

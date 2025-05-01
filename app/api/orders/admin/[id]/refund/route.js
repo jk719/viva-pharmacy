@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
+// import { getServerSession } from 'next-auth/next'; // Removed
+// import { authOptions } from '@/lib/auth'; // Removed
 import dbConnect from '@/lib/dbConnect';
 import Order from '@/models/Order';
 import Stripe from 'stripe';
@@ -8,11 +8,18 @@ import Stripe from 'stripe';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export async function POST(request, { params }) {
+    const token = request.nextauth?.token; // Added
+
+    // Use token for authorization
+    if (!token || token.role !== 'ADMIN') { // Modified: Check token.role for ADMIN
+        return new Response('Unauthorized', { status: 401 });
+    }
+
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.isAdmin) {
-            return new Response('Unauthorized', { status: 401 });
-        }
+        // const session = await getServerSession(authOptions); // Removed
+        // if (!session?.user?.isAdmin) { // Removed
+        //     return new Response('Unauthorized', { status: 401 }); // Removed
+        // } // Removed
 
         await dbConnect();
         const { id } = params;
@@ -51,13 +58,13 @@ export async function POST(request, { params }) {
             reason: body.reason,
             items: body.items,
             refundId: refund.id,
-            processedBy: session.user.id
+            processedBy: token.sub // Modified: Use token.sub for user ID
         };
 
         // Add note about refund
         order.notes.push({
             content: `Refund processed: $${refundAmount.toFixed(2)} - ${body.reason}`,
-            author: session.user.email,
+            author: token.email, // Modified: Use token.email
             type: 'system'
         });
 

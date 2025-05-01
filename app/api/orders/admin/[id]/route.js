@@ -1,18 +1,25 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
+// import { getServerSession } from 'next-auth/next'; // Removed
 import dbConnect from '@/lib/dbConnect';
 import Order from '@/models/Order';
-import { authOptions } from '@/lib/auth';
+// import { authOptions } from '@/lib/auth'; // Removed
 import { sendOrderStatusUpdate } from '@/lib/email/orderNotifications';
 
 const ORDER_STATUSES = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Completed'];
 
 export async function GET(request, context) {
+  const token = request.nextauth?.token; // Added
+
+  // Use token for authorization
+  if (!token || !token.role || !['ADMIN', 'MANAGER'].includes(token.role)) { // Modified
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  }
+
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.role || !['ADMIN', 'MANAGER'].includes(session.user.role)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
+    // const session = await getServerSession(authOptions); // Removed
+    // if (!session?.user?.role || !['ADMIN', 'MANAGER'].includes(session.user.role)) { // Removed
+    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 403 }); // Removed
+    // } // Removed
 
     const orderId = await Promise.resolve(context.params).then(p => p.id);
     if (!orderId) {
@@ -43,11 +50,18 @@ export async function GET(request, context) {
 }
 
 export async function PATCH(request, context) {
+  const token = request.nextauth?.token; // Added
+
+  // Use token for authorization
+  if (!token || !token.role || !['ADMIN', 'MANAGER'].includes(token.role)) { // Modified
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  }
+
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.role || !['ADMIN', 'MANAGER'].includes(session.user.role)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
+    // const session = await getServerSession(authOptions); // Removed
+    // if (!session?.user?.role || !['ADMIN', 'MANAGER'].includes(session.user.role)) { // Removed
+    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 403 }); // Removed
+    // } // Removed
 
     const orderId = await Promise.resolve(context.params).then(p => p.id);
     const body = await request.json();

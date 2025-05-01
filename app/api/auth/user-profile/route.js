@@ -1,22 +1,31 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
+// import { getServerSession } from 'next-auth/next'; // Removed
 import dbConnect from '@/lib/dbConnect';
 import User from '@/models/User';
-import { authOptions } from '@/lib/auth';
+// import { authOptions } from '@/lib/auth'; // Removed
 
-export async function GET() {
+export async function GET(request) { // Added request parameter
+  const token = request.nextauth?.token; // Added
+
+  // Use token for authorization
+  if (!token || !token.email) { // Modified: Check for token and token.email
+    return NextResponse.json({ 
+      success: false, 
+      message: 'Authentication required' 
+    }, { status: 401 });
+  }
+
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session) {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Authentication required' 
-      }, { status: 401 });
-    }
+    // const session = await getServerSession(authOptions); // Removed
+    // if (!session) { // Removed
+    //   return NextResponse.json({ // Removed
+    //     success: false, // Removed
+    //     message: 'Authentication required' // Removed
+    //   }, { status: 401 }); // Removed
+    // } // Removed
 
     await dbConnect();
-    const user = await User.findOne({ email: session.user.email })
+    const user = await User.findOne({ email: token.email }) // Modified: Use token.email
       .select('-password');
 
     if (!user) {
@@ -40,20 +49,29 @@ export async function GET() {
 }
 
 export async function PUT(request) {
+  const token = request.nextauth?.token; // Added
+
+  // Use token for authorization
+  if (!token || !token.email) { // Modified: Check for token and token.email
+    return NextResponse.json({ 
+      success: false, 
+      message: 'Authentication required' 
+    }, { status: 401 });
+  }
+
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session) {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Authentication required' 
-      }, { status: 401 });
-    }
+    // const session = await getServerSession(authOptions); // Removed
+    // if (!session) { // Removed
+    //   return NextResponse.json({ // Removed
+    //     success: false, // Removed
+    //     message: 'Authentication required' // Removed
+    //   }, { status: 401 }); // Removed
+    // } // Removed
 
     const body = await request.json();
     await dbConnect();
 
-    const user = await User.findOne({ email: session.user.email });
+    const user = await User.findOne({ email: token.email }); // Modified: Use token.email
     if (!user) {
       return NextResponse.json({ 
         success: false, 

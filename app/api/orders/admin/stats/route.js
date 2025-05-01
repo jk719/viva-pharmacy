@@ -1,15 +1,22 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
+// import { getServerSession } from 'next-auth/next'; // Removed
+// import { authOptions } from '@/lib/auth'; // Removed
 import dbConnect from '@/lib/dbConnect';
 import Order from '@/models/Order';
 
 export async function GET(request) {
+  const token = request.nextauth?.token; // Added: Get token from middleware
+
+  // Check for authorization using token
+  if (!token || !token.role || !['ADMIN', 'MANAGER'].includes(token.role)) { // Modified: Use token for role check
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.role || !['ADMIN', 'MANAGER'].includes(session.user.role)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // const session = await getServerSession(authOptions); // Removed
+    // if (!session?.user?.role || !['ADMIN', 'MANAGER'].includes(session.user.role)) { // Removed
+    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }); // Removed
+    // } // Removed
 
     await dbConnect();
 

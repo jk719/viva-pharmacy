@@ -1,20 +1,27 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import User from '@/models/User';
 import dbConnect from '@/lib/dbConnect';
+import { getToken } from "next-auth/jwt";
 
-export async function GET(req) {
+const secret = process.env.NEXTAUTH_SECRET;
+
+export async function GET(request) {
+  const token = await getToken({ req: request, secret });
+  console.log('SMS Pref GET handler getToken result:', JSON.stringify(token, null, 2));
+
+  if (!token || !token.sub) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     await dbConnect();
-    const user = await User.findById(session.user.id)
+    const user = await User.findById(token.sub)
       .select('smsPreferences phoneNumber addresses')
       .lean();
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
 
     // Get phone number from either root level or default address
     const phoneNumber = user.phoneNumber || 
@@ -34,17 +41,22 @@ export async function GET(req) {
   }
 }
 
-export async function PUT(req) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export async function PUT(request) {
+  const token = await getToken({ req: request, secret });
+  console.log('SMS Pref PUT handler getToken result:', JSON.stringify(token, null, 2));
 
-    const body = await req.json();
+  if (!token || !token.sub) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json();
     await dbConnect();
 
-    const user = await User.findById(session.user.id);
+    const user = await User.findById(token.sub);
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
     user.smsPreferences = body.smsPreferences;
     await user.save();
 

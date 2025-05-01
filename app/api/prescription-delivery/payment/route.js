@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import PrescriptionDelivery from '@/models/PrescriptionDelivery';
 import dbConnect from '@/lib/dbConnect';
@@ -17,14 +16,15 @@ export async function POST(request) {
   try {
     console.log('Prescription Delivery Payment: Starting request');
     
-    const session = await getServerSession(authOptions);
+    // Get token from middleware (will be null/undefined if guest)
+    const token = request.nextauth?.token;
     const body = await request.json();
     
     const { deliverySpeed, address, contact } = body;
 
     console.log('Request details:', {
       deliverySpeed,
-      userId: session?.user?.id || 'guest',
+      userId: token?.id || 'guest', // Use token.id or 'guest'
       address: { ...address, street: address?.street?.substring(0, 10) + '...' }, // Truncate for privacy
       contact: { ...contact, phone: '***-***-' + contact?.phone?.slice(-4) } // Mask phone number
     });
@@ -90,7 +90,7 @@ export async function POST(request) {
         deliverySpeed,
         address: JSON.stringify(address),
         contact: JSON.stringify(contact),
-        userId: session?.user?.id || 'guest'
+        userId: token?.id || 'guest' // Use token.id or 'guest'
       }
     });
     console.log('Payment intent created:', paymentIntent.id);
@@ -99,7 +99,7 @@ export async function POST(request) {
     console.log('Saving delivery record to MongoDB...');
     const deliveryRecord = await PrescriptionDelivery.create({
       paymentIntentId: paymentIntent.id,
-      userId: session?.user?.id || null,
+      userId: token?.id || null, // Use token.id or null
       deliverySpeed,
       amount,
       address,

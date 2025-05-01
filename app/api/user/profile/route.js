@@ -1,25 +1,28 @@
-import { getServerSession } from "next-auth/next";
 import { authOptions } from '@/lib/auth';
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
+import { getToken } from "next-auth/jwt";
+
+const secret = process.env.NEXTAUTH_SECRET;
 
 export async function GET(req) {
   try {
     console.log('🔵 Profile fetch request received');
-    
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      console.log('❌ No session found');
-      return new Response(JSON.stringify({ error: "Not authenticated" }), {
-        status: 401,
-      });
+
+    // Get token directly within the handler
+    const token = await getToken({ req, secret });
+    console.log('Profile GET handler getToken result:', JSON.stringify(token, null, 2));
+
+    if (!token || !token.email) {
+        console.log('❌ Token or email missing in handler (getToken failed or invalid token)');
+        return new Response(JSON.stringify({ error: "Authentication failed" }), { status: 401 });
     }
-    console.log('✅ Session verified for user:', session.user.email);
+    console.log('✅ Handler retrieved token for user:', token.email);
 
     await dbConnect();
     console.log('✅ Database connected');
 
-    const user = await User.findOne({ email: session.user.email })
+    const user = await User.findOne({ email: token.email })
       .select('email name phoneNumber addresses vivaBucks cumulativePoints currentTier pointsMultiplier rewardHistory')
       .lean();
 
@@ -63,15 +66,16 @@ export async function GET(req) {
 export async function PUT(req) {
   try {
     console.log('🔵 Profile update request received');
-    
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      console.log('❌ No session found');
-      return new Response(JSON.stringify({ error: "Not authenticated" }), {
-        status: 401,
-      });
+
+    // Get token directly within the handler
+    const token = await getToken({ req, secret });
+    console.log('Profile PUT handler getToken result:', JSON.stringify(token, null, 2));
+
+    if (!token || !token.email) {
+        console.log('❌ Token or email missing in handler (getToken failed or invalid token)');
+        return new Response(JSON.stringify({ error: "Authentication failed" }), { status: 401 });
     }
-    console.log('✅ Session verified for user:', session.user.email);
+    console.log('✅ Handler retrieved token for user:', token.email);
 
     await dbConnect();
     console.log('✅ Database connected');
@@ -88,7 +92,7 @@ export async function PUT(req) {
     }
 
     // Find the user
-    let user = await User.findOne({ email: session.user.email });
+    let user = await User.findOne({ email: token.email });
     
     if (!user) {
       console.log('❌ User not found');

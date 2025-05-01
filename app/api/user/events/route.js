@@ -1,6 +1,7 @@
 import { headers } from 'next/headers';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getToken } from "next-auth/jwt"; // Import getToken
+// import { getServerSession } from 'next-auth'; // Removed
+// import { authOptions } from '@/lib/auth'; // Removed
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -10,6 +11,8 @@ export const maxDuration = 60; // Set max duration to 60 seconds for Vercel hobb
 const activeConnections = new Map();
 const eventBuffer = new Map();
 const EVENT_BUFFER_SIZE = 100;
+
+const secret = process.env.NEXTAUTH_SECRET;
 
 function addToEventBuffer(userId, event) {
   if (!eventBuffer.has(userId)) {
@@ -31,13 +34,26 @@ function getEventsAfter(userId, lastEventId) {
 }
 
 export async function GET(request) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return new Response('Unauthorized', { status: 401 });
-    }
+  // Get token directly FIRST
+  const token = await getToken({ req: request, secret });
+  console.log('SSE handler getToken result:', JSON.stringify(token, null, 2));
 
-    const userId = session.user.id;
+  // Use token for authorization
+  if (!token || !token.sub) { // Check the retrieved token
+    console.warn('Unauthorized SSE connection attempt (token check inside handler failed)');
+    return new Response('Unauthorized', { status: 401 });
+  }
+
+  // If token is valid, proceed
+  const userId = token.sub; // Use token.sub from the handler's token
+  console.log(`Authorized SSE connection for user: ${userId}`);
+
+  try {
+    // const session = await getServerSession(authOptions); // Removed
+    // if (!session?.user?.id) { // Removed
+    //   return new Response('Unauthorized', { status: 401 }); // Removed
+    // } // Removed
+
     const headersList = headers();
     const lastEventId = request.nextUrl.searchParams.get('lastEventId');
     const connectionId = request.nextUrl.searchParams.get('connectionId');
@@ -82,7 +98,7 @@ export async function GET(request) {
     // Send initial connection message
     await writeEvent({
       type: 'CONNECTED',
-      userId: userId,
+      userId: userId, // userId is already token.sub
       connectionId: connectionId,
       timestamp: new Date().toISOString()
     });

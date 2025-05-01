@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import dbConnect from '@/lib/dbConnect';
 import User from '@/models/User';
@@ -9,8 +8,10 @@ import bcrypt from 'bcryptjs';
 
 export async function POST(request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== 'ADMIN') {
+    const token = request.nextauth?.token;
+    // Middleware ensures token exists and user is ADMIN or MANAGER.
+    // This route specifically requires ADMIN.
+    if (!token || token.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -77,8 +78,10 @@ export async function POST(request) {
 
 export async function GET(request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== 'ADMIN') {
+    const token = request.nextauth?.token;
+    // Middleware ensures token exists and user is ADMIN or MANAGER.
+    // This route specifically requires ADMIN.
+    if (!token || token.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

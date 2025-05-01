@@ -1,6 +1,6 @@
 // src/middleware.js
-import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
+import { getToken } from "next-auth/jwt"; // Import getToken
 
 // Remove isValidPayment function as the cookies are no longer set
 /*
@@ -16,239 +16,129 @@ const isValidPayment = (cookies) => {
 };
 */
 
-export default withAuth(
-  function middleware(req) {
-    const token = req.nextauth?.token;
-    
-    // Add this near the start, after token declaration
-    if (req.nextUrl.pathname === '/login') {
-      const callbackUrl = req.nextUrl.searchParams.get('callbackUrl');
-      const redirectUrl = new URL('/', req.url);
-      redirectUrl.searchParams.set('showLogin', 'true');
-      if (callbackUrl) {
-        redirectUrl.searchParams.set('callbackUrl', callbackUrl);
-      }
-      return NextResponse.redirect(redirectUrl);
-    }
+const secret = process.env.NEXTAUTH_SECRET;
 
-    // Handle admin routes first
-    if (req.nextUrl.pathname.startsWith('/admin')) {
-      if (!token) {
-        return NextResponse.redirect(
-          new URL(
-            `/?showLogin=true&callbackUrl=${encodeURIComponent(req.nextUrl.pathname)}`,
-            req.url
-          )
-        );
-      }
+// Remove the withAuth wrapper
+export async function middleware(req) {
+  // Get token directly
+  const token = await getToken({ req, secret });
+  const { pathname } = req.nextUrl;
 
-      // Check role for admin access
-      if (!['ADMIN', 'MANAGER'].includes(token.role)) {
-        return NextResponse.redirect(new URL('/', req.url));
-      }
-
-      // Update this section for manager redirects
-      if (token.role === 'MANAGER') {
-        // If manager is accessing root admin page, redirect to products page
-        if (req.nextUrl.pathname === '/admin') {
-          return NextResponse.redirect(new URL('/admin/products', req.url));
-        }
-
-        const allowedManagerPaths = [
-          '/admin/products',
-          '/admin/products/add',
-          '/admin/products/edit'
-        ];
-        
-        // Only redirect if not on an allowed path
-        if (!allowedManagerPaths.some(path => req.nextUrl.pathname.startsWith(path))) {
-          return NextResponse.redirect(new URL('/admin/products', req.url));
-        }
-      }
-
-      // Add this to the middleware function after the admin routes check
-      if (req.nextUrl.pathname.startsWith('/pharmacy-check-in')) {
-        if (!token?.isPharmacyAccount) {
-          return NextResponse.redirect(new URL('/', req.url));
-        }
-        return NextResponse.next();
-      }
-
-      return NextResponse.next();
-    }
-
-    // Add reset-password to public routes
-    const publicRoutes = [
-      '/verify-email',
-      '/reset-password',
-      '/forgot-password'
-    ];
-    
-    if (publicRoutes.includes(req.nextUrl.pathname)) {
-      return NextResponse.next();
-    }
-
-    // Handle all protected routes that require authentication
-    if (!req.nextauth?.token) {
-      const protectedRoutes = ['/checkout', '/profile', '/admin', '/prescriptions', '/rx'];
-      if (protectedRoutes.some(route => req.nextUrl.pathname.startsWith(route))) {
-        return NextResponse.redirect(
-          new URL(
-            `/?showLogin=true&callbackUrl=${encodeURIComponent(req.nextUrl.pathname)}`,
-            req.url
-          )
-        );
-      }
-    }
-
-    // Special handling for SSE connections
-    if (req.nextUrl.pathname.includes('/api/user/events')) {
-      req.timeoutMs = 0;
-      return NextResponse.next();
-    }
-
-    const isPublicRoute = 
-      (req.nextUrl.pathname.startsWith('/api/products') && req.method === 'GET') ||
-      req.nextUrl.pathname === '/api/webhook';
-
-    if (isPublicRoute) {
-      return NextResponse.next();
-    }
-
-    const isProtectedApiRoute = 
-      req.nextUrl.pathname.startsWith('/api/products') && 
-      ['POST', 'PUT', 'DELETE'].includes(req.method);
-
-    if (isProtectedApiRoute) {
-      // Check if user is authenticated and has proper role
-      if (!token?.role || !['ADMIN', 'MANAGER'].includes(token.role)) {
-        if (req.nextUrl.pathname.startsWith('/api/')) {
-          return new NextResponse(
-            JSON.stringify({ message: "Unauthorized" }), 
-            { status: 403 }
-          );
-        }
-        return NextResponse.redirect(new URL('/', req.url));
-      }
-
-      // Additional check for manager restrictions
-      if (token.role === 'MANAGER') {
-        // Only allow access to products-related routes
-        const allowedManagerPaths = [
-          '/admin/products',
-          '/api/products',
-          '/api/products/'  // Include base products API path
-        ];
-        
-        if (!allowedManagerPaths.some(path => req.nextUrl.pathname.startsWith(path))) {
-          if (req.nextUrl.pathname.startsWith('/api/')) {
-            return new NextResponse(
-              JSON.stringify({ message: "Access denied" }), 
-              { status: 403 }
-            );
-          }
-          return NextResponse.redirect(new URL('/admin/products', req.url));
-        }
-      }
-    }
-
-    // Add prescription routes handling
-    if (req.nextUrl.pathname.startsWith('/rx') || req.nextUrl.pathname.startsWith('/prescriptions')) {
-      // Require authentication for all prescription routes
-      if (!token) {
-        return NextResponse.redirect(
-          new URL(
-            `/?showLogin=true&callbackUrl=${encodeURIComponent(req.nextUrl.pathname)}`,
-            req.url
-          )
-        );
-      }
-
-      // Special handling for admin prescription verification routes
-      if (req.nextUrl.pathname.startsWith('/admin/prescriptions')) {
-        if (!['ADMIN', 'PHARMACIST'].includes(token.role)) {
-          return NextResponse.redirect(new URL('/', req.url));
-        }
-      }
-    }
-
-    // Add prescription API route protection
-    const isPrescriptionApiRoute = req.nextUrl.pathname.startsWith('/api/prescriptions');
-    if (isPrescriptionApiRoute) {
-      if (!token) {
-        return new NextResponse(
-          JSON.stringify({ message: "Unauthorized" }), 
-          { status: 401 }
-        );
-      }
-
-      // Verify/process prescriptions requires special roles
-      if (req.nextUrl.pathname.includes('/verify') || req.nextUrl.pathname.includes('/process')) {
-        if (!['ADMIN', 'PHARMACIST'].includes(token.role)) {
-          return new NextResponse(
-            JSON.stringify({ message: "Access denied" }), 
-            { status: 403 }
-          );
-        }
-      }
-    }
-
-    return NextResponse.next();
-  },
-  {
-    callbacks: {
-      authorized: ({ token, req }) => {
-        // Admin routes authorization
-        if (req.nextUrl.pathname.startsWith('/admin')) {
-          return !!token && ['ADMIN', 'MANAGER'].includes(token.role);
-        }
-
-        // Add reset-password to public paths
-        if (req.nextUrl.pathname === '/reset-password' ||
-            req.nextUrl.pathname === '/verify-email' ||
-            req.nextUrl.pathname === '/forgot-password') {
-          return true;
-        }
-
-        // Allow SSE connections with valid session
-        if (req.nextUrl.pathname.includes('/api/user/events')) {
-          return !!token;
-        }
-
-        // Public routes
-        if (req.nextUrl.pathname.startsWith('/api/products') && req.method === 'GET') {
-          return true;
-        }
-        if (req.nextUrl.pathname === '/api/webhook') {
-          return true;
-        }
-
-        // Protected routes
-        if (req.nextUrl.pathname.startsWith('/profile') ||
-            req.nextUrl.pathname.startsWith('/admin') ||
-            req.nextUrl.pathname.startsWith('/api/user') ||
-            req.nextUrl.pathname.startsWith('/checkout')) {
-          return !!token;
-        }
-
-        // Add prescription routes to protected paths
-        if (req.nextUrl.pathname.startsWith('/rx') || 
-            req.nextUrl.pathname.startsWith('/prescriptions') ||
-            req.nextUrl.pathname.startsWith('/api/prescriptions')) {
-          return !!token;
-        }
-
-        // Add admin prescription routes to admin-only paths
-        if (req.nextUrl.pathname.startsWith('/admin/prescriptions')) {
-          return !!token && ['ADMIN', 'PHARMACIST'].includes(token.role);
-        }
-
-        return true;
-      },
-    },
+  console.log(`Middleware processing ${pathname}. Token found:`, !!token);
+  if (token) {
+    console.log('Middleware found token:', JSON.stringify(token, null, 2));
   }
-);
 
+  // --- AUTHENTICATION & BASIC ACCESS --- 
+
+  // Allow specific public routes unconditionally
+  const publicPaths = [
+    '/verify-email',
+    '/reset-password',
+    '/forgot-password',
+    '/api/auth', // Allow all next-auth routes
+    '/api/webhook', // Allow webhook
+    // Add other necessary public paths like '/login', '/' (if homepage is public)
+    '/login', // Assuming /login is the actual login page path now
+    '/', 
+  ];
+
+  // Allow public assets and _next resources
+  if (pathname.startsWith('/_next') || pathname.startsWith('/public') || pathname.includes('/favicon.ico')) {
+    return NextResponse.next();
+  }
+
+  // Allow public GET requests for products
+  if (pathname.startsWith('/api/products') && req.method === 'GET') {
+      return NextResponse.next();
+  }
+
+  if (publicPaths.some(path => pathname.startsWith(path))) {
+    return NextResponse.next();
+  }
+
+  // If no token exists for any other route, redirect to login
+  if (!token) {
+    console.warn(`Middleware: No token found for protected route ${pathname}. Redirecting.`);
+    const loginUrl = new URL('/', req.url); // Redirect to homepage
+    loginUrl.searchParams.set('showLogin', 'true');
+    loginUrl.searchParams.set('callbackUrl', encodeURIComponent(pathname));
+    return NextResponse.redirect(loginUrl);
+  }
+
+  // --- ROLE-BASED AUTHORIZATION (Now that we know a token exists) ---
+
+  // Admin routes (/admin/*)
+  if (pathname.startsWith('/admin')) {
+    if (!['ADMIN', 'MANAGER'].includes(token.role)) {
+      console.warn(`Middleware: User ${token.email} with role ${token.role} denied access to ${pathname}`);
+      return NextResponse.redirect(new URL('/', req.url)); // Redirect to home
+    }
+
+    if (token.role === 'MANAGER') {
+      const allowedManagerPaths = [
+        '/admin/products',
+        // Add other allowed paths like '/admin/products/add', '/admin/products/edit/*' etc.
+      ];
+       // Basic check: Allow if path starts with any allowed path
+      if (!allowedManagerPaths.some(p => pathname.startsWith(p)) && pathname !== '/admin') {
+         console.warn(`Middleware: Manager ${token.email} denied access to ${pathname}. Redirecting to /admin/products`);
+         return NextResponse.redirect(new URL('/admin/products', req.url));
+      }
+    }
+    // Admins and authorized managers can proceed
+    console.log(`Middleware: Authorized access for ${token.role} to ${pathname}`);
+    return NextResponse.next(); 
+  }
+
+  // Pharmacy Check-in Route
+  if (pathname.startsWith('/pharmacy-check-in')) {
+    if (!token.isPharmacyAccount) {
+      console.warn(`Middleware: User ${token.email} denied access to ${pathname} (not a pharmacy account)`);
+      return NextResponse.redirect(new URL('/', req.url));
+    }
+    return NextResponse.next();
+  }
+
+  // Protected API Routes (POST/PUT/DELETE /api/products, /api/prescriptions/*, /api/user/*)
+  const isProtectedApiMethod = pathname.startsWith('/api/products') && !['GET'].includes(req.method);
+  const isUserApi = pathname.startsWith('/api/user');
+  const isPrescriptionApi = pathname.startsWith('/api/prescriptions');
+
+  if (isProtectedApiMethod || isUserApi || isPrescriptionApi) {
+      // All these require at least a logged-in user (token check already passed)
+      
+      // Product modifications require ADMIN/MANAGER
+      if (isProtectedApiMethod && !['ADMIN', 'MANAGER'].includes(token.role)) {
+          console.warn(`Middleware: User ${token.email} role ${token.role} denied ${req.method} on ${pathname}`);
+          return new NextResponse(JSON.stringify({ message: "Forbidden" }), { status: 403 });
+      }
+      
+      // Prescription verify/process requires ADMIN/PHARMACIST
+      if (isPrescriptionApi && (pathname.includes('/verify') || pathname.includes('/process'))) {
+          if (!['ADMIN', 'PHARMACIST'].includes(token.role)) {
+             console.warn(`Middleware: User ${token.email} role ${token.role} denied access to ${pathname}`);
+             return new NextResponse(JSON.stringify({ message: "Forbidden" }), { status: 403 });
+          }
+      }
+      
+      // Manager restrictions for product APIs (redundant check? Ensure manager can only hit product api)
+      if (isProtectedApiMethod && token.role === 'MANAGER' && !pathname.startsWith('/api/products')) {
+           console.warn(`Middleware: Manager ${token.email} denied access to non-product API ${pathname}`);
+           return new NextResponse(JSON.stringify({ message: "Forbidden" }), { status: 403 });
+      }
+      
+      // If all checks pass for protected APIs, let it through
+      console.log(`Middleware: Authorized API access for ${token.role} to ${pathname}`);
+      return NextResponse.next();
+  }
+
+  // Allow all other authenticated requests (e.g., /profile, /checkout, /rx, /prescriptions)
+  console.log(`Middleware: Allowing authenticated access for ${token.role} to ${pathname}`);
+  return NextResponse.next();
+}
+
+// Keep the matcher config
 export const config = {
   matcher: [
     /*
@@ -257,20 +147,11 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - public (public files)
+     * Match all paths not starting with these exclusions
      */
-    '/((?!_next/static|_next/image|favicon.ico|public).*)',
-    '/profile/:path*',
-    '/api/user/:path*',
-    '/api/webhook',
-    '/admin/:path*',
-    '/api/products/:path*',
-    '/checkout/:path*',
-    '/reset-password/:path*',
-    '/api/user/events',
-    '/rx/:path*',
-    '/prescriptions/:path*',
-    '/api/prescriptions/:path*',
-    '/admin/prescriptions/:path*',
-    '/pharmacy-check-in/:path*',
+    '/((?!_next/static|_next/image|favicon.ico|public).*)', 
+    // Explicitly include paths that might otherwise be missed if needed, 
+    // but the above negative lookahead should cover most cases.
+    // Ensure your API paths and page routes are covered.
   ],
 };

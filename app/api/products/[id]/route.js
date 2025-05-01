@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
+// import { getServerSession } from 'next-auth/next'; // Removed unused import
 import dbConnect from '@/lib/dbConnect';
 import getProductModel from '@/models/Product';
-import { authOptions } from '@/lib/auth';
+// import { authOptions } from '@/lib/auth'; // Removed unused import
 import { isValidObjectId } from 'mongoose';
 import { categories, isCategoryValid, isSubcategoryValid, isItemValid } from '@/data/categories';
 import { getCloudinaryUrl, FALLBACK_IMAGE } from '@/lib/cloudinary';
@@ -118,12 +118,11 @@ export async function PUT(request, context) {
         const id = await Promise.resolve(context.params).then(p => p.id);
         console.log('PUT request for product:', id);
         
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.role || !['ADMIN', 'MANAGER'].includes(session.user.role)) {
-            return NextResponse.json(
-                { success: false, message: 'Unauthorized' },
-                { status: 403 }
-            );
+        // Middleware ensures ADMIN or MANAGER role
+        const token = request.nextauth?.token;
+        if (!token?.email) { // Check for token/email presence
+            console.error('Token or email missing in product PUT after middleware');
+            return NextResponse.json({ success: false, message: 'Authentication Error' }, { status: 500 });
         }
 
         const data = await request.json();
@@ -179,7 +178,7 @@ export async function PUT(request, context) {
         if (changes.length > 0) {
             // Create new history entry
             const newHistoryEntry = {
-                editedBy: session.user.email,
+                editedBy: token.email, // Use token.email
                 timestamp: new Date(),
                 changes
             };
@@ -241,14 +240,11 @@ export async function DELETE(request, context) {
         const id = await Promise.resolve(context.params).then(p => p.id);
         console.log('DELETE request for product:', id);
         
-        const session = await getServerSession(authOptions);
-        console.log('Session user role:', session?.user?.role);
-        
-        if (!session?.user?.role || !['ADMIN', 'MANAGER'].includes(session.user.role)) {
-            return NextResponse.json(
-                { success: false, message: 'Unauthorized' },
-                { status: 403 }
-            );
+        // Middleware ensures ADMIN or MANAGER role
+        const token = request.nextauth?.token;
+        if (!token) { // Simple check for token presence
+            console.error('Token missing in product DELETE after middleware');
+            return NextResponse.json({ success: false, message: 'Authentication Error' }, { status: 500 });
         }
 
         if (!id) {

@@ -1,16 +1,23 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
+// import { getServerSession } from 'next-auth/next'; // Removed
 import dbConnect from '@/lib/dbConnect';
 import Order from '@/models/Order';
-import { authOptions } from '@/lib/auth';
+// import { authOptions } from '@/lib/auth'; // Removed
 import { sendOrderEmail } from '@/lib/email/sendEmail';
 
 export async function POST(request, { params }) {
+  const token = request.nextauth?.token; // Added
+
+  // Use token for authorization
+  if (!token || !token.role || !['ADMIN', 'MANAGER'].includes(token.role)) { // Modified
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  }
+
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.role || !['ADMIN', 'MANAGER'].includes(session.user.role)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
+    // const session = await getServerSession(authOptions); // Removed
+    // if (!session?.user?.role || !['ADMIN', 'MANAGER'].includes(session.user.role)) { // Removed
+    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 403 }); // Removed
+    // } // Removed
 
     const { content } = await request.json();
     
@@ -40,7 +47,7 @@ export async function POST(request, { params }) {
     // Add email to notes
     const note = {
       content,
-      author: session.user.name || session.user.email,
+      author: token.name || token.email, // Modified: Use token data for author
       type: 'email',
       createdAt: new Date()
     };

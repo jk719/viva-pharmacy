@@ -1,50 +1,58 @@
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { NextResponse } from 'next/server';
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
 import { calculateBirthdayReward, isWithinDays } from "@/lib/loyalty/utils";
 
-export async function POST(req) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export async function POST(request) {
+  const token = request.nextauth?.token;
 
+  if (!token) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
     await dbConnect();
-    const user = await User.findById(session.user.id);
+    const user = await User.findById(token.sub);
     
     if (!user || !user.birthday) {
-      return Response.json({ error: "Birthday not set" }, { status: 400 });
+      return NextResponse.json({ error: "Birthday not set" }, { status: 400 });
     }
 
     const today = new Date();
     const birthday = new Date(user.birthday);
     birthday.setFullYear(today.getFullYear());
 
-    // Check if birthday is within 7 days
     if (!isWithinDays(today, birthday, 7)) {
-      return Response.json({ error: "Not birthday period" }, { status: 400 });
+      return NextResponse.json({ error: "Not birthday period" }, { status: 400 });
     }
 
-    // Calculate reward based on tier
-    const rewardPoints = calculateBirthdayReward(user.loyaltyProgram?.tier || 'None');
+    const rewardPoints = calculateBirthdayReward(user.loyalty?.tier || 'BRONZE');
 
-    // Add points to user's account
-    user.loyaltyProgram.points += rewardPoints;
-    user.loyaltyProgram.transactions.push({
+    if (!user.loyalty) {
+      user.loyalty = { vivaBucks: 0, cumulativePoints: 0, tier: 'BRONZE', multiplier: 1, rewardHistory: [] };
+    }
+    
+    if (!user.loyalty.rewardHistory) {
+        user.loyalty.rewardHistory = [];
+    }
+
+    user.loyalty.vivaBucks = (user.loyalty.vivaBucks || 0) + rewardPoints;
+    user.loyalty.rewardHistory.push({
       type: 'earn',
       points: rewardPoints,
-      description: 'Birthday Reward'
+      description: 'Birthday Reward',
+      timestamp: new Date(),
+      source: 'birthday'
     });
 
     await user.save();
 
-    return Response.json({
+    return NextResponse.json({
       points: rewardPoints,
-      totalPoints: user.loyaltyProgram.points
+      totalPoints: user.loyalty.vivaBucks
     });
   } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    console.error('Error processing birthday reward:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 } 

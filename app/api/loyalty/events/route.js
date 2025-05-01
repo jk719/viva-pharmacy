@@ -1,12 +1,12 @@
-import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/dbConnect";
 import SpecialEvent from "@/models/SpecialEvent";
 
 export async function POST(req) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.role !== 'ADMIN') {
+    // Middleware should ensure authentication, check for ADMIN role here
+    const token = req.nextauth?.token;
+    if (!token || token.role !== 'ADMIN') { // Corrected check for ADMIN role
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -15,7 +15,7 @@ export async function POST(req) {
 
     const event = await SpecialEvent.create({
       ...data,
-      createdBy: session.user.id
+      createdBy: token.id // Use token.id
     });
 
     return Response.json(event, { status: 201 });

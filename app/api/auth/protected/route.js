@@ -1,19 +1,18 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 
-export async function GET() {
-  const session = await getServerSession(authOptions);
+export async function GET(req) {
+  // Middleware ensures user is authenticated before reaching this route.
+  const token = req.nextauth?.token;
 
-  if (!session) {
-    return NextResponse.json({ 
-      success: false, 
-      message: 'Authentication required' 
-    }, { status: 401 });
+  if (!token) {
+    // This should theoretically not be reached if middleware is correct
+    console.error('Auth token missing in protected route after middleware');
+    return NextResponse.json({ success: false, message: 'Authentication error' }, { status: 500 });
   }
 
   return NextResponse.json({ 
     success: true, 
-    user: session.user 
+    user: token // Return the token data (contains user info)
   });
 }
