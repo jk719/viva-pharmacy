@@ -6,8 +6,9 @@ import eventEmitter, { Events } from '@/lib/eventEmitter';
 /**
  * Animated progress bar component for loyalty tier progression
  * @param {Object} props Component properties
- * @param {number} props.progress - The progress percentage (0-100)
- * @param {number} props.currentPoints - Current points value
+ * @param {number} [props.progress] - The progress percentage (0-100), used if earnedPoints is not provided
+ * @param {number} [props.earnedPoints] - If provided, animate these points specifically
+ * @param {number} props.currentPoints - Current total points value
  * @param {number} props.startPoints - Starting points value for this tier
  * @param {number} props.endPoints - Ending points value for this tier
  * @param {boolean} props.animate - Whether to animate the progress bar
@@ -15,7 +16,8 @@ import eventEmitter, { Events } from '@/lib/eventEmitter';
  * @param {boolean} props.forceAnimation - Force animation even if animate is false
  */
 function ProgressBar({
-  progress,
+  progress, // Can be undefined if earnedPoints is used
+  earnedPoints, // New prop
   currentPoints = 0,
   startPoints = 0,
   endPoints = 100,
@@ -42,174 +44,110 @@ function ProgressBar({
   
   // Track animation state
   const [animatedProgress, setAnimatedProgress] = useState(0);
+  const [showEarnedPoints, setShowEarnedPoints] = useState(false); // State for showing earned points indicator
   const animationRef = useRef(null);
   const animationCompleted = useRef(false);
   
-  // Determine if we should animate - treat 0 as valid starting point
-  const shouldAnimate = (animate || forceAnimation) && displayProgress >= 0;
+  // Determine if we should animate
+  // Prioritize animating earned points if provided and forced
+  const shouldAnimateEarned = forceAnimation && typeof earnedPoints === 'number';
+  const shouldAnimateProgress = forceAnimation || (animate && displayProgress >= 0);
+  const shouldAnimate = shouldAnimateEarned || shouldAnimateProgress;
   
   // Use a ref to track if this is the first mount
   const isFirstMount = useRef(true);
   
   useEffect(() => {
+    // Move forceAnimation log here to avoid logging on every render
+    if (forceAnimation) {
+      // console.log('🚀 Force animation enabled');
+    }
+
     // Skip animation if not needed or if this is a re-render but not a force animation
     if (!shouldAnimate || (!isFirstMount.current && !forceAnimation)) {
-      setAnimatedProgress(displayProgress);
+      setAnimatedProgress(displayProgress); // Set final progress if not animating
       return;
     }
     
     // Mark that we've mounted
     isFirstMount.current = false;
     
-    console.log('🎬 Starting loyalty progress bar animation from 0 to', displayProgress, 
-      showExtendedTier ? `(Extended tier: ${displayStartPoints} to ${displayEndPoints})` : '');
+    // --- Animation Logic --- 
     let startTime;
-    const ANIMATION_DURATION = 2400; // 2.4 seconds animation - slower for smoother effect
-    let timeoutRef = null; // Backup timeout reference
+    const ANIMATION_DURATION = shouldAnimateEarned ? 1500 : 2400;
+    let timeoutRef = null;
     
-    // Helper to clear timeouts - define this BEFORE calling it
-    const clearExistingTimeouts = () => {
-      if (timeoutRef) {
-        clearTimeout(timeoutRef);
-        timeoutRef = null;
-      }
-    };
-    
-    // Ensure we start with clean animation state
-    // Cancel any existing animation FIRST before resetting state
-    if (animationRef.current) {
-      cancelAnimationFrame(animationRef.current);
-      animationRef.current = null;
-    }
-    
-    // Clear any existing safety timeouts
-    clearExistingTimeouts();
-    
-    // Reset animation state AFTER canceling animation frame
-    setAnimatedProgress(0);
-    animationCompleted.current = false;
-    
-    // Log animation start for debugging
-    console.log(`📊 Animation initialized: shouldAnimate=${shouldAnimate}, forceAnimation=${forceAnimation}`);
-    
-    // Set a safety fallback timeout in case animation frame callbacks fail
-    // This ensures the animation completion events will fire even if requestAnimationFrame fails
-    const SAFETY_TIMEOUT = ANIMATION_DURATION + 500; // animation + 500ms buffer
+    // --- MODIFICATION START: Set indicator true immediately if animating earned points --- 
+    setShowEarnedPoints(shouldAnimateEarned);
+    // --- MODIFICATION END ---
+
+    // Cancel existing animation & timeouts
+    if (animationRef.current) cancelAnimationFrame(animationRef.current);
     timeoutRef = setTimeout(() => {
       if (!animationCompleted.current) {
-        console.log('⚠️ Animation safety timeout triggered - animation may have stalled');
+        // console.log('⚠️ Animation safety timeout triggered');
         completeAnimation();
       }
-    }, SAFETY_TIMEOUT);
+    }, ANIMATION_DURATION + 500);
     
-    // Function to handle animation completion and event emission
-    // Make this callback idempotent (can be called multiple times safely)
+    // Function to handle animation completion
     const completeAnimation = () => {
-      // Prevent duplicate calls
-      if (animationCompleted.current) {
-        console.log('🛑 Animation already completed, ignoring repeat call');
-        return;
-      }
-      
-      // Mark as completed first to prevent race conditions
+      if (animationCompleted.current) return;
       animationCompleted.current = true;
       
-      // Ensure progress is visually complete
-      setAnimatedProgress(displayProgress);
-      console.log('✅ Loyalty progress bar animation completed');
+      setAnimatedProgress(displayProgress); 
+      // --- MODIFICATION START: Ensure indicator is hidden on completion --- 
+      setShowEarnedPoints(false); 
+      // --- MODIFICATION END ---
       
-      // ONLY call the callback OR emit event, not both
-      // This is to prevent duplicate notifications
+      // console.log('✅ Progress bar animation completed');
+      
       if (typeof onAnimationComplete === 'function') {
-        console.log('📣 Calling onAnimationComplete callback');
-        try {
-          // Call the callback, which should handle all necessary state updates
-          onAnimationComplete();
-        } catch (error) {
-          console.error('Error in animation complete callback:', error);
-          // Only fall back to event emission if callback fails
-          emitCompletionEvent();
-        }
-      } else {
-        // No callback provided, so emit the event
-        emitCompletionEvent();
-      }
-    };
-    
-    // Separate event emission to avoid duplication
-    const emitCompletionEvent = () => {
-      console.log('📣 Emitting LOYALTY_ANIMATION_COMPLETE event');
-      try {
-        eventEmitter.emit(Events.LOYALTY_ANIMATION_COMPLETE, {
-          timestamp: Date.now(),
-          source: 'progress_bar',
-          animationType: 'loyalty_points',
-          completed: true,
-          absolutePriority: true // Signal to event system this is critical
-        });
-      } catch (error) {
-        console.error('Error emitting animation complete event:', error);
+        // console.log('📣 Calling onAnimationComplete callback');
+        try { onAnimationComplete(); } catch (error) { console.error('Error in animation complete callback:', error); }
       }
     };
     
     // Animation frame callback
-    const animateProgress = (timestamp) => {
+    const animateFrame = (timestamp) => {
       if (!startTime) startTime = timestamp;
       const elapsed = timestamp - startTime;
-      const progress = Math.min(elapsed / ANIMATION_DURATION, 1);
+      const progressRatio = Math.min(elapsed / ANIMATION_DURATION, 1);
       
-      // Calculate eased progress (smoother ease out with slight bounce)
-      // Using a custom easing function that starts slow, speeds up, then gently eases at the end
-      let easedProgress;
-      if (progress < 0.2) {
-        // Slow start (ease-in)
-        easedProgress = 2.5 * Math.pow(progress, 2);
-      } else if (progress > 0.85) {
-        // Gentle finish with tiny bounce
-        const p = (progress - 0.85) / 0.15;
-        easedProgress = 0.85 + 0.15 * (1 - Math.pow(1 - p, 3));
-        // Add subtle bounce effect near the end
-        if (p > 0.5 && p < 0.9) {
-          easedProgress += Math.sin(p * Math.PI) * 0.01;
-        }
+      if (shouldAnimateEarned) {
+        // Indicator visibility is now handled outside the loop
+        // Keep the main progress bar static
+        setAnimatedProgress(displayProgress);
       } else {
-        // Middle part (smooth acceleration)
-        const p = (progress - 0.2) / 0.65;
-        easedProgress = 0.1 + 0.75 * p;
+        // Animate the progress bar itself
+        const easedProgressRatio = 1 - Math.pow(1 - progressRatio, 2);
+        const newProgress = easedProgressRatio * displayProgress;
+        setAnimatedProgress(newProgress);
       }
       
-      // Calculate the current progress value
-      const newProgress = easedProgress * displayProgress;
-      
-      setAnimatedProgress(newProgress);
-      
-      if (progress < 1) {
-        // Continue animation
-        animationRef.current = requestAnimationFrame(animateProgress);
+      if (progressRatio < 1) {
+        animationRef.current = requestAnimationFrame(animateFrame);
       } else {
-        // Complete immediately
         completeAnimation();
       }
     };
     
     // Start the animation
-    animationRef.current = requestAnimationFrame(animateProgress);
+    animationRef.current = requestAnimationFrame(animateFrame);
     
-    // Cleanup animation on unmount and when dependencies change
+    // Cleanup
     return () => {
-      console.log('🧹 Cleaning up progress bar animation resources');
-      // Cancel any running animation frames
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-        animationRef.current = null;
-      }
-      // Clear any safety timeouts
-      clearExistingTimeouts();
+      // console.log('🧹 Cleaning up progress bar animation resources');
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
+      clearTimeout(timeoutRef);
     };
-  }, [clampedProgress, shouldAnimate, onAnimationComplete]);
+  }, [progress, currentPoints, startPoints, endPoints, animate, forceAnimation, earnedPoints, onAnimationComplete]); // Add earnedPoints to dependency array
+
+  // Determine final width for the bar (use displayProgress if not animating earned points)
+  const barWidthPercent = shouldAnimateEarned ? displayProgress : (shouldAnimate ? animatedProgress : displayProgress);
 
   return (
-    <div className="w-full py-2" data-testid="loyalty-progress-bar">
+    <div className="w-full py-2 relative" data-testid="loyalty-progress-bar">
       {/* Start and End Points */}
         <div className="text-xs md:text-sm font-medium text-slate-600 flex justify-between mt-1">
           <span>{displayStartPoints.toLocaleString()}</span>
@@ -227,7 +165,7 @@ function ProgressBar({
         <div
           className="absolute top-0 left-0 h-full rounded-full overflow-hidden transition-all duration-500"
           style={{
-            width: `${shouldAnimate ? animatedProgress : clampedProgress}%`,
+            width: `${barWidthPercent}%`, // Use calculated width
             background: 'linear-gradient(90deg, #FFB347 0%, #FF9B10 50%, #FF6B00 100%)',
             boxShadow: '0 2px 8px rgba(255,107,0,0.4)',
             transition: 'width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)'
@@ -240,6 +178,16 @@ function ProgressBar({
           </span>
         </div>
         
+        {/* Earned Points Indicator */}
+        {shouldAnimateEarned && showEarnedPoints && (
+          <div 
+            className="absolute top-[-25px] left-1/2 -translate-x-1/2 px-2 py-1 bg-green-500 text-white text-xs font-bold rounded shadow-lg animate-bounce"
+            data-testid="earned-points-indicator"
+          >
+            + {earnedPoints} VivaBucks!
+          </div>
+        )}
+
         {/* Tick marks */}
         <div className="absolute inset-0 flex justify-between pointer-events-none">
           {[...Array(5)].map((_, i) => (
@@ -251,20 +199,15 @@ function ProgressBar({
   );
 }
 
-// Memoize the component to prevent unnecessary re-renders
+// Memoize the component
 export default memo(ProgressBar, (prevProps, nextProps) => {
-  // Only re-render if critical props change
   const criticalPropsEqual = 
     prevProps.progress === nextProps.progress &&
+    prevProps.earnedPoints === nextProps.earnedPoints &&
     prevProps.currentPoints === nextProps.currentPoints &&
     prevProps.startPoints === nextProps.startPoints &&
     prevProps.endPoints === nextProps.endPoints &&
     prevProps.animate === nextProps.animate;
-  
-  // Always re-render if forceAnimation is true
-  if (nextProps.forceAnimation) {
-    return false; // Do not memoize, force a re-render
-  }
   
   return criticalPropsEqual;
 });

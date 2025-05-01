@@ -1,265 +1,53 @@
 import { NextResponse } from 'next/server';
-import { generateOrderConfirmationEmail } from '@/lib/email-templates/order-confirmation';
-import { sendOrderConfirmationEmail } from '@/lib/email/sendEmail';
-import { eventEmitter, Events } from '@/lib/eventEmitter';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { LoyaltyCheckoutService } from '@/lib/checkout/loyaltyCheckoutService';
-import loyaltyEventsService from '@/lib/loyalty/eventsService';
-import User from '@/models/User';
 import Order from '@/models/Order';
-import { calculateTierFromPoints, TIER_CONFIG } from '@/lib/loyalty/loyaltyService';
-import { twilioService } from '@/lib/sms/twilioService';
+import dbConnect from '@/lib/dbConnect';
 
-export async function POST(request) {
-  const backendTimingLog = [];
-  const logTime = (msg) => backendTimingLog.push({ msg, time: Date.now() });
+export async function GET(request) {
   try {
-    const session = await getServerSession(authOptions);
-    const data = await request.json();
+    // Get order ID from query parameters
+    const { searchParams } = new URL(request.url);
+    const orderId = searchParams.get('orderId');
     
-    // DRY: Utility to format item
-    const formatItem = (item) => ({
-      name: item.name,
-      price: parseFloat(item.price || 0).toFixed(2),
-      quantity: parseInt(item.quantity || 1),
-      image: item.image,
-      hasImage: !!item.image,
-      subtotal: (parseFloat(item.price || 0) * parseInt(item.quantity || 1)).toFixed(2),
-      productId: item.productId || item._id || 'unknown',
-    });
-    // Format all numerical values immediately
-    const formattedData = {
-      orderNumber: data.orderNumber,
-      email: data.email,
-      items: data.items.map(formatItem),
-      subtotal: parseFloat(data.subtotal || 0).toFixed(2),
-      tax: parseFloat(data.tax || 0).toFixed(2),
-      total: parseFloat(data.total || 0).toFixed(2),
-      shippingAddress: data.shippingAddress,
-      deliveryMethod: data.deliveryMethod,
-      selectedTime: data.selectedTime,
-      customerName: data.customerName || session?.user?.name || 'Valued Customer'
-    };
-    logTime('Formatted input');
-    // Log formatted data
-    console.log('📦 Received order confirmation request:', {
-      hasSession: !!session,
-      userEmail: formattedData.email?.replace(/@.*$/, '@...'),
-      userId: session?.user?.id,
-      orderData: {
-        orderNumber: formattedData.orderNumber,
-        total: parseFloat(formattedData.total),
-        itemCount: formattedData.items.length,
-        subtotal: parseFloat(formattedData.subtotal),
-        tax: parseFloat(formattedData.tax)
-      }
-    });
-
-    // Create order record
-    const order = new Order({
-      orderNumber: formattedData.orderNumber,
-      userId: session?.user?.id,
-      items: formattedData.items.map(formatItem),
-      total: parseFloat(formattedData.total),
-      status: 'Processing',
-      paymentStatus: 'Paid',
-      paymentIntentId: formattedData.orderNumber,
-      deliveryMethod: formattedData.deliveryMethod,
-      selectedTime: formattedData.selectedTime,
-      shippingAddress: formattedData.shippingAddress,
-      emailSent: false
-    });
-    logTime('Order model constructed');
-    await order.save();
-    logTime('Order saved');
-
-    // Respond to client ASAP after order is saved
-    const respondData = {
-      success: true,
-      timings: backendTimingLog,
-      data: {
-        subtotal: parseFloat(formattedData.subtotal),
-        tax: parseFloat(formattedData.tax),
-        total: parseFloat(formattedData.total),
-        loyaltyRedemption: data.loyaltyRedemption
-      }
-    };
-
-    // Async side effects (email, sms, loyalty)
-    (async () => {
-      try {
-        // Email
-        const emailData = {
-          ...formattedData,
-          items: formattedData.items.map(item => ({
-            ...item,
-            price: parseFloat(item.price),
-            subtotal: parseFloat(item.subtotal)
-          }))
-        };
-        await sendOrderConfirmationEmail(formattedData.email, emailData);
-        order.emailSent = true;
-        await order.save();
-        logTime('Email sent & order updated');
-      } catch (err) {
-        console.error('Error sending order confirmation email:', err);
-      }
-
-      // SMS
-      if (session?.user?.id) {
-        try {
-          const user = await User.findById(session.user.id);
-          if (user?.phoneNumber) {
-            const message = `Your order #${formattedData.orderNumber} has been confirmed! Total: $${formattedData.total}. Thank you for shopping with Viva Pharmacy!`;
-            await twilioService.sendSMS(user.phoneNumber, message);
-            logTime('SMS sent');
-          }
-        } catch (smsError) {
-          console.error('Error sending SMS:', smsError);
-        }
-      }
-
-      // Loyalty
-      if (session?.user?.id) {
-        try {
-          // Check if this orderNumber has already had points processed
-          // This prevents duplicate points if the confirmation is processed multiple times
-          const existingOrder = await Order.findOne({ 
-            orderNumber: formattedData.orderNumber,
-            loyaltyPointsProcessed: true
-          });
-          
-          if (existingOrder) {
-            console.log('⚠️ Loyalty points already processed for this order, skipping.');
-            return NextResponse.json({
-              success: true,
-              message: 'Order already processed',
-              timings: backendTimingLog
-            });
-          }
-          // Log request to help debug
-          console.log('💯 Processing loyalty for order:', {
-            orderId: formattedData.orderNumber,
-            clientEstimate: data.pointsEstimate,
-            calculatedOnClient: data.calculatedOnClient,
-            total: formattedData.total
-          });
-          
-          const user = await User.findById(session.user.id);
-          if (!user) throw new Error('User not found');
-          const amount = parseFloat(formattedData.total);
-          const loyaltyBenefits = await LoyaltyCheckoutService.calculateLoyaltyBenefits(user, amount);
-          user.vivaBucks = user.vivaBucks || 0;
-          user.cumulativePoints = user.cumulativePoints || 0;
-          user.currentTier = user.currentTier || 'BRONZE';
-          user.pointsMultiplier = user.pointsMultiplier || 1;
-          user.rewardHistory = user.rewardHistory || [];
-          const oldPoints = user.vivaBucks;
-          const oldLifetimePoints = user.cumulativePoints;
-          // Log points calculation to help debug
-          console.log('📊 Loyalty points calculation:', { 
-            basePoints: loyaltyBenefits.basePoints,
-            tierMultiplier: loyaltyBenefits.tierMultiplier,
-            totalPoints: loyaltyBenefits.totalPoints,
-            currentTier: user.currentTier,
-            appliedEvents: loyaltyBenefits.appliedEvents?.length || 0
-          });
-          
-          // Server-side is the source of truth - we add points here
-          user.vivaBucks += loyaltyBenefits.totalPoints;
-          user.cumulativePoints += loyaltyBenefits.totalPoints;
-          user.rewardHistory.push({
-            type: 'POINTS_EARNED',
-            points: loyaltyBenefits.basePoints,
-            adjustedPoints: loyaltyBenefits.totalPoints,
-            multiplier: loyaltyBenefits.tierMultiplier,
-            tier: user.currentTier,
-            source: 'purchase',
-            appliedEvents: loyaltyBenefits.appliedEvents || [],
-            timestamp: new Date(),
-            createdAt: new Date(),
-            updatedAt: new Date()
-          });
-          const newTier = calculateTierFromPoints(user.cumulativePoints);
-          if (newTier !== user.currentTier) {
-            const oldTier = user.currentTier;
-            user.currentTier = newTier;
-            user.pointsMultiplier = TIER_CONFIG[newTier]?.multiplier || 1;
-            user.rewardHistory.push({
-              type: 'TIER_CHANGED',
-              oldTier: oldTier,
-              newTier: newTier,
-              timestamp: new Date(),
-              createdAt: new Date(),
-              updatedAt: new Date()
-            });
-          }
-          await user.save();
-          
-          // Mark the order as having had loyalty points processed
-          await Order.findOneAndUpdate(
-            { orderNumber: formattedData.orderNumber },
-            { loyaltyPointsProcessed: true },
-            { new: true }
-          );
-          
-          logTime('User loyalty updated and order marked as processed');
-          setTimeout(async () => {
-            try {
-              await loyaltyEventsService.emitLoyaltyUpdate(user._id, {
-                type: 'ORDER_COMPLETE',
-                paymentIntentId: formattedData.orderNumber,
-                amount: amount,
-                isComplete: true,
-                points: loyaltyBenefits.totalPoints,
-                vivaBucks: user.vivaBucks,
-                loyaltyBenefits: {
-                  ...loyaltyBenefits,
-                  currentPoints: user.vivaBucks,
-                  lifetimePoints: user.cumulativePoints,
-                  currentTier: user.currentTier,
-                  oldPoints,
-                  oldLifetimePoints,
-                  tierChanged: newTier !== user.currentTier,
-                  oldTier: user.currentTier,
-                  newTier: newTier
-                }
-              });
-              setTimeout(() => {
-                eventEmitter.emit(Events.PAYMENT_COMPLETED, {
-                  userId: user._id,
-                  paymentIntentId: formattedData.orderNumber,
-                  amount: amount,
-                  status: 'completed'
-                });
-              }, 200);
-              logTime('Loyalty events emitted');
-            } catch (emitError) {
-              console.error('Error emitting loyalty events:', emitError);
-            }
-          }, 100);
-        } catch (error) {
-          console.error('Error processing loyalty benefits:', error);
-        }
-      }
-    })();
-
-    // Add this to ensure the loyalty redemption is cleared on order completion
-    if (data.loyaltyRedemption && session?.user?.id) {
-      console.log('✅ Loyalty redemption confirmed:', data.loyaltyRedemption);
+    if (!orderId) {
+      return NextResponse.json(
+        { error: 'Missing orderId parameter' },
+        { status: 400 }
+      );
     }
-
-    logTime('Responding to client');
-    return NextResponse.json(respondData);
-
-
-
-
+    
+    // Connect to database
+    await dbConnect();
+    
+    // Check if order exists and has loyalty points processed
+    // Updated query to primarily use paymentIntentId if available from success page
+    // but fall back to orderNumber if needed.
+    const order = await Order.findOne({ 
+      $or: [
+        { paymentIntentId: orderId }, 
+        { orderNumber: orderId } 
+      ]
+    });
+    
+    if (!order) {
+      return NextResponse.json(
+        { error: 'Order not found', processed: false },
+        { status: 404 }
+      );
+    }
+    
+    // Return success status and whether points were processed by webhook
+    return NextResponse.json({
+      success: true,
+      processed: !!order.loyaltyPointsProcessed, // Check the flag set by webhook
+      orderId: order._id.toString(), // Return DB ID
+      orderNumber: order.orderNumber,
+      status: order.status,
+      paymentStatus: order.paymentStatus
+    });
   } catch (error) {
-    console.error('❌ Order confirmation error:', error);
+    console.error('Error checking order status:', error);
     return NextResponse.json(
-      { error: 'Failed to send order confirmation' },
+      { error: 'Failed to check order status', processed: false },
       { status: 500 }
     );
   }

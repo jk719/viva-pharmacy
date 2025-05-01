@@ -3,6 +3,8 @@
 import { useEffect, useState, Suspense, useMemo } from 'react';
 import { useCart } from '@/context/CartContext';
 import PaymentForm from '@/components/checkout/PaymentForm';
+import LoyaltyAnimationModal from '@/components/checkout/LoyaltyAnimationModal';
+import eventEmitter, { Events } from '@/lib/eventEmitter';
 import Image from 'next/image';
 import { calculateTax, formatTaxRate, getTaxRate } from '@/lib/tax/taxRates';
 import ShippingAddress from '@/components/checkout/ShippingAddress';
@@ -104,6 +106,9 @@ function CheckoutContent() {
 
   // Add new state for prescriptions
   const [isPrescriptionOrder, setIsPrescriptionOrder] = useState(false);
+
+  // Add state for loyalty modal
+  const [loyaltyModalData, setLoyaltyModalData] = useState(null);
 
   useEffect(() => {
     if (!session) {
@@ -607,6 +612,23 @@ function CheckoutContent() {
             redemptionApplied={redemptionApplied}
           />
         </motion.div>
+      )}
+
+      {/* Conditionally render the modal OUTSIDE the PaymentForm block */}
+      {loyaltyModalData && (
+        <LoyaltyAnimationModal
+          // Use a key based on orderId if available
+          key={`loyalty-animation-${loyaltyModalData.orderDetails?.orderId || Date.now()}`}
+          pointsEarned={loyaltyModalData.pointsEarned}
+          orderDetails={loyaltyModalData.orderDetails}
+          // The modal itself handles redirecting on completion, no need for callback here usually
+          onProgressBarAnimationComplete={() => {
+            console.log('Modal animation progress bar complete (handler in CheckoutContent)');
+            // You could potentially clear the modal state here if needed, 
+            // but the redirect inside the modal might make it unnecessary.
+            // setLoyaltyModalData(null); 
+          }}
+        />
       )}
     </motion.div>
   );

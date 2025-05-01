@@ -3,10 +3,12 @@
 import { FaCheckCircle, FaBox, FaEnvelope, FaGift } from 'react-icons/fa';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import LoyaltyAnimationModal from './LoyaltyAnimationModal';
 
 export default function OrderSuccessModal({ orderDetails, onClose }) {
   const router = useRouter();
   const [showRewards, setShowRewards] = useState(false);
+  const [key, setKey] = useState(Date.now());
 
   useEffect(() => {
     // Show rewards immediately - no need to delay anymore

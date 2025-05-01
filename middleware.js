@@ -2,8 +2,8 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 
-// Remove direct import of paymentTracker
-// Instead, use a simpler cookie-based check for payment state
+// Remove isValidPayment function as the cookies are no longer set
+/*
 const isValidPayment = (cookies) => {
   const paymentIntentId = cookies.get('paymentIntentId')?.value;
   const paymentTimestamp = cookies.get('paymentTimestamp')?.value;
@@ -14,6 +14,7 @@ const isValidPayment = (cookies) => {
   const thirtyMinutesAgo = Date.now() - (30 * 60 * 1000);
   return parseInt(paymentTimestamp) > thirtyMinutesAgo;
 };
+*/
 
 export default withAuth(
   function middleware(req) {
@@ -85,13 +86,6 @@ export default withAuth(
     
     if (publicRoutes.includes(req.nextUrl.pathname)) {
       return NextResponse.next();
-    }
-
-    // Check payment state for success page
-    if (req.nextUrl.pathname === '/checkout/success') {
-      if (!isValidPayment(req.cookies)) {
-        return NextResponse.redirect(new URL('/', req.url));
-      }
     }
 
     // Handle all protected routes that require authentication

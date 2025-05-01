@@ -12,12 +12,6 @@ import TierPointsDisplay from './components/TierPointsDisplay';
 // Import hooks and constants
 import useLoyaltyData from './hooks/useLoyaltyData';
 import { TIER_COLORS } from './constants/tierConfig';
-import { 
-  getCurrentPoints,
-  getLifetimePoints,
-  getCurrentTier,
-  getPointsMultiplier
-} from '@/lib/loyalty/userDataAccess';
 
 /**
  * Loading state component for loyalty banner
@@ -37,10 +31,11 @@ const LoadingState = () => (
 /**
  * Main loyalty banner component that displays user's tier and progress
  * @param {Object} props Component properties
- * @param {boolean} props.forceAnimation - Force animation even if not triggered by an event
+ * @param {boolean} [props.forceAnimation=false] - Force animation even if not triggered by an event
+ * @param {number} [props.animateEarnedPoints] - If provided, animate these points instead of tier progress
  * @param {Function} props.onProgressBarAnimationComplete - Callback when progress bar animation completes
  */
-function LoyaltyBanner({ forceAnimation = false, onProgressBarAnimationComplete }) {
+function LoyaltyBanner({ forceAnimation = false, animateEarnedPoints, onProgressBarAnimationComplete }) {
   const { data: session, status } = useSession();
 
   // Use the custom hook to get loyalty data
@@ -52,32 +47,30 @@ function LoyaltyBanner({ forceAnimation = false, onProgressBarAnimationComplete 
   } = useLoyaltyData();
   
   // Track animation state for deduplication
-  const [animationInProgress, setAnimationInProgress] = useState(false);
   const [animationCompleted, setAnimationCompleted] = useState(false);
   
   // Effect to log component mount/unmount for debugging
   useEffect(() => {
-    console.log('🏁 LoyaltyBanner mounted with forceAnimation =', forceAnimation);
-    return () => console.log('🚫 LoyaltyBanner unmounted');
+    // console.log('🏁 LoyaltyBanner mounted with forceAnimation =', forceAnimation);
+    return () => { /* console.log('🚫 LoyaltyBanner unmounted'); */ };
   }, [forceAnimation]);
   
   // Handle animation completion - simplified to avoid duplicate events
   const handleAnimationComplete = () => {
-    console.log('🔔 Loyalty banner progress bar animation completed');
+    // console.log('🔔 Loyalty banner progress bar animation completed');
     
     // Prevent duplicate completions
     if (animationCompleted) {
-      console.log('⚠️ Animation already completed, ignoring duplicate completion');
+      // console.log('⚠️ Animation already completed, ignoring duplicate completion');
       return;
     }
     
     // Mark animation as completed
     setAnimationCompleted(true);
-    setAnimationInProgress(false);
     
     // Call the callback directly - ProgressBar no longer handles event emission
     if (typeof onProgressBarAnimationComplete === 'function') {
-      console.log('📣 Calling onProgressBarAnimationComplete callback');
+      // console.log('📣 Calling onProgressBarAnimationComplete callback');
       try {
         onProgressBarAnimationComplete();
       } catch (error) {
@@ -89,11 +82,11 @@ function LoyaltyBanner({ forceAnimation = false, onProgressBarAnimationComplete 
   // Don't render anything if user is not logged in
   if (status === "loading" || !session) return null;
 
-  // Extract values using the data access layer
-  const currentVivaBucks = getCurrentPoints(userData);
-  const lifetimeVivaBucks = getLifetimePoints(userData);
-  const currentTier = getCurrentTier(userData);
-  const multiplier = getPointsMultiplier(userData);
+  // Extract values directly from userData provided by the hook
+  const currentVivaBucks = userData?.vivaBucks || 0;
+  const lifetimeVivaBucks = userData?.cumulativePoints || 0;
+  const currentTier = userData?.tier || 'BRONZE';
+  const multiplier = userData?.multiplier || 1; // Default to 1x if not available
   
   // Extract progress info with fallbacks
   const nextTierName = progressInfo?.nextTier ?? 'SILVER';
@@ -104,12 +97,8 @@ function LoyaltyBanner({ forceAnimation = false, onProgressBarAnimationComplete 
   // Get background accent color based on tier
   const bannerAccentColor = TIER_COLORS[currentTier]?.bg || TIER_COLORS.BRONZE.bg;
 
-  // Use a stable key to prevent unmounting/remounting
-  const stableKey = `loyalty-banner-${currentTier || 'unknown'}`;
-  
   return (
     <div 
-      key={stableKey}
       className="loyalty-banner w-full py-1 md:py-2 px-2 md:px-6 relative overflow-hidden border-b"
       style={{
         background: "white",
@@ -150,14 +139,15 @@ function LoyaltyBanner({ forceAnimation = false, onProgressBarAnimationComplete 
           {/* Progress bar with animation */}
           {progressInfo && (
             <ProgressBar 
-              progress={progressPercent}
+              progress={animateEarnedPoints ? undefined : progressPercent}
+              earnedPoints={animateEarnedPoints}
               currentPoints={lifetimeVivaBucks}
               startPoints={startPoints}
               endPoints={endPoints}
               animate={true}
               forceAnimation={forceAnimation}
               onAnimationComplete={handleAnimationComplete}
-              key={`progress-bar-${forceAnimation ? 'forced' : 'normal'}`} /* Use a stable key to prevent unmounting/remounting */
+              key={`progress-bar-${forceAnimation ? 'forced' : 'normal'}`}
               data-testid="animated-progress-bar"
             />
           )}
@@ -171,9 +161,10 @@ function LoyaltyBanner({ forceAnimation = false, onProgressBarAnimationComplete 
 
 // Export a memoized version of the component to prevent unnecessary re-renders
 export default memo(LoyaltyBanner, (prevProps, nextProps) => {
-  // Only re-render if forceAnimation changes or if the callback changes
+  // Only re-render if forceAnimation or animateEarnedPoints changes, or if the callback changes
   return (
     prevProps.forceAnimation === nextProps.forceAnimation &&
+    prevProps.animateEarnedPoints === nextProps.animateEarnedPoints &&
     prevProps.onProgressBarAnimationComplete === nextProps.onProgressBarAnimationComplete
   );
 });

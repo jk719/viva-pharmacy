@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { calculateProgressToNextTier } from '@/lib/loyalty/loyaltyCalculator';
-import { TIER_CONFIG } from '../constants/tierConfig';
+import { TIER_CONFIG } from '@/lib/loyalty/tierConfig';
 import eventEmitter, { Events } from '@/lib/eventEmitter';
 
 /**
@@ -19,7 +19,6 @@ export default function useLoyaltyData() {
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
 
   // Refs for tracking state across renders
-  const previousPointsRef = useRef(null);
   const lastUpdateRef = useRef(0);
   const updateTimeoutRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
@@ -45,7 +44,7 @@ export default function useLoyaltyData() {
     try {
       const timestamp = Date.now();
       const random = Math.random().toString(36).substring(2, 15);
-      const url = `/api/user/profile?nocache=${timestamp}&r=${random}`;
+      const url = `/api/user/loyalty-status?nocache=${timestamp}&r=${random}`;
       
       const response = await fetch(url, {
         headers: {
@@ -77,12 +76,6 @@ export default function useLoyaltyData() {
     try {
       const data = await fetchUserDataFresh();
       if (!data) return;
-
-      // Update refs with new data for comparison
-      previousPointsRef.current = {
-        vivaBucks: data.vivaBucks,
-        cumulativePoints: data.cumulativePoints
-      };
 
       // Update state with fetched data
       setUserData(data);
