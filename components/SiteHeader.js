@@ -8,6 +8,8 @@ import { usePathname } from 'next/navigation';
 export default function SiteHeader() {
   const pathname = usePathname();
 
+  // We'll no longer use this to conditionally hide the LoyaltyBanner on checkout
+  // Just keeping it for other potential uses
   const isCheckoutPage = pathname === '/checkout' || pathname?.startsWith('/checkout/');
 
   return (
@@ -15,7 +17,8 @@ export default function SiteHeader() {
       <div className="w-full flex flex-col">
         <Navbar />
         <PrescriptionBanner />
-        {!isCheckoutPage && <LoyaltyBanner />}
+        {/* Show LoyaltyBanner on all pages now that we have a proper modal system */}
+        <LoyaltyBanner />
       </div>
     </header>
   );

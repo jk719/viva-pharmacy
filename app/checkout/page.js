@@ -3,7 +3,6 @@
 import { useEffect, useState, Suspense, useMemo } from 'react';
 import { useCart } from '@/context/CartContext';
 import PaymentForm from '@/components/checkout/PaymentForm';
-import LoyaltyAnimationModal from '@/components/checkout/LoyaltyAnimationModal';
 import eventEmitter, { Events } from '@/lib/eventEmitter';
 import Image from 'next/image';
 import { calculateTax, formatTaxRate, getTaxRate } from '@/lib/tax/taxRates';
@@ -12,6 +11,7 @@ import { useSession } from 'next-auth/react';
 import { FaClock, FaTruck, FaStore, FaMapMarkerAlt, FaRegClock, FaBox, FaBolt } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import { useModal, ModalType } from '@/context/ModalContext';
 
 // Define INCREMENT_SIZE as a regular constant outside of any components
 const INCREMENT_SIZE = {
@@ -87,6 +87,7 @@ function CheckoutContent() {
   const [deliveryMethod, setDeliveryMethod] = useState('delivery');
   const { data: session } = useSession();
   const router = useRouter();
+  const { showModal } = useModal();
 
   const [displayCount, setDisplayCount] = useState(
     SLOTS_PER_PAGE[typeof window !== 'undefined' && window.innerWidth < 768 ? 'mobile' : 'desktop']
@@ -107,31 +108,30 @@ function CheckoutContent() {
   // Add new state for prescriptions
   const [isPrescriptionOrder, setIsPrescriptionOrder] = useState(false);
 
-  // Add state for loyalty modal
-  const [loyaltyModalData, setLoyaltyModalData] = useState(null);
-
   useEffect(() => {
     if (!session) {
       router.push('/?showLogin=true&redirect=/checkout');
     }
   }, [session, router]);
 
-  // Expose setLoyaltyModalData to the global context
+  // Handle loyalty-related events using our ModalContext system
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      // Create or update the global checkout context
-      window._checkoutContext = window._checkoutContext || {};
-      window._checkoutContext.setLoyaltyModalData = setLoyaltyModalData;
-      
-      console.log('Exposed setLoyaltyModalData to global context');
-    }
-    
-    return () => {
-      if (typeof window !== 'undefined' && window._checkoutContext) {
-        window._checkoutContext.setLoyaltyModalData = null;
+    // Listen for loyalty events for direct interaction with the loyalty system
+    const handleLoyaltyUpdate = (data) => {
+      // We'll use our ModalContext to show the loyalty animation if needed
+      if (data && (data.pointsEarned > 0 || data.loyaltyPointsEarned > 0 || data.tierUpgrade)) {
+        showModal(ModalType.LOYALTY_ANIMATION, data);
       }
     };
-  }, []);
+    
+    // Subscribe to the loyalty update event
+    eventEmitter.on(Events.LOYALTY_UPDATE, handleLoyaltyUpdate);
+    
+    // Clean up on unmount
+    return () => {
+      eventEmitter.off(Events.LOYALTY_UPDATE, handleLoyaltyUpdate);
+    };
+  }, [showModal]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -630,24 +630,6 @@ function CheckoutContent() {
           />
         </motion.div>
       )}
-
-      {/* Conditionally render the modal OUTSIDE the PaymentForm block */}
-      {/* Temporarily disabled LoyaltyAnimationModal to fix conflicts with OrderSuccessModal */}
-      {/* {loyaltyModalData && (
-        <LoyaltyAnimationModal
-          // Use a key based on orderId if available
-          key={`loyalty-animation-${loyaltyModalData.orderDetails?.orderId || Date.now()}`}
-          pointsEarned={loyaltyModalData.pointsEarned}
-          orderDetails={loyaltyModalData.orderDetails}
-          // The modal itself handles redirecting on completion, no need for callback here usually
-          onProgressBarAnimationComplete={() => {
-            console.log('Modal animation progress bar complete (handler in CheckoutContent)');
-            // You could potentially clear the modal state here if needed, 
-            // but the redirect inside the modal might make it unnecessary.
-            // setLoyaltyModalData(null); 
-          }}
-        />
-      )} */}
     </motion.div>
   );
 }
