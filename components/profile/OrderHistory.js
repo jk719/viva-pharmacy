@@ -81,7 +81,17 @@ export default function OrderHistory({ userId, limit }) {
         }));
 
         if (!ordersResponse.ok) {
-          throw new Error(`HTTP error! status: ${ordersResponse.status}`);
+          // Attempt to get more details from the response body
+          let errorDetails = `HTTP error! status: ${ordersResponse.status}`;
+          try {
+            const errorData = await ordersResponse.json();
+            errorDetails = errorData.error || errorData.message || errorDetails;
+            console.error('OrderHistory API Error Data:', errorData);
+          } catch (e) {
+            // Ignore if response is not JSON or empty
+            console.warn('OrderHistory: Could not parse error response as JSON.');
+          }
+          throw new Error(errorDetails);
         }
 
         const ordersData = await ordersResponse.json();
@@ -128,10 +138,12 @@ export default function OrderHistory({ userId, limit }) {
         if (error.name === 'AbortError') return;
         
         if (isMounted) {
-          console.error('Error in OrderHistory:', error);
-          setError(error.message);
+          // Log the full error object for detailed inspection, and error.message for a summary
+          console.error('Error in OrderHistory (object):', error);
+          console.error('Error in OrderHistory (message):', error.message);
+          setError(error.message); // error.message should now contain more details
           setLoading(false);
-          toast.error('Failed to load order history');
+          toast.error(error.message || 'Failed to load order history'); // Show detailed error in toast
         }
       }
     };

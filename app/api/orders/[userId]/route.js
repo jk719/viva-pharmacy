@@ -1,7 +1,7 @@
-import { authOptions } from '@/lib/auth';
 import dbConnect from "@/lib/dbConnect";
 import Order from "@/models/Order";
 import mongoose from 'mongoose';
+import { getToken } from "next-auth/jwt";
 import { getCloudinaryUrl } from '@/lib/cloudinary';
 
 export async function GET(request) {
@@ -24,9 +24,17 @@ export async function GET(request) {
         await dbConnect();
         console.log('API: Connected to database');
 
-        // 3. Get token from middleware
-        const token = request.nextauth?.token;
-        console.log('API: Token check:', !!token);
+        // 3. Get token using getToken from next-auth/jwt
+        const secret = process.env.NEXTAUTH_SECRET;
+        const token = await getToken({ req: request, secret });
+        
+        console.log('API: Token check (using getToken):', !!token);
+        if (token) {
+            // Log only necessary parts of the token for brevity and security
+            console.log('API: Token details:', { id: token.id, email: token.email, role: token.role });
+        } else {
+            console.error('API: No token retrieved by getToken in API route.');
+        }
 
         if (!token) {
             // This check might be redundant if middleware correctly protects /api/orders/*
