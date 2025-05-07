@@ -116,6 +116,23 @@ function CheckoutContent() {
     }
   }, [session, router]);
 
+  // Expose setLoyaltyModalData to the global context
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Create or update the global checkout context
+      window._checkoutContext = window._checkoutContext || {};
+      window._checkoutContext.setLoyaltyModalData = setLoyaltyModalData;
+      
+      console.log('Exposed setLoyaltyModalData to global context');
+    }
+    
+    return () => {
+      if (typeof window !== 'undefined' && window._checkoutContext) {
+        window._checkoutContext.setLoyaltyModalData = null;
+      }
+    };
+  }, []);
+
   useEffect(() => {
     const handleResize = () => {
       setWindowWidth(window.innerWidth);
@@ -615,7 +632,8 @@ function CheckoutContent() {
       )}
 
       {/* Conditionally render the modal OUTSIDE the PaymentForm block */}
-      {loyaltyModalData && (
+      {/* Temporarily disabled LoyaltyAnimationModal to fix conflicts with OrderSuccessModal */}
+      {/* {loyaltyModalData && (
         <LoyaltyAnimationModal
           // Use a key based on orderId if available
           key={`loyalty-animation-${loyaltyModalData.orderDetails?.orderId || Date.now()}`}
@@ -629,7 +647,7 @@ function CheckoutContent() {
             // setLoyaltyModalData(null); 
           }}
         />
-      )}
+      )} */}
     </motion.div>
   );
 }

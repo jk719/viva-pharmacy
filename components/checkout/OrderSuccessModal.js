@@ -1,94 +1,121 @@
 "use client";
 
-import { FaCheckCircle, FaBox, FaEnvelope, FaGift } from 'react-icons/fa';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import LoyaltyAnimationModal from './LoyaltyAnimationModal';
+import { FaCheckCircle, FaBox } from 'react-icons/fa';
+import { useModal, ModalType } from '@/context/ModalContext';
 
-export default function OrderSuccessModal({ orderDetails, onClose }) {
+export default function OrderSuccessModal() {
+  // Get modal context
+  const { modalData, hideModal } = useModal();
+  const orderDetails = modalData || {};
+  
+  // Extract points (handle both field name possibilities)
+  const pointsEarned = orderDetails?.pointsEarned || orderDetails?.loyaltyPointsEarned || 0;
+  
+  // Extract total amount (handle both field name possibilities)
+  const totalAmount = orderDetails?.total || orderDetails?.amount || 0;
+  
+  // Log for debugging
+  console.log('OrderSuccessModal RENDERING with data:', { 
+    hasOrderDetails: !!orderDetails, 
+    orderId: orderDetails?.orderId || 'MISSING',
+    itemCount: orderDetails?.items?.length || 0,
+    pointsEarned,
+    totalAmount
+  });
+  
   const router = useRouter();
-  const [showRewards, setShowRewards] = useState(false);
-  const [key, setKey] = useState(Date.now());
-
+  
   useEffect(() => {
-    // Show rewards immediately - no need to delay anymore
-    setShowRewards(true);
-  }, []);
+    console.log('OrderSuccessModal - useEffect mounted with order details:', orderDetails);
+    // Block scrolling when modal opens
+    if (typeof document !== 'undefined') {
+      document.body.style.overflow = 'hidden';
+    }
+    
+    // Cleanup function
+    return () => {
+      console.log('OrderSuccessModal - useEffect cleanup');
+      if (typeof document !== 'undefined') {
+        document.body.style.overflow = '';
+      }
+    };
+  }, [orderDetails]);
+
+  const handleClose = () => {
+    console.log('OrderSuccessModal - handleClose clicked');
+    hideModal();
+  };
+
+  const handleViewOrders = () => {
+    console.log('OrderSuccessModal - handleViewOrders clicked');
+    hideModal();
+    router.push('/profile/orders');
+  };
+  
+  const handleContinueShopping = () => {
+    console.log('OrderSuccessModal - handleContinueShopping clicked');
+    hideModal();
+    router.push('/');
+  };
+
+  // Handle missing order details gracefully
+  if (!orderDetails || !orderDetails.orderId) {
+    console.warn('OrderSuccessModal - Warning: Missing order details');
+  }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fadeIn">
-      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 text-center animate-scaleIn">
-        <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6 animate-bounceIn">
-          <FaCheckCircle className="w-12 h-12 text-green-500" />
-        </div>
-
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">
-          Order Confirmed! 🎉
-        </h2>
-        <p className="text-gray-600 mb-6">
-          Thank you for shopping with us!
-        </p>
-
-        <div className="space-y-4 mb-6">
-          <div className="bg-blue-50 rounded-lg p-4">
-            <div className="flex items-center gap-3 mb-2">
-              <FaBox className="text-primary text-xl" />
-              <h3 className="font-semibold text-gray-800">Order Details</h3>
+    <div 
+      className="order-success-modal fixed inset-0 z-[9999999] flex items-center justify-center bg-black/50 p-4"
+      onClick={handleClose}
+    >
+      <div 
+        className="relative bg-white rounded-lg p-6 w-full max-w-md shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-center">
+          <FaCheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold mb-2">Order Confirmed!</h2>
+          <p className="mb-2">Your order #{orderDetails?.orderId || 'Pending'} has been placed.</p>
+          
+          {/* Order summary */}
+          <div className="bg-gray-50 rounded p-3 mb-4 text-left">
+            <div className="flex items-center gap-2 mb-1">
+              <FaBox className="text-primary" />
+              <span className="font-medium">Order Summary</span>
             </div>
-            <p className="text-sm text-gray-600">
-              Order #{orderDetails?.orderId}
-            </p>
-            <p className="text-sm text-gray-600">
-              {orderDetails?.deliveryMethod === 'delivery' 
-                ? `Delivery on ${new Date(orderDetails?.selectedTime).toLocaleDateString()}`
-                : `Pickup on ${new Date(orderDetails?.selectedTime).toLocaleDateString()}`
-              }
-            </p>
+            <div className="text-sm text-gray-600">
+              <p>Total: ${totalAmount.toFixed(2)}</p>
+              <p>Method: {orderDetails?.deliveryMethod === 'delivery' ? 'Delivery' : 'Pickup'}</p>
+              {pointsEarned > 0 && (
+                <p className="text-green-600 font-medium">Rewards: {pointsEarned} points earned!</p>
+              )}
+            </div>
           </div>
-
-          <div className="bg-green-50 rounded-lg p-4">
-            <div className="flex items-center gap-3 mb-2">
-              <FaEnvelope className="text-green-600 text-xl" />
-              <h3 className="font-semibold text-gray-800">Confirmation Email</h3>
-            </div>
-            <p className="text-sm text-gray-600">
-              A confirmation email has been sent with your order details
-            </p>
+          
+          <div className="flex gap-2">
+            <button 
+              onClick={handleViewOrders}
+              className="flex-1 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200"
+            >
+              View Orders
+            </button>
+            <button 
+              onClick={handleContinueShopping}
+              className="flex-1 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
+            >
+              Continue Shopping
+            </button>
           </div>
-
-          {orderDetails?.pointsEarned && showRewards && (
-            <div className="bg-yellow-50 rounded-lg p-4 animate-slideUp">
-              <div className="flex items-center gap-3 mb-2">
-                <FaGift className="text-yellow-600 text-xl" />
-                <h3 className="font-semibold text-gray-800">Rewards Earned</h3>
-              </div>
-              <p className="text-sm text-gray-600">
-                You earned {orderDetails.pointsEarned} VivaBucks! 🌟
-              </p>
-            </div>
-          )}
-        </div>
-
-        <div className="flex gap-3">
+          
+          {/* Close button */}
           <button
-            onClick={() => {
-              if (onClose) onClose();
-              router.push('/profile/orders');
-            }}
-            className="flex-1 py-3 px-6 bg-gray-100 text-gray-800 rounded-lg font-semibold
-                     hover:bg-gray-200 transition-colors hover:scale-102 active:scale-98"
+            onClick={handleClose}
+            className="absolute top-2 right-2 text-gray-500 hover:text-gray-800"
+            aria-label="Close"
           >
-            View Orders
-          </button>
-          <button
-            onClick={() => {
-              if (onClose) onClose();
-              router.push('/');
-            }}
-            className="flex-1 py-3 px-6 bg-primary text-white rounded-lg font-semibold
-                     hover:bg-primary/90 transition-colors hover:scale-102 active:scale-98"
-          >
-            Continue Shopping
+            ✕
           </button>
         </div>
       </div>

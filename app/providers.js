@@ -9,6 +9,13 @@ import SSEProvider from '@/components/SSEProvider';
 import HeaderHeightAdjuster from '@/components/HeaderHeightAdjuster';
 import ToasterProvider from '@/components/ToasterProvider';
 import GoogleAnalytics from '@/components/analytics/GoogleAnalytics';
+import { ModalProvider } from '@/context/ModalContext';
+import dynamic from 'next/dynamic';
+
+// Modal components loaded dynamically
+const OrderSuccessModal = dynamic(() => import('@/components/checkout/OrderSuccessModal'));
+const LoyaltyAnimationModal = dynamic(() => import('@/components/checkout/LoyaltyAnimationModal'));
+const ModalController = dynamic(() => import('@/components/ModalController'));
 
 const fetcher = async (url) => {
   const res = await fetch(url);
@@ -31,10 +38,13 @@ export function Providers({ children, session }) {
         <AnnouncementProvider>
           <CategoryProvider>
             <CartProvider>
-              <SSEProvider>
-                <ToasterProvider />
-                {children}
-              </SSEProvider>
+              <ModalProvider>
+                <SSEProvider>
+                  <ToasterProvider />
+                  {children}
+                  <ModalController />
+                </SSEProvider>
+              </ModalProvider>
             </CartProvider>
           </CategoryProvider>
         </AnnouncementProvider>

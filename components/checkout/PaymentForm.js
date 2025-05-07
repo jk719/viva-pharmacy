@@ -9,6 +9,13 @@ import toast from 'react-hot-toast';
 import CheckoutForm from './CheckoutForm';
 
 export default function PaymentForm({ amount, amountDetails, items, shippingAddress, deliveryMethod, selectedTime }) {
+  console.log('PaymentForm RENDER', { 
+    amount, 
+    hasItems: !!items?.length,
+    deliveryMethod,
+    hasShippingAddress: !!shippingAddress
+  });
+  
   const { 
     getFormattedItems, 
   } = useCart();
@@ -20,12 +27,24 @@ export default function PaymentForm({ amount, amountDetails, items, shippingAddr
   const [paymentInitialized, setPaymentInitialized] = useState(false);
   const [requestId] = useState(() => `${Date.now()}_${Math.random().toString(36).slice(2)}`);
 
+  // Debug log for client secret state changes
+  useEffect(() => {
+    console.log('PaymentForm - clientSecret state changed:', 
+      clientSecret ? 'Secret received' : 'No secret yet');
+  }, [clientSecret]);
+
   useEffect(() => {
     if (paymentInitialized || !amount || amount <= 0) {
+      console.log('PaymentForm - Skipping payment initialization:', { 
+        paymentInitialized, 
+        amount, 
+        skipReason: paymentInitialized ? 'Already initialized' : 'Invalid amount'
+      });
       return;
     }
 
     const initializePayment = async () => {
+      console.log('PaymentForm - Initializing payment...');
       try {
         setIsLoading(true);
         setPaymentInitialized(true);
@@ -55,6 +74,12 @@ export default function PaymentForm({ amount, amountDetails, items, shippingAddr
           shippingAddress: formattedAddress,
           requestId: requestId
         };
+        
+        console.log('PaymentForm - Sending payment request with payload:', {
+          amount: payload.amount,
+          itemCount: payload.cartItems.length,
+          deliveryMethod: payload.deliveryMethod
+        });
 
         const response = await fetch('/api/payments', {
           method: 'POST',
@@ -67,10 +92,16 @@ export default function PaymentForm({ amount, amountDetails, items, shippingAddr
 
         if (!response.ok) {
           const errorData = await response.json();
+          console.error('PaymentForm - Server returned error:', errorData);
           throw new Error(errorData.error || 'Payment initialization failed');
         }
 
         const data = await response.json();
+        console.log('PaymentForm - Server response received:', { 
+          hasClientSecret: !!data.clientSecret,
+          status: 'success' 
+        });
+        
         if (data.clientSecret) {
           setClientSecret(data.clientSecret);
         } else {
@@ -83,12 +114,15 @@ export default function PaymentForm({ amount, amountDetails, items, shippingAddr
         setPaymentInitialized(false);
       } finally {
         setIsLoading(false);
+        console.log('PaymentForm - Payment initialization completed');
       }
     };
 
     const timeoutId = setTimeout(initializePayment, 100);
     return () => clearTimeout(timeoutId);
   }, [amount, amountDetails, getFormattedItems, deliveryMethod, selectedTime, shippingAddress, paymentInitialized, requestId]);
+
+  console.log('PaymentForm - Render state:', { isLoading, hasError: !!error, hasClientSecret: !!clientSecret });
 
   if (isLoading) {
     return (
@@ -124,6 +158,11 @@ export default function PaymentForm({ amount, amountDetails, items, shippingAddr
           }}
         >
           <div>
+            {console.log('PaymentForm - Rendering CheckoutForm with props:', { 
+              amount, 
+              hasItems: !!items?.length,
+              deliveryMethod
+            })}
             <CheckoutForm
               amount={amount}
               amountDetails={amountDetails}

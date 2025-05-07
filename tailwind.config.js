@@ -101,6 +101,7 @@ module.exports = {
         scaleSpring: 'scaleSpring 0.3s ease-out',
         modalAppear: 'modalAppear 0.2s ease-out forwards',
         fadeIn: 'fadeIn 0.2s ease-out forwards',
+        'fade-in': 'fadeIn 0.5s ease-out forwards',
         pulse: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         wiggle: 'wiggle 1s ease-in-out infinite',
         'bounce-subtle': 'bounce-subtle 2s ease-in-out infinite',

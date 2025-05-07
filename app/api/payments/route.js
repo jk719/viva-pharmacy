@@ -88,7 +88,16 @@ export async function POST(req) {
     // Use userId derived from token.sub consistently
     const userId = token.sub; 
 
-    const { amount, prescriptionId, deliveryOption } = await req.json();
+    const { 
+      amount, 
+      prescriptionId, 
+      deliveryOption,
+      cartItems,
+      amountDetails,
+      deliveryMethod,
+      selectedTime,
+      shippingAddress,
+    } = await req.json();
 
     // Convert amount to cents and ensure it's a clean integer
     const amountInCents = Math.round(amount * 100);
@@ -117,15 +126,39 @@ export async function POST(req) {
       }
     }
 
+    // Prepare metadata - compact versions of the required data
+    // This is needed because Stripe metadata has size limitations
+    const metadata = {
+      userId: userId,
+      prescriptionId: prescriptionId || null,
+      deliveryOption: deliveryOption || null,
+      deliveryMethod: deliveryMethod || 'delivery',
+      selectedTime: selectedTime || 'default',
+    };
+
+    // Add cart items to metadata if provided
+    if (cartItems && cartItems.length > 0) {
+      // Compress cart items to fit within Stripe metadata limits
+      metadata.cartItems = createCompactCartMetadata(cartItems);
+    }
+
+    // Add shipping address to metadata if provided
+    if (shippingAddress) {
+      // Compact version of shipping address
+      metadata.shippingAddress = JSON.stringify({
+        street: shippingAddress.street || '',
+        city: shippingAddress.city || '',
+        state: shippingAddress.state || '',
+        zipCode: shippingAddress.zipCode || '',
+        country: shippingAddress.country || 'US'
+      });
+    }
+
     // Create Stripe payment intent
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amountInCents, 
       currency: 'usd',
-      metadata: {
-        userId: userId, // Use userId variable consistently
-        prescriptionId: prescriptionId || null,
-        deliveryOption
-      }
+      metadata
     });
 
     return NextResponse.json({

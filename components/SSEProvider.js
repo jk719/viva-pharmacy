@@ -11,11 +11,16 @@ export default function SSEProvider({ children }) {
   useEffect(() => {
     if (!session?.user?.id || status !== 'authenticated') return;
     
-    // CRITICAL FIX: Skip SSE connection during checkout success to avoid delays
+    // CRITICAL FIX: Skip SSE connection during checkout completion to avoid delays
     if (typeof window !== 'undefined') {
-      const isCheckoutSuccess = window.location.pathname.includes('/checkout/success');
-      if (isCheckoutSuccess) {
-        console.log('🚫 Skipping SSE connection during checkout success flow to avoid delays');
+      // Check if we're in a post-checkout state via URL parameters instead of non-existent path
+      const urlParams = new URLSearchParams(window.location.search);
+      const isCheckoutComplete = urlParams.has('orderComplete') || 
+                                 urlParams.has('orderId') || 
+                                 window.location.pathname.includes('/profile/orders');
+      
+      if (isCheckoutComplete) {
+        console.log('🚫 Skipping SSE connection after checkout completion to avoid delays');
         return;
       }
     }

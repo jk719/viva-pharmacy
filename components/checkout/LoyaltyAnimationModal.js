@@ -1,73 +1,54 @@
 import LoyaltyBanner from '@/components/loyalty/LoyaltyBanner';
 import { useEffect, useRef } from 'react';
 import eventEmitter, { Events } from '@/lib/eventEmitter';
+import { useModal, ModalType } from '@/context/ModalContext';
 
-export default function LoyaltyAnimationModal({
-  pointsEarned,
-  paymentIntent,
-  orderDetails,
-  onProgressBarAnimationComplete
-}) {
-  // Use ref to track if redirect already triggered
-  const redirectTriggered = useRef(false);
+export default function LoyaltyAnimationModal() {
+  // Use the modal context
+  const { modalData, hideModal } = useModal();
+  
+  // Extract data from modalData, handling both possible field names
+  const pointsEarned = modalData?.loyaltyPointsEarned || modalData?.pointsEarned || 0;
+  const paymentIntent = modalData?.paymentIntent;
+  const orderDetails = modalData?.orderDetails || modalData;
+  const totalAmount = orderDetails?.total || orderDetails?.amount || 0;
+  
+  // Use ref to track if event already emitted
+  const animationCompleteEmitted = useRef(false);
 
-  // Set up guaranteed fallback timer
-  useEffect(() => {
-    const orderId = paymentIntent?.id || orderDetails?.orderId || '';
-    if (!orderId) return;
+  // Log the data we received
+  console.log('LoyaltyAnimationModal rendering with data:', {
+    pointsEarned,
+    orderId: orderDetails?.orderId || 'missing',
+    hasPaymentIntent: !!paymentIntent,
+    totalAmount
+  });
+
+  // Handle animation complete from LoyaltyBanner/ProgressBar
+  const handleAnimationComplete = () => {
+    console.log('LoyaltyAnimationModal: Animation complete');
     
-    // Guaranteed fallback redirect after 5 seconds
-    const timeout = setTimeout(() => {
-      if (!redirectTriggered.current) {
-        console.log('🚨 Animation fallback redirect triggered after timeout');
-        redirectTriggered.current = true;
-        
-        // Include animate=false to prevent duplicate animations
-        window.location.href = `/checkout/success?orderId=${orderId}&animate=false&redirect=timeout&ts=${Date.now()}`;
-      }
-    }, 5000);
-    
-    return () => clearTimeout(timeout);
-  }, [paymentIntent, orderDetails]);
-
-  // Centralized redirect function to avoid race conditions
-  const redirectToSuccessPage = (orderId, source) => {
-    if (redirectTriggered.current) {
-      console.log('⚠️ Redirect already triggered, ignoring duplicate:', source);
+    // Prevent duplicate events
+    if (animationCompleteEmitted.current) {
+      console.log('Animation complete already emitted, ignoring duplicate');
       return;
     }
     
-    console.log(`🔄 Redirecting to success page from ${source}`);
-    redirectTriggered.current = true;
+    animationCompleteEmitted.current = true;
     
-    // Emit event before redirecting to notify any listeners
+    // Emit the animation complete event for other components that might be listening
+    const orderId = paymentIntent?.id || orderDetails?.orderId || '';
     eventEmitter.emit(Events.LOYALTY_ANIMATION_COMPLETE, {
       timestamp: Date.now(),
       orderId,
-      source,
+      source: 'animation_complete',
       completed: true
     });
     
-    // Do the actual redirect with a small delay to allow event processing
+    // Short delay to make animation visible before closing
     setTimeout(() => {
-      window.location.href = `/checkout/success?orderId=${orderId}&animate=false&source=${source}&ts=${Date.now()}`;
-    }, 100);
-  };
-  
-  // Handle animation complete from LoyaltyBanner/ProgressBar
-  const handleAnimationComplete = () => {
-    const orderId = paymentIntent?.id || orderDetails?.orderId || '';
-    if (!orderId) return;
-    
-    // Call the callback if provided (for parent component coordination)
-    if (typeof onProgressBarAnimationComplete === 'function') {
-      onProgressBarAnimationComplete();
-    }
-    
-    // Wait slightly longer to ensure animation is visually complete
-    setTimeout(() => {
-      redirectToSuccessPage(orderId, 'animation_complete');
-    }, 800);
+      hideModal(); // This will trigger the next modal in queue (likely OrderSuccessModal)
+    }, 1000);
   };
 
   return (
