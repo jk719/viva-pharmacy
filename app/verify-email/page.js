@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import toast from 'react-hot-toast';
+import { verifyEmail } from '@/app/actions/auth';
 
 export default function VerifyEmailPage() {
   const [status, setStatus] = useState('verifying');
@@ -13,28 +14,25 @@ export default function VerifyEmailPage() {
   const token = searchParams.get('token');
 
   useEffect(() => {
-    const verifyEmail = async () => {
+    const handleVerification = async () => {
       try {
         console.log('Starting verification with token:', token?.substring(0, 10) + '...');
         
-        const response = await fetch('/api/auth/verify-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token })
-        });
+        // Create form data
+        const formData = new FormData();
+        formData.append('token', token);
+        
+        const result = await verifyEmail(formData);
 
-        const data = await response.json();
-        console.log('Verification response:', data);
-
-        if (!response.ok) {
-          throw new Error(data.message || 'Verification failed');
+        if (!result.success) {
+          throw new Error(result.message || 'Verification failed');
         }
 
         setStatus('success');
         toast.success('Email verified successfully');
 
         // For managers who need to set password
-        if (data.role === 'MANAGER' && data.mustChangePassword) {
+        if (result.role === 'MANAGER' && result.mustChangePassword) {
           console.log('Redirecting manager to password setup:', token);
           router.replace(`/reset-password/${token}`);
           return;
@@ -52,7 +50,7 @@ export default function VerifyEmailPage() {
     };
 
     if (token) {
-      verifyEmail();
+      handleVerification();
     } else {
       setStatus('invalid');
     }

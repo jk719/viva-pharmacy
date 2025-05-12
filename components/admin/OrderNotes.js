@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { FiMessageSquare, FiSend, FiMail } from 'react-icons/fi';
+import { getOrderNotes, addOrderNote, sendOrderEmail } from '@/app/actions/orders';
 
 export default function OrderNotes({ orderId }) {
   const [notes, setNotes] = useState([]);
@@ -17,9 +18,13 @@ export default function OrderNotes({ orderId }) {
   const fetchNotes = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/orders/admin/${orderId}/notes`);
-      const data = await response.json();
-      setNotes(data.notes);
+      const result = await getOrderNotes(orderId);
+      
+      if (result.success) {
+        setNotes(result.notes);
+      } else {
+        console.error('Error fetching notes:', result.message);
+      }
     } catch (error) {
       console.error('Error fetching notes:', error);
     } finally {
@@ -27,24 +32,27 @@ export default function OrderNotes({ orderId }) {
     }
   };
 
-  const addNote = async (e) => {
+  const handleAddNote = async (e) => {
     e.preventDefault();
     if (!newNote.trim()) return;
 
     try {
       setSending(true);
-      const response = await fetch(`/api/orders/admin/${orderId}/notes`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ content: newNote }),
-      });
-
-      if (!response.ok) throw new Error('Failed to add note');
       
-      setNewNote('');
-      await fetchNotes();
+      // Create form data
+      const formData = new FormData();
+      formData.append('orderId', orderId);
+      formData.append('content', newNote);
+      
+      // Use server action
+      const result = await addOrderNote(formData);
+
+      if (result.success) {
+        setNewNote('');
+        await fetchNotes();
+      } else {
+        console.error('Error adding note:', result.message);
+      }
     } catch (error) {
       console.error('Error adding note:', error);
     } finally {
@@ -52,25 +60,28 @@ export default function OrderNotes({ orderId }) {
     }
   };
 
-  const sendCustomerEmail = async (e) => {
+  const handleSendEmail = async (e) => {
     e.preventDefault();
     if (!emailContent.trim()) return;
 
     try {
       setSending(true);
-      const response = await fetch(`/api/orders/admin/${orderId}/email`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ content: emailContent }),
-      });
-
-      if (!response.ok) throw new Error('Failed to send email');
       
-      setEmailContent('');
-      setShowEmailForm(false);
-      await fetchNotes(); // Refresh notes to show email sent
+      // Create form data
+      const formData = new FormData();
+      formData.append('orderId', orderId);
+      formData.append('content', emailContent);
+      
+      // Use server action
+      const result = await sendOrderEmail(formData);
+
+      if (result.success) {
+        setEmailContent('');
+        setShowEmailForm(false);
+        await fetchNotes(); // Refresh notes to show email sent
+      } else {
+        console.error('Error sending email:', result.message);
+      }
     } catch (error) {
       console.error('Error sending email:', error);
     } finally {
@@ -101,7 +112,7 @@ export default function OrderNotes({ orderId }) {
       </div>
 
       {showEmailForm && (
-        <form onSubmit={sendCustomerEmail} className="bg-gray-50 p-4 rounded-lg">
+        <form onSubmit={handleSendEmail} className="bg-gray-50 p-4 rounded-lg">
           <textarea
             value={emailContent}
             onChange={(e) => setEmailContent(e.target.value)}
@@ -141,7 +152,7 @@ export default function OrderNotes({ orderId }) {
         ))}
       </div>
 
-      <form onSubmit={addNote} className="mt-4">
+      <form onSubmit={handleAddNote} className="mt-4">
         <div className="flex gap-2">
           <input
             type="text"

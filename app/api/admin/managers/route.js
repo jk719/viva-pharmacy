@@ -3,7 +3,7 @@ import { authOptions } from "@/lib/auth";
 import dbConnect from '@/lib/dbConnect';
 import User from '@/models/User';
 import { generateVerificationToken } from '@/lib/tokens';
-import { sendAdminWelcomeEmail } from '@/lib/email/sendEmail';
+import { emailService } from '@/lib/email/emailService';
 import bcrypt from 'bcryptjs';
 
 export async function POST(request) {
@@ -51,10 +51,11 @@ export async function POST(request) {
       expires: newManager.verificationExpires
     });
 
-    // Send welcome email without temporary password
-    await sendAdminWelcomeEmail(email, { 
-      verificationToken
-    });
+    // Use emailService directly instead of adapter
+    await emailService.sendAdminWelcomeEmail(
+      { email, name },
+      { verificationToken, role: 'MANAGER' }
+    );
 
     return NextResponse.json({
       message: 'Manager created successfully',

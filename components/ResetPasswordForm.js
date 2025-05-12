@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
+import { requestPasswordReset } from '@/app/actions/auth';
 
 export default function ResetPasswordForm({ isManagerReset = false }) {
   const { data: session, update: updateSession } = useSession();
@@ -16,30 +17,22 @@ export default function ResetPasswordForm({ isManagerReset = false }) {
     setIsLoading(true);
 
     try {
-      const res = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          isManagerReset: isManagerReset && session?.user?.role === 'MANAGER' && session?.user?.mustChangePassword
-        }),
-      });
+      // Create form data for the server action
+      const formData = new FormData();
+      formData.append('email', email);
 
-      const data = await res.json();
+      // Use server action instead of API route
+      const result = await requestPasswordReset(formData);
 
-      if (res.ok) {
-        if (data.updateSession) {
-          await updateSession({
-            user: data.user
-          });
+      if (result.success) {
+        toast.success('Password reset link sent to your email');
+        
+        // For managers who need to update session
+        if (isManagerReset && session?.user?.role === 'MANAGER') {
+          router.push('/admin');
         }
-
-        toast.success('Password reset successfully');
-        router.push('/admin');
       } else {
-        toast.error(data.error || 'Failed to send reset email');
+        toast.error(result.message || 'Failed to send reset email');
       }
     } catch (error) {
       console.error('Reset password error:', error);

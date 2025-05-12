@@ -4,8 +4,7 @@ import Stripe from 'stripe';
 import dbConnect from '@/lib/dbConnect';
 import User from '@/models/User';
 import Order from '@/models/Order';
-import { generateOrderConfirmationEmail } from '@/lib/email-templates/order-confirmation';
-import { sendOrderConfirmationEmail } from '@/lib/email/sendEmail';
+import { emailService } from '@/lib/email/emailService';
 import mongoose from 'mongoose';
 import { paymentTracker } from '@/lib/stripe/paymentTracker';
 import eventEmitter, { Events } from '@/lib/eventEmitter';
@@ -170,7 +169,20 @@ const processPostOrderTasks = async (order) => {
             if (user && user.email) {
                 const freshOrder = await Order.findById(order._id);
                 if (freshOrder) {
-                   await sendOrderConfirmationEmail(user.email, freshOrder);
+                   await emailService.sendOrderConfirmationEmail(
+                       { email: user.email, name: user.name || 'Valued Customer' },
+                       {
+                           orderNumber: freshOrder.orderNumber,
+                           items: freshOrder.items,
+                           total: freshOrder.total,
+                           subtotal: freshOrder.subtotal || (freshOrder.total * 0.93),
+                           tax: freshOrder.tax || (freshOrder.total * 0.07),
+                           shippingAddress: freshOrder.shippingAddress,
+                           deliveryMethod: freshOrder.deliveryMethod,
+                           selectedTime: freshOrder.selectedTime,
+                           vivaBucksEarned: Math.floor(freshOrder.total)
+                       }
+                   );
                    await Order.updateOne({ _id: order._id }, { $set: { emailSent: true } });
                    console.log('✉️ Order confirmation email sent to:', user.email);
                 } else {

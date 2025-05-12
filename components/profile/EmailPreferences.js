@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
+import { getUserEmailPreferences, updateEmailPreferences } from '@/app/actions/emailPreferences';
 
 const PREFERENCE_TYPES = {
   pointsNotifications: {
@@ -37,9 +38,13 @@ export default function EmailPreferences() {
 
   const fetchPreferences = async () => {
     try {
-      const response = await fetch('/api/user/email-preferences');
-      const data = await response.json();
-      setPreferences(data.emailPreferences);
+      const result = await getUserEmailPreferences();
+      
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      
+      setPreferences(result.emailPreferences);
     } catch (error) {
       console.error('Error fetching preferences:', error);
       toast.error('Failed to load email preferences');
@@ -56,15 +61,17 @@ export default function EmailPreferences() {
         [key]: !preferences[key]
       };
 
-      const response = await fetch('/api/user/email-preferences', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ emailPreferences: newPreferences })
-      });
+      // Create form data
+      const formData = new FormData();
+      formData.append('emailPreferences', JSON.stringify(newPreferences));
+      
+      const result = await updateEmailPreferences(formData);
+      
+      if (result.error) {
+        throw new Error(result.error);
+      }
 
-      if (!response.ok) throw new Error('Failed to update preferences');
-
-      setPreferences(newPreferences);
+      setPreferences(result.emailPreferences);
       toast.success('Preferences updated successfully');
     } catch (error) {
       console.error('Error updating preferences:', error);

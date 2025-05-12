@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { headers } from 'next/headers';
-import { sendDeliveryConfirmation, sendOrderConfirmationEmail } from '@/lib/email/sendEmail';
+// Replace adapter import with direct emailService import
+import { emailService } from '@/lib/email/emailService';
 import dbConnect from '@/lib/dbConnect';
 import PrescriptionDelivery from '@/models/PrescriptionDelivery';
 import Order from '@/models/Order';
@@ -160,18 +161,21 @@ async function handleRegularOrder(paymentIntent) {
     const user = await User.findById(userId);
     if (user && user.email) {
       try {
-        await sendOrderConfirmationEmail(user.email, {
-          orderNumber,
-          customerName: user.name || 'Valued Customer',
-          items: order.items,
-          total: order.total,
-          subtotal: order.total * 0.93, // Approximation if actual subtotal is not stored
-          tax: order.total * 0.07, // Approximation if actual tax is not stored
-          shippingAddress: order.shippingAddress,
-          deliveryMethod: order.deliveryMethod,
-          selectedTime: order.selectedTime,
-          vivaBucksEarned: Math.floor(order.total) // Simple points calculation
-        });
+        // Use emailService directly instead of adapter
+        await emailService.sendOrderConfirmationEmail(
+          { email: user.email, name: user.name || 'Valued Customer' },
+          {
+            orderNumber,
+            items: order.items,
+            total: order.total,
+            subtotal: order.total * 0.93, // Approximation if actual subtotal is not stored
+            tax: order.total * 0.07, // Approximation if actual tax is not stored
+            shippingAddress: order.shippingAddress,
+            deliveryMethod: order.deliveryMethod,
+            selectedTime: order.selectedTime,
+            vivaBucksEarned: Math.floor(order.total) // Simple points calculation
+          }
+        );
         
         // Mark email as sent
         order.emailSent = true;
@@ -252,10 +256,10 @@ async function handlePrescriptionDelivery(paymentIntent) {
       estimatedDelivery
     });
 
-    // Send confirmation email
-    await sendDeliveryConfirmation({
-      to: paymentIntent.receipt_email || contact.email,
-      deliveryDetails: {
+    // Send confirmation email using emailService directly
+    await emailService.sendDeliveryConfirmationEmail(
+      { email: paymentIntent.receipt_email || contact.email, name: contact.name },
+      {
         id: delivery._id,
         estimatedDelivery,
         address,
@@ -263,7 +267,7 @@ async function handlePrescriptionDelivery(paymentIntent) {
         amount: paymentIntent.amount / 100,
         deliverySpeed: metadata.deliverySpeed
       }
-    });
+    );
 
     // Update delivery status
     await delivery.updateOne({ status: 'CONFIRMED' });

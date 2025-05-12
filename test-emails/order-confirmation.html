@@ -1,0 +1,495 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Confirmation - Email Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .controls {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f5f5f5;
+            border-radius: 8px;
+        }
+        .dark-mode {
+            background-color: #222;
+            color: #eee;
+        }
+        iframe {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 100%;
+            height: 600px;
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 15px;
+            background: #FF9F43;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #e58b2f;
+        }
+        .theme-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #FF9F43;
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <h1>Order Confirmation Template Test</h1>
+        <div class="theme-toggle">
+            <span>Light Mode</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="dark-mode-toggle">
+                <span class="slider"></span>
+            </label>
+            <span>Dark Mode</span>
+        </div>
+        <p>Viewing the email template with mock data. Use the toggle above to test dark mode support.</p>
+    </div>
+    
+    <div id="email-container"></div>
+    
+    <script>
+        // Store the email HTML content
+        const emailHtml = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="color-scheme" content="light dark">
+        <meta name="supported-color-schemes" content="light dark">
+        <title>Order Confirmation - Viva Pharmacy</title>
+        <style>
+          :root {
+            color-scheme: light dark;
+            supported-color-schemes: light dark;
+            --primary-color: #FF9F43;
+            --primary-dark: #E58B2F;
+            --secondary-color: #2863E8;
+            --accent-color: #00C49A;
+            --text-color: #333333;
+            --text-light: #666666;
+            --text-on-primary: #FFFFFF;
+            --bg-color: #FFFFFF;
+            --bg-secondary: #F9F5FF;
+            --success-color: #2EC76D;
+            --border-radius: 8px;
+            --bg-secondary: #F9F9F9;
+            --bg-rewards: #FFF5E6;
+            --border-color: #EEEEEE;
+            --shadow-color: rgba(0,0,0,0.1);
+          }
+
+          @media (prefers-color-scheme: dark) {
+            :root {
+              --text-color: #F0F0F0;
+              --text-light: #CCCCCC;
+              --bg-color: #2C3E50;
+              --bg-secondary: #34495E;
+              --bg-rewards: #5A3922;
+              --border-color: #4A6583;
+              --shadow-color: rgba(0, 0, 0, 0.2);
+            }
+            .item, .content {
+              background-color: var(--bg-color) !important;
+            }
+          }
+          
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+          }
+          .icon {
+            width: 24px;
+            height: 24px;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 8px;
+          }
+          .confetti-bg {
+            background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTIwIDIwTDI1IDMwIiBzdHJva2U9IiNGRjlGNDMiIHN0cm9rZS13aWR0aD0iMiIgLz48cGF0aCBkPSJNODAgODBMNzUgNzAiIHN0cm9rZT0iIzI4NjNFOCIgc3Ryb2tlLXdpZHRoPSIyIiAvPjxjaXJjbGUgY3g9IjgwIiBjeT0iMjAiIHI9IjQiIGZpbGw9IiMwMEM0OUEiIC8+PGNpcmNsZSBjeD0iMjAiIGN5PSI4MCIgcj0iNCIgZmlsbD0iI0ZGOUZEMyIgLz48cGF0aCBkPSJNNDAgNjBMNDUgNDUiIHN0cm9rZT0iI0ZGOUZEMyIgc3Ryb2tlLXdpZHRoPSIyIiAvPjxyZWN0IHg9IjY1IiB5PSI1MCIgd2lkdGg9IjciIGhlaWdodD0iNyIgZmlsbD0iI0ZGOUY0MyIgdHJhbnNmb3JtPSJyb3RhdGUoNDUgNjUgNTApIi8+PHJlY3QgeD0iMzUiIHk9IjI1IiB3aWR0aD0iNSIgaGVpZ2h0PSI1IiBmaWxsPSIjMDBDNDlBIiB0cmFuc2Zvcm09InJvdGF0ZSgzMCAzNSAyNSkiLz48L3N2Zz4=');
+            background-repeat: repeat;
+            opacity: 0.2;
+          }
+          .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+          }
+          .header {
+            text-align: center;
+            background-color: var(--primary-color);
+            background-image: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+            padding: 30px 24px;
+            text-align: center;
+            color: var(--text-on-primary);
+            border-radius: var(--border-radius) var(--border-radius) 0 0;
+            position: relative;
+            overflow: hidden;
+          }
+          .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTIwIDIwTDI1IDMwIiBzdHJva2U9IiNGRkZGRkYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLW9wYWNpdHk9IjAuMyIgLz48cGF0aCBkPSJNODAgODBMNzUgNzAiIHN0cm9rZT0iI0ZGRkZGRiIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2Utb3BhY2l0eT0iMC4yIiAvPjxjaXJjbGUgY3g9IjgwIiBjeT0iMjAiIHI9IjQiIGZpbGw9IiNGRkZGRkYiIGZpbGwtb3BhY2l0eT0iMC4yIiAvPjxjaXJjbGUgY3g9IjIwIiBjeT0iODAiIHI9IjQiIGZpbGw9IiNGRkZGRkYiIGZpbGwtb3BhY2l0eT0iMC4yIiAvPjxyZWN0IHg9IjY1IiB5PSI1MCIgd2lkdGg9IjciIGhlaWdodD0iNyIgZmlsbD0iI0ZGRkZGRiIgZmlsbC1vcGFjaXR5PSIwLjIiIHRyYW5zZm9ybT0icm90YXRlKDQ1IDY1IDUwKSIvPjwvc3ZnPg==');
+            opacity: 0.2;
+            z-index: 0;
+          }
+          .content {
+            background-color: var(--bg-color);
+            padding: 20px;
+            border-radius: 0 0 var(--border-radius) var(--border-radius);
+            box-shadow: 0 2px 4px var(--shadow-color);
+            border: 1px solid var(--border-color);
+          }
+          .button {
+            display: inline-block;
+            padding: 14px 28px;
+            background-color: var(--primary-color);
+            background-image: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+            color: var(--text-on-primary);
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: 600;
+            margin: 20px 0;
+            box-shadow: 0 4px 10px rgba(229, 139, 47, 0.2);
+            transition: transform 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 14px;
+          }
+          .section {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: var(--bg-secondary);
+            border-radius: 6px;
+          }
+          .section-title {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+          }
+          .item {
+            display: flex;
+            margin: 10px 0;
+            padding: 10px;
+            background-color: var(--bg-color);
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+          }
+          .product-image {
+            width: 70px;
+            height: 70px;
+            object-fit: cover;
+            margin-right: 16px;
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+          }
+          .item-details {
+            flex: 1;
+          }
+          .item-name {
+            font-weight: bold;
+            margin: 0 0 5px 0;
+            color: var(--text-color);
+          }
+          .item-meta {
+            color: var(--text-light);
+            font-size: 0.9em;
+            margin: 0;
+          }
+          .total-section {
+            margin-top: 20px;
+            border-top: 2px solid var(--border-color);
+            padding-top: 15px;
+          }
+          .total-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+          }
+          .total-row.final {
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-top: 10px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 10px;
+          }
+          .rewards-section {
+            background-color: var(--bg-rewards);
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+            text-align: center;
+          }
+          .rewards-title {
+            color: var(--primary-color);
+            margin: 0 0 10px 0;
+          }
+          .rewards-amount {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin: 5px 0;
+          }
+          .footer {
+            text-align: center;
+            padding: 30px 20px;
+            color: var(--text-light);
+            font-size: 0.9em;
+            background-color: var(--bg-secondary);
+            border-radius: 0 0 var(--border-radius) var(--border-radius);
+            margin-top: 20px;
+          }
+          .icon-wrap {
+            display: inline-flex;
+            align-items: center;
+            margin: 5px 0;
+          }
+          .status-badge {
+            display: inline-block;
+            background-color: var(--success-color);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 30px;
+            font-weight: 500;
+            font-size: 14px;
+            margin-bottom: 16px;
+          }
+          .info-card {
+            background-color: var(--bg-secondary);
+            border-radius: var(--border-radius);
+            padding: 16px;
+            margin: 16px 0;
+          }
+          .product {
+            margin-bottom: 16px;
+            padding: 16px;
+            border-radius: var(--border-radius);
+            background-color: var(--bg-secondary);
+            display: flex;
+            align-items: center;
+          }
+          /* Email client-specific adjustments */
+          [data-ogsc] .header { background-color: var(--primary-color) !important; }
+          [data-ogsc] .content { background-color: var(--bg-color) !important; }
+          [data-ogsc] .section { background-color: var(--bg-secondary) !important; }
+          [data-ogsc] .rewards-section { background-color: var(--bg-rewards) !important; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1 style="margin-bottom: 0;">Order Confirmed! 🎉</h1>
+            <div class="status-badge">✓ Successfully Processed</div>
+            <p style="font-size: 18px; margin-top: 10px;">Thank you for your order, John Doe!</p>
+            <p style="opacity: 0.9; font-size: 16px;">Order #: ORD-123456789</p>
+          </div>
+
+          <div class="content">
+            <p class="greeting">Hi John Doe,</p>
+            <div class="info-card">
+              <div class="icon-wrap">
+                <img src="https://res.cloudinary.com/dv3cd1aoy/image/upload/v1/viva/ui/truck-icon" width="24" height="24" alt="Delivery" style="vertical-align: middle; margin-right: 8px;"/>
+                <span><strong>Delivery Method:</strong> Home Delivery</span>
+              </div>
+              <div class="icon-wrap">
+                <img src="https://res.cloudinary.com/dv3cd1aoy/image/upload/v1/viva/ui/calendar-icon" width="24" height="24" alt="Schedule" style="vertical-align: middle; margin-right: 8px;"/>
+                <span><strong>Time:</strong> Today, 5:00 PM - 7:00 PM</span>
+              </div>
+            </div>
+            
+            <p style="font-size: 16px; line-height: 1.6; margin-top: 20px;">Your order has been received and is being processed. We'll notify you once it's ready for delivery!</p>
+
+            <div class="section">
+              <h2 class="section-title">Order Summary</h2>
+              
+                  <div class="product">
+                    <div style="width: 70px; height: 70px; background-color: #eee; border-radius: var(--border-radius); margin-right: 16px;"></div>
+                    <div class="product-details">
+                      <div class="product-name" style="font-weight: 600; margin-bottom: 4px;">Tylenol PM Extra Strength Nighttime Pain Reliever</div>
+                      <div style="color: var(--text-light);">
+                        <span style="background-color: var(--bg-rewards); padding: 3px 8px; border-radius: 20px; font-size: 13px; color: var(--primary-dark);">2 × $13.97</span>
+                      </div>
+                    </div>
+                  </div>
+                
+                  <div class="product">
+                    <div style="width: 70px; height: 70px; background-color: #eee; border-radius: var(--border-radius); margin-right: 16px;"></div>
+                    <div class="product-details">
+                      <div class="product-name" style="font-weight: 600; margin-bottom: 4px;">Advil Liquid Gel Capsules</div>
+                      <div style="color: var(--text-light);">
+                        <span style="background-color: var(--bg-rewards); padding: 3px 8px; border-radius: 20px; font-size: 13px; color: var(--primary-dark);">1 × $8.99</span>
+                      </div>
+                    </div>
+                  </div>
+                
+
+              <div class="total-section">
+                <div class="total-row">
+                  <span>Subtotal</span>
+                  <span>$36.93</span>
+                </div>
+                <div class="total-row">
+                  <span>Tax</span>
+                  <span>$3.25</span>
+                </div>
+                <div class="total-row final">
+                  <span>Total</span>
+                  <span>$40.18</span>
+                </div>
+              </div>
+            </div>
+
+            
+              <div class="rewards-section">
+                <h3 style="margin-top: 0; color: var(--primary-dark); display: flex; align-items: center; justify-content: center;">
+                  <img src="https://res.cloudinary.com/dv3cd1aoy/image/upload/v1/viva/ui/gift-icon" width="28" height="28" alt="Rewards" style="margin-right: 8px;"/>
+                  Rewards Earned!
+                </h3>
+                <div style="display: flex; justify-content: center; flex-wrap: wrap; gap: 20px; margin-top: 16px;">
+                  <div style="background: white; border-radius: var(--border-radius); padding: 16px; min-width: 120px; box-shadow: 0 2px 8px rgba(229, 139, 47, 0.15);">
+                    <div style="font-size: 28px; font-weight: bold; color: var(--primary-color);">401</div>
+                    <div style="color: var(--text-light); font-size: 14px; margin-top: 4px;">VivaBucks</div>
+                  </div>
+                  <div style="background: white; border-radius: var(--border-radius); padding: 16px; min-width: 120px; box-shadow: 0 2px 8px rgba(229, 139, 47, 0.15);">
+                    <div style="font-size: 28px; font-weight: bold; color: var(--primary-color);">40</div>
+                    <div style="color: var(--text-light); font-size: 14px; margin-top: 4px;">Reward Points</div>
+                  </div>
+                </div>
+              </div>
+            
+
+            <div class="section">
+              <h2 class="section-title">Delivery Details</h2>
+              
+                <p><strong>Shipping Address:</strong><br>
+                123 Main Street<br>
+                New York, NY 10001</p>
+              
+              <p><strong>Selected Time:</strong> Today, 5:00 PM - 7:00 PM</p>
+            </div>
+          </div>
+        </div>
+      </body>
+    </html>
+    `;
+        
+        // Function to update the email preview
+        function updatePreview(isDarkMode) {
+            const container = document.getElementById('email-container');
+            container.innerHTML = '';
+            
+            // Create iframe to isolate email styles
+            const iframe = document.createElement('iframe');
+            container.appendChild(iframe);
+            
+            // Add dark mode class to the iframe if needed
+            iframe.onload = function() {
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                const htmlTag = iframeDoc.querySelector('html');
+                
+                // Apply dark mode through data attribute for testing
+                if (isDarkMode) {
+                    htmlTag.setAttribute('data-color-scheme', 'dark');
+                    
+                    // Also add a class to the html element to help with testing
+                    htmlTag.classList.add('dark-mode');
+                    
+                    // Add forced dark mode styles
+                    const style = iframeDoc.createElement('style');
+                    style.textContent = `
+                        @media (prefers-color-scheme: dark) {
+                            :root {
+                                color-scheme: dark;
+                            }
+                        }
+                    `;
+                    iframeDoc.head.appendChild(style);
+                } else {
+                    htmlTag.removeAttribute('data-color-scheme');
+                    htmlTag.classList.remove('dark-mode');
+                }
+            };
+            
+            // Write the email content to the iframe
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            iframeDoc.open();
+            iframeDoc.write(emailHtml);
+            iframeDoc.close();
+        }
+        
+        // Initialize with light mode
+        updatePreview(false);
+        
+        // Handle dark mode toggle
+        const toggle = document.getElementById('dark-mode-toggle');
+        toggle.addEventListener('change', function() {
+            updatePreview(this.checked);
+        });
+    </script>
+</body>
+</html>

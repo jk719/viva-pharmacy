@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
+import { resendVerificationEmail } from '@/app/actions/auth';
 
 export default function VerificationAlert() {
   const { data: session } = useSession();
@@ -15,17 +16,17 @@ export default function VerificationAlert() {
     return null;
   }
 
-  const resendVerification = async () => {
+  const handleResendVerification = async () => {
     try {
       setResending(true);
-      const res = await fetch('/api/auth/resend-verification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: session.user.email })
-      });
+      // Create form data for the server action
+      const formData = new FormData();
+      formData.append('email', session.user.email);
       
-      const data = await res.json();
-      setMessage(data.message);
+      // Call server action instead of API
+      const result = await resendVerificationEmail(formData);
+      
+      setMessage(result.message);
     } catch (error) {
       setMessage('Failed to resend verification email');
     } finally {
@@ -53,7 +54,7 @@ export default function VerificationAlert() {
             <div className="flex items-center space-x-4">
               {!resending ? (
                 <button
-                  onClick={resendVerification}
+                  onClick={handleResendVerification}
                   className="text-sm px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
                 >
                   Resend verification email

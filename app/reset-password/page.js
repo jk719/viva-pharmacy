@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import PasswordStrengthIndicator from '@/components/auth/PasswordStrengthIndicator';
+import { resetPassword } from '@/app/actions/auth';
 
 export default function ResetPassword() {
   const [password, setPassword] = useState('');
@@ -35,20 +36,20 @@ export default function ResetPassword() {
 
     try {
       console.log('Starting password reset process...');
-      const response = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          password,
-          isManagerReset: true
-        }),
-      });
+      
+      // Use the reset token from the session user if available
+      const token = session?.user?.resetToken || '';
+      
+      // Create form data for the server action
+      const formData = new FormData();
+      formData.append('token', token);
+      formData.append('password', password);
+      
+      // Use server action instead of API
+      const result = await resetPassword(formData);
 
-      const data = await response.json();
-      console.log('Password reset response:', { success: data.success });
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to reset password');
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to reset password');
       }
 
       setSuccess(true);

@@ -6,6 +6,7 @@ import PasswordStrengthIndicator from '@/components/auth/PasswordStrengthIndicat
 import toast from 'react-hot-toast';
 import { FaStar, FaGift, FaCoins, FaEnvelope, FaLock, FaPhone, FaUser } from 'react-icons/fa';
 import { motion } from 'framer-motion';
+import { registerUser } from '@/app/actions/auth';
 
 function RegisterContent() {
   const router = useRouter();
@@ -31,20 +32,19 @@ function RegisterContent() {
     }
 
     try {
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          password: formData.password,
-          phoneNumber: formData.phoneNumber
-        })
-      });
+      // Create form data for the server action
+      const formDataObj = new FormData();
+      formDataObj.append('name', formData.name);
+      formDataObj.append('email', formData.email);
+      formDataObj.append('password', formData.password);
+      if (formData.phoneNumber) {
+        formDataObj.append('phoneNumber', formData.phoneNumber);
+      }
+      
+      // Call server action instead of API
+      const result = await registerUser(formDataObj);
 
-      const data = await res.json();
-
-      if (res.ok) {
+      if (result.success) {
         toast.success(
           '✨ Account created successfully!\n✉️ Please check your email to verify your account.', 
           {
@@ -61,8 +61,8 @@ function RegisterContent() {
         );
         router.push('/login?registration=success');
       } else {
-        toast.error(data.message || 'Something went wrong');
-        setError(data.message || 'Something went wrong');
+        toast.error(result.message || 'Something went wrong');
+        setError(result.message || 'Something went wrong');
       }
     } catch (error) {
       toast.error('An error occurred during registration');

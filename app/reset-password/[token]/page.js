@@ -6,6 +6,7 @@ import { FaLock, FaArrowLeft } from 'react-icons/fa';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import PasswordStrengthIndicator from '@/components/auth/PasswordStrengthIndicator';
+import { confirmPasswordReset } from '@/app/actions/auth';
 
 export default function ResetPasswordWithToken() {
   const [password, setPassword] = useState('');
@@ -25,22 +26,16 @@ export default function ResetPasswordWithToken() {
         throw new Error('Passwords do not match');
       }
 
-      // Skip verification check and directly reset password
-      const response = await fetch('/api/auth/reset-password-confirm', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          token,
-          password,
-          isManagerReset: true
-        }),
-      });
+      // Create formData and use server action instead of fetch
+      const formData = new FormData();
+      formData.append('token', token);
+      formData.append('password', password);
+      formData.append('isManagerReset', 'true');
 
-      const data = await response.json();
-      console.log('Password reset response:', data);
+      const result = await confirmPasswordReset(formData);
 
-      if (!response.ok) {
-        throw new Error(data.error || data.message || 'Failed to reset password');
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to reset password');
       }
 
       toast.success('Password set successfully!');

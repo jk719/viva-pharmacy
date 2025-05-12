@@ -3,32 +3,32 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import toast from 'react-hot-toast';
+import { verifyEmail } from '@/app/actions/emailVerification';
 
 export default function VerificationForm({ token }) {
   const [isVerifying, setIsVerifying] = useState(false);
   const router = useRouter();
 
-  const verifyEmail = async () => {
+  const handleVerification = async () => {
     try {
       setIsVerifying(true);
-      const response = await fetch('/api/auth/verify-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token }),
-      });
+      
+      // Create form data
+      const formData = new FormData();
+      formData.append('token', token);
+      
+      const result = await verifyEmail(formData);
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Verification failed');
+      if (!result.success) {
+        throw new Error(result.message || 'Verification failed');
       }
 
       toast.success('Email verified successfully!');
 
       // If this is a manager, handle auto-login
-      if (data.userRole === 'MANAGER') {
+      if (result.role === 'MANAGER') {
         const signInResult = await signIn('credentials', {
-          email: data.email,
+          email: result.email,
           verificationLogin: 'true',
           redirect: false,
         });
@@ -63,7 +63,7 @@ export default function VerificationForm({ token }) {
         </div>
         <div className="mt-8 space-y-6">
           <button
-            onClick={verifyEmail}
+            onClick={handleVerification}
             disabled={isVerifying}
             className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
           >

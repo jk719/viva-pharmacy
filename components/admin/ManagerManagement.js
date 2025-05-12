@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiUserPlus, FiTrash2, FiAlertCircle, FiCheckCircle, FiEdit2, FiMail, FiUser } from 'react-icons/fi';
 import LoadingSpinner from '../common/LoadingSpinner';
+import { getManagers, sendAdminWelcomeEmail } from '@/app/actions/emailAdmin';
 
 export default function ManagerManagement() {
   const [managers, setManagers] = useState([]);
@@ -30,23 +31,16 @@ export default function ManagerManagement() {
   const fetchManagers = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/admin/managers', {
-        // Add cache: 'no-store' to prevent caching
-        cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache'
-        }
-      });
+      // Use the server action instead of fetch
+      const result = await getManagers();
       
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to fetch managers');
+      if (result.success) {
+        console.log('Fetched managers:', result.managers);
+        setManagers(result.managers || []);
+        setError(null);
+      } else {
+        throw new Error(result.message || 'Failed to fetch managers');
       }
-      
-      const data = await response.json();
-      console.log('Fetched managers:', data.managers);
-      setManagers(data.managers || []);
-      setError(null);
     } catch (err) {
       console.error('Fetch error:', err);
       setError(err.message);
@@ -80,6 +74,7 @@ export default function ManagerManagement() {
     setSuccessMessage('');
 
     try {
+      // Still using the API route for deletion as we haven't migrated it yet
       const response = await fetch(`/api/admin/managers/${managerId}`, {
         method: 'DELETE',
       });
@@ -112,27 +107,33 @@ export default function ManagerManagement() {
     setSuccessMessage('');
 
     try {
-      const url = editingManager 
-        ? `/api/admin/managers/${editingManager._id}`
-        : '/api/admin/managers';
-      
-      const method = editingManager ? 'PUT' : 'POST';
-      
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
+      if (editingManager) {
+        // Still using the API route for updates as we haven't migrated it yet
+        const response = await fetch(`/api/admin/managers/${editingManager._id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        });
 
-      const data = await response.json();
-      
-      if (!response.ok) throw new Error(data.error);
-
-      setSuccessMessage(
-        editingManager
-          ? `Manager updated successfully!`
-          : `Manager account created successfully! An email has been sent to ${formData.email} with instructions to set up their account.`
-      );
+        const data = await response.json();
+        
+        if (!response.ok) throw new Error(data.error);
+        
+        setSuccessMessage('Manager updated successfully!');
+      } else {
+        // Use server action for creating new managers
+        const formDataObj = new FormData();
+        formDataObj.append('name', formData.name);
+        formDataObj.append('email', formData.email);
+        
+        const result = await sendAdminWelcomeEmail(formDataObj);
+        
+        if (!result.success) {
+          throw new Error(result.message || 'Failed to create manager');
+        }
+        
+        setSuccessMessage(`Manager account created successfully! An email has been sent to ${formData.email} with instructions to set up their account.`);
+      }
       
       setFormData({ name: '', email: '' });
       setShowForm(false);

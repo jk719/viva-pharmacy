@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { requestPasswordReset } from '@/app/actions/auth';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -16,16 +17,15 @@ export default function ForgotPasswordPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.toLowerCase().trim() })
-      });
+      // Create form data for the server action
+      const formData = new FormData();
+      formData.append('email', email.toLowerCase().trim());
+      
+      // Call server action instead of API
+      const result = await requestPasswordReset(formData);
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to send reset email');
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to send reset email');
       }
 
       setSubmitted(true);
