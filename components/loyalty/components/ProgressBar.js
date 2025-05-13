@@ -14,6 +14,7 @@ import eventEmitter, { Events } from '@/lib/eventEmitter';
  * @param {boolean} props.animate - Whether to animate the progress bar
  * @param {Function} props.onAnimationComplete - Callback when animation completes
  * @param {boolean} props.forceAnimation - Force animation even if animate is false
+ * @param {boolean} props.compactMode - Use compact layout for desktop views
  */
 function ProgressBar({
   progress, // Can be undefined if earnedPoints is used
@@ -23,7 +24,8 @@ function ProgressBar({
   endPoints = 100,
   animate = false,
   onAnimationComplete,
-  forceAnimation = false
+  forceAnimation = false,
+  compactMode = false
 }) {
   // Clamp progress between 0 and 100
   const clampedProgress = Math.max(0, Math.min(progress, 100));
@@ -146,24 +148,24 @@ function ProgressBar({
   // Determine final width for the bar (use displayProgress if not animating earned points)
   const barWidthPercent = shouldAnimateEarned ? displayProgress : (shouldAnimate ? animatedProgress : displayProgress);
 
+  // Adjustments for compact mode
+  const barHeight = compactMode ? "h-4" : "h-5"; // Increased from h-3 to h-4 for compact mode
+  const containerClasses = compactMode 
+    ? "w-full py-0.5 md:py-0.5 relative" 
+    : "w-full py-2 relative";
+  const pointsTextClasses = compactMode
+    ? "text-xs md:text-xs font-medium text-slate-600 flex justify-between mt-0.5"
+    : "text-xs md:text-sm font-medium text-slate-600 flex justify-between mt-1";
+  const labelTopPosition = compactMode ? "top-1/2" : "top-1/2"; // Set to top-1/2 in both cases
+  const pointsRightPosition = compactMode ? "right-1.5" : "right-2";
+
   return (
-    <div className="w-full py-2 relative" data-testid="loyalty-progress-bar">
-      {/* Start and End Points */}
-        <div className="text-xs md:text-sm font-medium text-slate-600 flex justify-between mt-1">
-          <span>{displayStartPoints.toLocaleString()}</span>
-          <span>{displayEndPoints.toLocaleString()}</span>
-        </div>
-        {showExtendedTier && (
-          <div className="text-xs text-slate-500 mt-1 text-center">
-            {currentPoints >= 10000 ? "Extended Tier" : ""}
-          </div>
-        )}
-      
-      {/* Bar Container */}
-      <div className="relative w-full h-5 bg-gray-200 rounded-full overflow-hidden shadow-inner">
+    <div className={containerClasses} data-testid="loyalty-progress-bar">
+      {/* Bar Container - Added overflow-visible */}
+      <div className={`relative w-full ${barHeight} bg-gray-200 rounded-full overflow-visible shadow-inner`}>
         {/* Filled Bar */}
         <div
-          className="absolute top-0 left-0 h-full rounded-full overflow-hidden transition-all duration-500"
+          className="absolute top-0 left-0 h-full rounded-full overflow-visible transition-all duration-500"
           style={{
             width: `${barWidthPercent}%`, // Use calculated width
             background: 'linear-gradient(90deg, #FFB347 0%, #FF9B10 50%, #FF6B00 100%)',
@@ -173,7 +175,7 @@ function ProgressBar({
           data-testid="loyalty-progress-bar-fill"
           data-animate={shouldAnimate ? 'true' : 'false'}
         >
-          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-white font-bold text-xs drop-shadow">
+          <span className={`absolute ${pointsRightPosition} ${labelTopPosition} -translate-y-1/2 text-white font-bold text-xs drop-shadow`}>
             {currentPoints.toLocaleString()}
           </span>
         </div>
@@ -181,7 +183,7 @@ function ProgressBar({
         {/* Earned Points Indicator */}
         {shouldAnimateEarned && showEarnedPoints && (
           <div 
-            className="absolute top-[-25px] left-1/2 -translate-x-1/2 px-2 py-1 bg-green-500 text-white text-xs font-bold rounded shadow-lg animate-bounce"
+            className="absolute top-[-20px] left-1/2 -translate-x-1/2 px-2 py-1 bg-green-500 text-white text-xs font-bold rounded shadow-lg animate-bounce"
             data-testid="earned-points-indicator"
           >
             + {earnedPoints} VivaBucks!
@@ -195,6 +197,17 @@ function ProgressBar({
           ))}
         </div>
       </div>
+
+      {/* Start and End Points */}
+      <div className={pointsTextClasses}>
+        <span>{displayStartPoints.toLocaleString()}</span>
+        <span>{displayEndPoints.toLocaleString()}</span>
+      </div>
+      {showExtendedTier && (
+        <div className="text-xs text-slate-500 mt-0.5 text-center">
+          {currentPoints >= 10000 ? "Extended Tier" : ""}
+        </div>
+      )}
     </div>
   );
 }
@@ -207,7 +220,8 @@ export default memo(ProgressBar, (prevProps, nextProps) => {
     prevProps.currentPoints === nextProps.currentPoints &&
     prevProps.startPoints === nextProps.startPoints &&
     prevProps.endPoints === nextProps.endPoints &&
-    prevProps.animate === nextProps.animate;
+    prevProps.animate === nextProps.animate &&
+    prevProps.compactMode === nextProps.compactMode;
   
   return criticalPropsEqual;
 });

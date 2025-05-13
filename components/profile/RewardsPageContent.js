@@ -2,34 +2,44 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { FaUser, FaCoins, FaShoppingBag, FaGift, FaTrophy, FaChartLine, FaArrowRight } from 'react-icons/fa';
 import { TIER_CONFIG } from '@/lib/loyalty/tierConfig';
-import { calculateProgressToNextTier } from '@/lib/loyalty/loyaltyCalculator';
+import { TIER_COLORS } from '@/components/loyalty/constants/tierConfig';
+import TierPointsDisplay from '@/components/loyalty/components/TierPointsDisplay';
+import ProgressBar from '@/components/loyalty/components/ProgressBar';
+import useLoyaltyData from '@/components/loyalty/hooks/useLoyaltyData';
 
-export default function RewardsPageContent({ user }) {
+export default function RewardsPageContent() {
   const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'history', 'rewards'
 
-  // Ensure user has all required fields
-  const serializedUser = {
-    ...user,
-    vivaBucks: user.vivaBucks || 0,
-    cumulativePoints: user.cumulativePoints || 0,
-    currentTier: user.currentTier || 'BRONZE',
-    pointsMultiplier: user.pointsMultiplier || 1,
-    rewardHistory: user.rewardHistory || []
-  };
+  // Use the shared loyalty data hook
+  const { userData, progressInfo, isLoading } = useLoyaltyData();
 
-  // Get current loyalty points and tier
-  const currentPoints = serializedUser.vivaBucks || 0;
-  const cumulativePoints = serializedUser.cumulativePoints || 0;
-  const currentTier = serializedUser.currentTier || 'BRONZE';
-  const pointsMultiplier = serializedUser.pointsMultiplier || 1;
+  // Don't render full content while loading
+  if (isLoading || !userData) {
+    return (
+      <div className="min-h-screen bg-[#F5F7FA] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin mb-4">
+            <FaCoins className="text-[#FF6B00]" size={32} />
+          </div>
+          <p className="text-gray-600">Loading your VivaBucks rewards...</p>
+        </div>
+      </div>
+    );
+  }
 
-  // Use the centralized calculation function instead of duplicating logic
-  const progressInfo = calculateProgressToNextTier(cumulativePoints, TIER_CONFIG);
+  // Get current loyalty points and tier from userData
+  const currentPoints = userData.vivaBucks || 0;
+  const cumulativePoints = userData.cumulativePoints || 0;
+  const currentTier = userData.currentTier || 'BRONZE';
+  const pointsMultiplier = userData.pointsMultiplier || 1;
+  const rewardHistory = userData.rewardHistory || [];
   
   // Extract values from the progress info
-  const nextTierKey = progressInfo.nextTier;
-  const pointsToNextTier = progressInfo.pointsNeeded;
-  const progressPercentage = progressInfo.progress;
+  const nextTierKey = progressInfo?.nextTier || null;
+  const pointsToNextTier = progressInfo?.pointsNeeded || 0;
+  const progressPercentage = progressInfo?.progress || 0;
+  const startPoints = progressInfo?.startPoints || 0;
+  const endPoints = progressInfo?.endPoints || 0;
 
   // Generate dummy tier benefits for display purposes
   const tierBenefits = {
@@ -199,27 +209,32 @@ export default function RewardsPageContent({ user }) {
                     </div>
                     <h3 className="ml-3 text-lg font-medium text-gray-900">Current Tier</h3>
                   </div>
-                  <div className="mt-2">
-                    <div className="text-3xl font-bold text-gray-900">{currentTier}</div>
-                    <p className="text-sm text-gray-500 mt-1">
-                      {pointsMultiplier}x points multiplier
-                    </p>
+                  
+                  <div className="flex mt-2 mb-4">
+                    <TierPointsDisplay 
+                      currentTier={currentTier}
+                      points={currentPoints}
+                      multiplier={pointsMultiplier}
+                      showBadges={false}
+                    />
                   </div>
                   
-                  {nextTier && (
-                    <div className="mt-4">
+                  {nextTierKey && (
+                    <div className="mt-2">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs text-gray-500">Progress to {nextTierKey}</span>
                         <span className="text-xs font-semibold text-gray-700">
                           {pointsToNextTier.toLocaleString()} points needed
                         </span>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className="bg-amber-500 h-2 rounded-full"
-                          style={{ width: `${progressPercentage}%` }}
-                        ></div>
-                      </div>
+                      
+                      <ProgressBar
+                        progress={progressPercentage}
+                        currentPoints={cumulativePoints}
+                        startPoints={startPoints}
+                        endPoints={endPoints}
+                        animate={false}
+                      />
                     </div>
                   )}
                 </div>
@@ -236,7 +251,7 @@ export default function RewardsPageContent({ user }) {
                   </div>
                   <div className="mt-2">
                     <div className="text-3xl font-bold text-gray-900">
-                      {serializedUser.rewardHistory?.length || 0}
+                      {rewardHistory.length || 0}
                     </div>
                     <p className="text-sm text-gray-500 mt-1">Total reward activities</p>
                   </div>
@@ -274,7 +289,7 @@ export default function RewardsPageContent({ user }) {
               </div>
             </div>
 
-            {nextTier && (
+            {nextTierKey && (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                 <div className="p-6 bg-[#F7FAFF] border-b border-gray-200">
                   <h2 className="text-lg font-medium text-[#0F2D5C]">Next Tier: {nextTierKey}</h2>
@@ -351,9 +366,9 @@ export default function RewardsPageContent({ user }) {
               <p className="text-sm text-gray-500">View your past reward transactions</p>
             </div>
             <div className="p-6">
-              {serializedUser.rewardHistory && serializedUser.rewardHistory.length > 0 ? (
+              {rewardHistory && rewardHistory.length > 0 ? (
                 <div className="divide-y divide-gray-200">
-                  {serializedUser.rewardHistory.map((activity, index) => (
+                  {rewardHistory.map((activity, index) => (
                     <div key={index} className="py-4">
                       <div className="flex justify-between items-center">
                         <div>

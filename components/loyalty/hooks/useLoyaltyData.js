@@ -14,7 +14,6 @@ export default function useLoyaltyData() {
   const [userData, setUserData] = useState(null);
   const [progressInfo, setProgressInfo] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isMobile, setIsMobile] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
 
@@ -26,25 +25,15 @@ export default function useLoyaltyData() {
   const updateQueueRef = useRef([]);
   const isProcessingRef = useRef(false);
 
-  // Check for mobile device
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  // Fetch user data with cache control
+  // Fetch user data with cache control - CHANGED to use /api/user/profile endpoint
   const fetchUserDataFresh = useCallback(async () => {
     if (!session?.user?.id) return null;
     
     try {
       const timestamp = Date.now();
       const random = Math.random().toString(36).substring(2, 15);
-      const url = `/api/user/loyalty-status?nocache=${timestamp}&r=${random}`;
+      // Changed URL from loyalty-status to profile
+      const url = `/api/user/profile?nocache=${timestamp}&r=${random}`;
       
       const response = await fetch(url, {
         headers: {
@@ -77,14 +66,24 @@ export default function useLoyaltyData() {
       const data = await fetchUserDataFresh();
       if (!data) return;
 
+      // Ensure data has the correct structure - normalize field names if needed
+      const normalizedData = {
+        ...data,
+        // Ensure these properties exist in the normalized form
+        vivaBucks: data.vivaBucks || 0,
+        cumulativePoints: data.cumulativePoints || 0,
+        currentTier: data.currentTier || 'BRONZE',
+        pointsMultiplier: data.pointsMultiplier || 1,
+      };
+
       // Update state with fetched data
-      setUserData(data);
+      setUserData(normalizedData);
       setIsInitialized(true);
       
       // Calculate tier progress if we have cumulative points
-      if (data.cumulativePoints && typeof data.cumulativePoints === 'number') {
+      if (normalizedData.cumulativePoints && typeof normalizedData.cumulativePoints === 'number') {
         try {
-          const progress = calculateProgressToNextTier(data.cumulativePoints, TIER_CONFIG);
+          const progress = calculateProgressToNextTier(normalizedData.cumulativePoints, TIER_CONFIG);
           setProgressInfo(progress);
         } catch (err) {
           console.error('Error calculating tier progress:', err);
@@ -173,7 +172,6 @@ export default function useLoyaltyData() {
     userData,
     progressInfo,
     isLoading,
-    isMobile,
     isInitialized,
     connectionStatus,
     refresh: () => queueUpdate(true)
