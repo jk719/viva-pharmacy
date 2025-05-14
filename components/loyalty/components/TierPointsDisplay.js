@@ -1,135 +1,133 @@
 'use client';
 
-import { FaCoins, FaGift, FaArrowUp } from 'react-icons/fa';
-import { IoMdStar } from 'react-icons/io';
-import { TIER_COLORS, TIER_ICONS } from '../constants/tierConfig';
-
-// No counter animation component needed anymore - removing
+import { useState } from 'react';
+import { FaTrophy, FaStar, FaInfoCircle } from 'react-icons/fa';
 
 /**
- * Display component for loyalty tier and VivaBucks points information
+ * Component for displaying the user's loyalty tier progress and points
+ * 
+ * @param {Object} props Component properties
+ * @param {number} props.cumulativeVivaBucks - Total cumulative VivaBucks earned
+ * @param {number} props.pointsToNextTier - Points needed to reach next tier
+ * @param {string} props.currentTier - Current tier name
+ * @param {string} props.nextTier - Next tier name
+ * @param {number} props.progress - Progress percentage to next tier (0-100)
+ * @param {boolean} [props.showDetails=false] - Whether to show detailed information initially
  */
 export default function TierPointsDisplay({
+  cumulativeVivaBucks = 0,
+  pointsToNextTier = 0,
   currentTier = 'BRONZE',
-  points = 0,
-  multiplier = 1,
-  showBadges = true,
-  compact = false
+  nextTier = 'SILVER',
+  progress = 0,
+  showDetails = false
 }) {
-  const tierColors = TIER_COLORS[currentTier] || TIER_COLORS.BRONZE;
-  const Icon = TIER_ICONS[currentTier] || TIER_ICONS.BRONZE;
+  const [detailsVisible, setDetailsVisible] = useState(showDetails);
   
-  // Apply compact styling
-  const containerClasses = compact
-    ? "flex items-center space-x-1.5 md:space-x-3 flex-1 z-10"
-    : "flex items-center space-x-2 md:space-x-4 flex-1 z-10";
+  // Get tier color based on tier name
+  const getTierColor = (tier) => {
+    switch (tier.toUpperCase()) {
+      case 'SILVER':
+        return 'text-gray-400';
+      case 'GOLD':
+        return 'text-amber-500';
+      case 'PLATINUM':
+        return 'text-blue-400';
+      case 'DIAMOND':
+        return 'text-purple-500';
+      case 'BRONZE':
+      default:
+        return 'text-amber-700';
+    }
+  };
   
-  const iconSizeClasses = compact
-    ? "w-7 md:w-9 h-7 md:h-9"
-    : "w-8 md:w-12 h-8 md:h-12";
+  // Format points for display
+  const formatPoints = (points) => {
+    if (points >= 10000) {
+      return `${(points / 1000).toFixed(1)}k`;
+    }
+    return points.toLocaleString();
+  };
   
-  const tierNameClasses = compact
-    ? "text-xs md:text-xs font-bold tracking-wider uppercase"
-    : "text-xs md:text-sm font-bold tracking-wider uppercase";
+  // Get tier benefits description
+  const getTierBenefits = (tier) => {
+    switch (tier.toUpperCase()) {
+      case 'SILVER':
+        return '1.25x VivaBucks on purchases';
+      case 'GOLD':
+        return '1.5x VivaBucks on purchases';
+      case 'PLATINUM':
+        return '1.75x VivaBucks on purchases';
+      case 'DIAMOND':
+        return '2x VivaBucks on purchases';
+      case 'BRONZE':
+      default:
+        return '1x VivaBucks on purchases';
+    }
+  };
   
-  const multiplierBadgeClasses = compact
-    ? "text-[9px] md:text-[10px] px-1 md:px-1.5 py-0.5 rounded-full text-white font-semibold bg-gradient-to-r from-[#FF6B00] to-[#FF9F43]"
-    : "text-[10px] md:text-xs px-1.5 md:px-2 py-0.5 rounded-full text-white font-semibold bg-gradient-to-r from-[#FF6B00] to-[#FF9F43]";
-  
-  const pointsValueClasses = compact
-    ? "text-sm md:text-lg font-extrabold text-gray-800"
-    : "text-sm md:text-xl font-extrabold text-gray-800";
-  
-  const vivaBucksLabelClasses = compact
-    ? "text-[7px] md:text-[9px] text-gray-500"
-    : "text-[8px] md:text-xs text-gray-500";
-  
-  const badgeIconClasses = compact
-    ? "h-1.5 md:h-1.5 w-1.5 md:w-1.5 mr-0.5"
-    : "h-1.5 md:h-2 w-1.5 md:w-2 mr-0.5";
-  
-  const badgeClasses = compact
-    ? "text-[5px] md:text-[7px] px-1 md:px-1 py-0.5 rounded-full text-white font-medium flex items-center"
-    : "text-[6px] md:text-[8px] px-1 md:px-1.5 py-0.5 rounded-full text-white font-medium flex items-center";
+  const currentTierColor = getTierColor(currentTier);
+  const nextTierColor = getTierColor(nextTier);
   
   return (
-    <div className={containerClasses} data-testid="tier-points-display">
-      {/* Tier icon */}
-      <div 
-        className={`flex items-center justify-center ${iconSizeClasses} rounded-full relative shadow-sm`}
-        data-testid="tier-icon-container"
-      >
-        <div 
-          className={`absolute inset-0 rounded-full bg-gradient-to-br ${tierColors?.bg || 'from-gray-100 to-gray-300'} opacity-60`} 
-        />
-        <div 
-          className={`relative z-20 ${compact ? 'scale-75 md:scale-90' : 'scale-90 md:scale-110'} ${tierColors?.icon || 'text-gray-600'}`}
+    <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+      {/* Header with toggle */}
+      <div className="flex justify-between items-center mb-2">
+        <h3 className="font-medium text-gray-800 flex items-center">
+          <FaTrophy className="text-amber-500 mr-2" />
+          <span>Loyalty Progress</span>
+        </h3>
+        <button 
+          onClick={() => setDetailsVisible(!detailsVisible)}
+          className="text-blue-500 hover:text-blue-600 text-sm flex items-center"
         >
-          {Icon}
+          <FaInfoCircle className="mr-1" />
+          <span>{detailsVisible ? 'Hide Details' : 'Show Details'}</span>
+        </button>
+      </div>
+      
+      {/* Current status */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center">
+          <span className={`font-bold ${currentTierColor}`}>{currentTier}</span>
+          <span className="mx-2 text-gray-400">→</span>
+          <span className={`font-bold ${nextTierColor}`}>{nextTier}</span>
+        </div>
+        <div className="text-sm text-gray-500">
+          {formatPoints(cumulativeVivaBucks)} total points
         </div>
       </div>
-
-      {/* Tier and points info */}
-      <div>
-        <div className="flex items-center space-x-1 md:space-x-2">
-          <h3 
-            className={`${tierNameClasses} ${tierColors?.text || 'text-gray-700'}`}
-            data-testid="tier-name"
-          >
-            {currentTier}
-          </h3>
-          <span 
-            className={multiplierBadgeClasses}
-            data-testid="multiplier-badge"
-          >
-            {multiplier}x
-          </span>
-        </div>
-
-        {/* Points display - simplified */}
-        <div className="flex items-baseline space-x-1 md:space-x-2 mt-0.5">
-          <div className="flex items-center">
-            <div className="relative mr-1 md:mr-1.5">
-              <FaCoins 
-                className={`h-2.5 md:h-3 w-2.5 md:w-3 text-[#FF6B00]`}
-                aria-hidden="true"
-              />
-            </div>
-            <span 
-              className={pointsValueClasses}
-              data-testid="points-value"
-            >
-              {points.toLocaleString()}
-            </span>
-          </div>
-          <span className={vivaBucksLabelClasses}>
-            VivaBucks
-          </span>
-        </div>
-
-        {/* Badges */}
-        {showBadges && (
-          <div className="flex space-x-1 md:space-x-2 mt-1" data-testid="loyalty-badges">
-            {/* First Purchase Badge */}
-            <div className={`${badgeClasses} bg-gradient-to-r from-green-400 to-green-500`}>
-              <FaGift className={badgeIconClasses} aria-hidden="true" />
-              <span>First Purchase</span>
-            </div>
-
-            {/* Loyal Customer Badge */}
-            <div className={`${badgeClasses} bg-gradient-to-r from-blue-400 to-blue-500`}>
-              <IoMdStar className={badgeIconClasses} aria-hidden="true" />
-              <span>Loyal Customer</span>
-            </div>
-
-            {/* Referral Badge */}
-            <div className={`${badgeClasses} bg-gradient-to-r from-purple-400 to-purple-500`}>
-              <FaArrowUp className={badgeIconClasses} aria-hidden="true" />
-              <span>Referral Pro</span>
-            </div>
-          </div>
-        )}
+      
+      {/* Progress bar */}
+      <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden mb-2">
+        <div 
+          className="h-full bg-gradient-to-r from-amber-400 to-orange-500"
+          style={{ width: `${progress}%` }}
+        ></div>
       </div>
+      
+      {/* Progress text */}
+      <div className="flex justify-between text-xs text-gray-500">
+        <span>{Math.round(progress)}% complete</span>
+        <span>{formatPoints(pointsToNextTier)} more to {nextTier}</span>
+      </div>
+      
+      {/* Expanded details */}
+      {detailsVisible && (
+        <div className="mt-4 border-t pt-3 text-sm">
+          <h4 className="font-medium text-gray-700 mb-2">Current Benefits</h4>
+          <div className="flex items-center text-gray-600 mb-3">
+            <FaStar className={`${currentTierColor} mr-2`} />
+            <span>{getTierBenefits(currentTier)}</span>
+          </div>
+          
+          <h4 className="font-medium text-gray-700 mb-2">Next Tier Benefits</h4>
+          <div className="flex items-center text-gray-600">
+            <FaStar className={`${nextTierColor} mr-2`} />
+            <span>{getTierBenefits(nextTier)}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

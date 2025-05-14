@@ -5,60 +5,68 @@ import { getToken } from "next-auth/jwt";
 
 const secret = process.env.NEXTAUTH_SECRET;
 
+// Add cache control headers to all responses
+const CACHE_CONTROL_HEADERS = {
+  'Cache-Control': 'no-cache, no-store, must-revalidate',
+  'Pragma': 'no-cache',
+  'Expires': '0'
+};
+
 export async function GET(req) {
   try {
     console.log('🔵 Profile fetch request received');
-
+    
     // Get token directly within the handler
     const token = await getToken({ req, secret });
     console.log('Profile GET handler getToken result:', JSON.stringify(token, null, 2));
 
     if (!token || !token.email) {
         console.log('❌ Token or email missing in handler (getToken failed or invalid token)');
-        return new Response(JSON.stringify({ error: "Authentication failed" }), { status: 401 });
+        return new Response(JSON.stringify({ error: "Authentication failed" }), { 
+          status: 401,
+          headers: CACHE_CONTROL_HEADERS
+        });
     }
     console.log('✅ Handler retrieved token for user:', token.email);
 
     await dbConnect();
-    console.log('✅ Database connected');
-
-    const user = await User.findOne({ email: token.email })
-      .select('email name phoneNumber addresses vivaBucks cumulativePoints currentTier pointsMultiplier rewardHistory')
-      .lean();
+    const user = await User.findById(token.id).select(
+      '_id name email phone vivaBucks cumulativeVivaBucks currentTier vivaBucksMultiplier isVerified role'
+    );
 
     if (!user) {
-      console.log('❌ User not found');
-      return new Response(JSON.stringify({ error: "User not found" }), {
+      console.log('❌ User not found in database:', token.id);
+      return new Response(JSON.stringify({ error: "User not found" }), { 
         status: 404,
+        headers: CACHE_CONTROL_HEADERS
       });
     }
 
-    // Initialize loyalty fields if they don't exist
-    const userData = {
-      ...user,
-      vivaBucks: user.vivaBucks || 0,
-      cumulativePoints: user.cumulativePoints || 0,
-      currentTier: user.currentTier || 'BRONZE',
-      pointsMultiplier: user.pointsMultiplier || 1,
-      rewardHistory: user.rewardHistory || []
-    };
+    // Ensure all needed fields are populated with defaults if missing
+    const userData = user.toObject();
+    userData.vivaBucks = userData.vivaBucks || 0;
+    userData.cumulativeVivaBucks = userData.cumulativeVivaBucks || 0;
+    userData.currentTier = userData.currentTier || 'BRONZE';
+    userData.vivaBucksMultiplier = userData.vivaBucksMultiplier || 1;
+    
+    // Add timestamp for cache validation
+    userData.timestamp = new Date().toISOString();
 
-    // Log loyalty data
-    console.log('✅ User loyalty data:', {
+    console.log('✅ User data retrieved successfully for:', user.email, {
       vivaBucks: userData.vivaBucks,
-      cumulativePoints: userData.cumulativePoints,
-      currentTier: userData.currentTier,
-      pointsMultiplier: userData.pointsMultiplier,
-      rewardHistoryCount: userData.rewardHistory.length
+      cumulativeVivaBucks: userData.cumulativeVivaBucks,
+      currentTier: userData.currentTier
     });
 
-    return new Response(JSON.stringify(userData), {
+    return new Response(JSON.stringify(userData), { 
       status: 200,
+      headers: CACHE_CONTROL_HEADERS
     });
   } catch (error) {
-    console.error('❌ Error fetching profile:', error.message);
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('❌ Error in profile API:', error);
+    return new Response(JSON.stringify({ error: error.message }), { 
       status: 500,
+      headers: CACHE_CONTROL_HEADERS 
     });
   }
 }
