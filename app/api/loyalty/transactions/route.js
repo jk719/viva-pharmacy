@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { connectDB } from "@/lib/mongodb";
-import { LoyaltyTransaction } from "@/models/LoyaltyTransaction";
+import { authOptions } from "../../../../lib/auth";
+import dbConnect from "../../../../lib/dbConnect";
+import LoyaltyTransaction from "../../../../models/LoyaltyTransaction";
 import { NextResponse } from "next/server";
 
 /**
@@ -36,7 +36,7 @@ export async function GET(request) {
   }
   
   try {
-    await connectDB();
+    await dbConnect();
     
     // Get transaction count
     const totalCount = await LoyaltyTransaction.countDocuments({ userId });

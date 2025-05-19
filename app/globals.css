@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Reduce header heights for mobile to minimize whitespace */
+@media (max-width: 767px) {
+  :root {
+    --navbar-height: 56px;
+    --loyalty-banner-height: 48px;
+  }
+}
+
 /* Root Variables */
 :root {
   --background: #ffffff;

@@ -35,6 +35,13 @@ export const ModalProvider = ({ children }) => {
       setModalQueue(prev => prev.slice(1));
     }
   }, [modalQueue, activeModal]);
+  
+  // Helper to check if we're on a checkout-related page
+  const isCheckoutRelatedPage = useCallback(() => {
+    if (typeof window === 'undefined') return false;
+    const path = window.location.pathname;
+    return path.includes('/checkout') || path.includes('/payment') || path === '/';
+  }, []);
 
   // Show a modal with optional data
   const showModal = useCallback((type, data = null, options = {}) => {
@@ -79,6 +86,12 @@ export const ModalProvider = ({ children }) => {
     const handlePaymentCompleted = (data) => {
       console.log('ModalContext: Payment completed event received', data);
       
+      // Only show modals on checkout-related pages
+      if (!isCheckoutRelatedPage()) {
+        console.log('ModalContext: Ignoring payment completed event on non-checkout page');
+        return;
+      }
+      
       // Check for loyalty points using either field name
       const hasLoyaltyPoints = (data.loyaltyPointsEarned > 0 || data.pointsEarned > 0);
       
@@ -113,6 +126,12 @@ export const ModalProvider = ({ children }) => {
     const handleShowLoyaltyAnimation = (data) => {
       console.log('ModalContext: Show loyalty animation event received', data);
       
+      // Only show modals on checkout-related pages
+      if (!isCheckoutRelatedPage()) {
+        console.log('ModalContext: Ignoring loyalty animation event on non-checkout page');
+        return;
+      }
+      
       // Normalize data to include both field names
       const normalizedData = {
         ...data,
@@ -143,9 +162,22 @@ export const ModalProvider = ({ children }) => {
     console.log('Modal state changed:', { 
       activeModal, 
       hasData: !!modalData, 
-      queueLength: modalQueue.length 
+      queueLength: modalQueue.length,
+      isCheckoutPage: isCheckoutRelatedPage()
     });
-  }, [activeModal, modalData, modalQueue]);
+  }, [activeModal, modalData, modalQueue, isCheckoutRelatedPage]);
+  
+  // Clear modals on non-checkout pages
+  useEffect(() => {
+    if (activeModal && !isCheckoutRelatedPage()) {
+      console.log('ModalContext: Clearing modal on non-checkout page');
+      // Give a small delay to allow for page transitions
+      const timer = setTimeout(() => {
+        hideModal();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [activeModal, hideModal, isCheckoutRelatedPage]);
 
   const contextValue = {
     activeModal,

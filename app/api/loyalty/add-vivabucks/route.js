@@ -1,8 +1,8 @@
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { connectDB } from "@/lib/mongodb";
-import { User } from "@/models/User";
-import { LoyaltyTransaction } from "@/models/LoyaltyTransaction";
+import { authOptions } from "../../../../lib/auth";
+import dbConnect from "../../../../lib/dbConnect";
+import User from "../../../../models/User";
+import LoyaltyTransaction from "../../../../models/LoyaltyTransaction";
 import { NextResponse } from "next/server";
 
 /**
@@ -43,7 +43,7 @@ export async function POST(request) {
     }
     
     // Connect to database
-    await connectDB();
+    await dbConnect();
     
     // Find the user
     const user = await User.findById(userId);
