@@ -1,6 +1,5 @@
-// src/middleware.js
 import { NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt"; // Import getToken
+import { getToken } from "next-auth/jwt";
 
 // Remove isValidPayment function as the cookies are no longer set
 /*
