@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../../lib/auth";
 import dbConnect from "../../../../lib/dbConnect";
-import LoyaltyTransaction from "../../../../models/LoyaltyTransaction";
+import { LoyaltyTransaction } from "../../../../models/LoyaltyTransaction";
 import { NextResponse } from "next/server";
 
 /**

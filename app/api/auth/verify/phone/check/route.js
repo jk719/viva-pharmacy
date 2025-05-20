@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { twilioService } from '@/lib/sms/twilioService';
-import connectDB from '@/lib/db';
+import connectDB from '@/lib/dbConnect';
 import User from '@/models/User';
 
 export async function POST(request) {

@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '../../../lib/dbConnect';
 import User from '../../../models/User';
-import { logger } from '../../../lib/logger';
 
 export async function POST(req) {
   try {
@@ -44,7 +43,7 @@ export async function POST(req) {
       }
 
       await existingUser.save();
-      logger.info(`Existing user entered giveaway: ${email}`);
+      console.log(`Existing user entered giveaway: ${email}`);
     } else {
       // For non-users, we'll create a simplified record
       // This could be expanded to create a full user account if desired
@@ -64,7 +63,7 @@ export async function POST(req) {
         }],
         role: 'customer',
       });
-      logger.info(`New giveaway entry created: ${email}`);
+      console.log(`New giveaway entry created: ${email}`);
     }
 
     // You could also trigger an email notification here
@@ -75,7 +74,7 @@ export async function POST(req) {
       message: 'Giveaway entry received successfully'
     });
   } catch (error) {
-    logger.error('Error processing giveaway entry:', error);
+    console.error('Error processing giveaway entry:', error);
     return NextResponse.json(
       { error: 'Failed to process entry' },
       { status: 500 }
