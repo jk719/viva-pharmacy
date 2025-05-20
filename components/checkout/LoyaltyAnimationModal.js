@@ -7,6 +7,17 @@ export default function LoyaltyAnimationModal() {
   // Use the modal context
   const { modalData, hideModal } = useModal();
   
+  // Safety check - don't show on giveaway or other non-checkout pages
+  if (typeof window !== 'undefined') {
+    const path = window.location.pathname;
+    if (path.includes('/giveaway')) {
+      // Close modal immediately if we're on a non-checkout page
+      console.log('LoyaltyAnimationModal: Not rendering on giveaway page');
+      setTimeout(hideModal, 0);
+      return null; // Don't render anything
+    }
+  }
+  
   // Extract data from modalData, handling both possible field names
   const pointsEarned = modalData?.loyaltyPointsEarned || modalData?.pointsEarned || 0;
   const paymentIntent = modalData?.paymentIntent;

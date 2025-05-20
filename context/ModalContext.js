@@ -40,7 +40,13 @@ export const ModalProvider = ({ children }) => {
   const isCheckoutRelatedPage = useCallback(() => {
     if (typeof window === 'undefined') return false;
     const path = window.location.pathname;
-    return path.includes('/checkout') || path.includes('/payment') || path === '/';
+    
+    // Explicitly exclude certain pages
+    if (path.includes('/giveaway')) return false;
+    
+    // Only include specific checkout-related paths
+    return path.includes('/checkout') || path.includes('/payment') || 
+           path.includes('/order-confirmation') || path.includes('/success');
   }, []);
 
   // Show a modal with optional data

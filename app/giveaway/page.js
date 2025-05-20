@@ -1,217 +1,324 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+import { useRouter } from 'next/navigation';
 import axios from 'axios';
-import { FaGift, FaTv, FaCheckCircle, FaEnvelope, FaMobile, FaMapMarkerAlt, FaCheckSquare } from 'react-icons/fa';
+import { 
+  FaGift, FaTv, FaCheckCircle, FaEnvelope, FaMobile, 
+  FaMapMarkerAlt, FaStar, FaGamepad, FaFilm, FaWifi, 
+  FaMicrophone, FaBolt, FaCheck, FaAward, FaHeart
+} from 'react-icons/fa';
+import { Carousel } from 'react-responsive-carousel';
+import 'react-responsive-carousel/lib/styles/carousel.min.css';
 import Image from 'next/image';
 
-// TV specs for the giveaway
+// TV specs with actual React icons, grouped by category
 const tvSpecs = [
-  { icon: "📺", text: "55\" 4K Ultra HD Display" },
-  { icon: "🔊", text: "Dolby Atmos Sound" },
-  { icon: "🎮", text: "Built-in Gaming Mode" },
-  { icon: "🎬", text: "All Streaming Apps Included" },
-  { icon: "🔄", text: "Smart Home Compatible" },
-  { icon: "📱", text: "Voice Remote Control" },
+  { 
+    category: 'Display',
+    items: [
+      { icon: <FaTv className="text-blue-500"/>, text: "55\" 4K Ultra HD Display" },
+      { icon: <FaBolt className="text-amber-500"/>, text: "HDR10 & Dolby Vision" }
+    ]
+  },
+  { 
+    category: 'Audio',
+    items: [
+      { icon: <FaStar className="text-purple-500"/>, text: "Dolby Atmos Sound" },
+      { icon: <FaMicrophone className="text-red-500"/>, text: "Voice Control" }
+    ]
+  },
+  { 
+    category: 'Smart Features',
+    items: [
+      { icon: <FaWifi className="text-green-500"/>, text: "Smart Home Compatible" },
+      { icon: <FaFilm className="text-blue-600"/>, text: "All Streaming Apps" },
+      { icon: <FaGamepad className="text-indigo-500"/>, text: "Gaming Mode" }
+    ]
+  }
+];
+
+// Carousel images
+const tvImages = [
+  { src: "/images/giveaway/fire-tv-1.jpg", alt: "Smart TV Front View", caption: "Sleek Design" },
+  { src: "/images/giveaway/fire-tv-2.jpg", alt: "Smart TV Side View", caption: "Ultra-Thin Profile" },
+  { src: "/images/giveaway/fire-tv-3.jpg", alt: "Smart TV Interface", caption: "Intuitive Interface" },
+  { src: "/images/giveaway/fire-tv-4.jpg", alt: "Smart TV Remote", caption: "Voice Remote" },
+  { src: "/images/giveaway/fire-tv-5.jpg", alt: "Smart TV Features", caption: "Smart Features" }
+];
+
+
+// Launch benefits
+const launchBenefits = [
+  { icon: <FaBolt className="text-blue-500"/>, text: "Early access to exclusive deals" },
+  { icon: <FaStar className="text-amber-500"/>, text: "Double VivaBucks on first purchase" },
+  { icon: <FaGift className="text-purple-500"/>, text: "Special launch promotions" }
 ];
 
 export default function GiveawayPage() {
-  const { register, handleSubmit, reset, formState: { errors } } = useForm();
-  const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [timeLeft, setTimeLeft] = useState({});
+  const router = useRouter();
   
-  const onSubmit = async (data) => {
-    setLoading(true);
-    try {
-      await axios.post('/api/giveaway-entry', data);
-      setSubmitted(true);
-      reset();
-    } catch (err) {
-      console.error('Submission error:', err);
-    } finally {
-      setLoading(false);
-    }
+  // Countdown timer effect
+  useEffect(() => {
+    // Giveaway end date - June 25, 2025
+    const endDate = new Date('2025-06-25T23:59:59');
+    
+    const calculateTimeLeft = () => {
+      const difference = endDate - new Date();
+      let timeLeft = {};
+
+      if (difference > 0) {
+        timeLeft = {
+          days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+          hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
+          minutes: Math.floor((difference / 1000 / 60) % 60),
+          seconds: Math.floor((difference / 1000) % 60),
+        };
+      }
+
+      return timeLeft;
+    };
+
+    // Update time initially
+    setTimeLeft(calculateTimeLeft());
+    
+    // Set up interval to update every second
+    const timer = setInterval(() => {
+      setTimeLeft(calculateTimeLeft());
+    }, 1000);
+
+    // Clear interval on component unmount
+    return () => clearInterval(timer);
+  }, []);
+  
+  // Handle redirect to registration page
+  const handleRegisterClick = () => {
+    router.push('/register?referrer=giveaway');
   };
+  
+  // Helper components
+  const CountdownUnit = ({ value, label }) => (
+    <div className="flex flex-col items-center">
+      <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white text-sm md:text-lg font-mono font-bold rounded-md w-10 h-10 md:w-12 md:h-12 flex items-center justify-center">
+        {value}
+      </div>
+      <span className="text-xs text-gray-500 mt-1">{label}</span>
+    </div>
+  );
+  
+  const TVFeatureCard = ({ category, items }) => (
+    <div className="bg-gradient-to-br from-white to-slate-50 rounded-lg shadow-sm p-2.5 md:p-4 h-full border border-gray-100">
+      <h3 className="text-sm md:text-lg font-medium text-primary mb-1.5 md:mb-3 flex items-center">
+        {category === 'Display' && <FaTv className="mr-1.5 text-primary-light" />}
+        {category === 'Audio' && <FaMicrophone className="mr-1.5 text-primary-light" />}
+        {category === 'Smart Features' && <FaWifi className="mr-1.5 text-primary-light" />}
+        {category}
+      </h3>
+      <div className="space-y-1.5 md:space-y-2">
+        {items.map((item, idx) => (
+          <div key={idx} className="flex items-center p-1.5 md:p-2 bg-gray-50/80 rounded-md hover:bg-primary-light/10 transition-colors border-l-2 border-l-primary-light/30">
+            <div className="mr-2 md:mr-3 text-base md:text-xl">{item.icon}</div>
+            <div className="text-xs md:text-sm text-gray-700 font-medium">{item.text}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+  
+  const AccountBenefits = () => (
+    <div className="bg-white rounded-lg shadow-md p-3 md:p-5 border border-gray-100">
+      <h3 className="text-base md:text-lg font-semibold text-center mb-2">Join Our Launch Celebration</h3>
+      
+      {/* Combined Benefits */}
+      <div className="grid grid-cols-1 gap-2 mb-3">
+        {/* Benefits List - Combined in a single section */}
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50/60 p-2.5 rounded-lg">
+          <div className="flex flex-wrap gap-1 justify-center">
+            <div className="flex items-center bg-white/70 px-2 py-1 rounded-md">
+              <FaGift className="text-primary-light mr-1" />
+              <span className="text-xs font-medium">100 VivaBucks</span>
+            </div>
+            <div className="flex items-center bg-white/70 px-2 py-1 rounded-md">
+              <FaStar className="text-amber-500 mr-1" />
+              <span className="text-xs font-medium">Double Rewards</span>
+            </div>
+            <div className="flex items-center bg-white/70 px-2 py-1 rounded-md">
+              <FaBolt className="text-blue-500 mr-1" />
+              <span className="text-xs font-medium">Early Access</span>
+            </div>
+            <div className="flex items-center bg-white/70 px-2 py-1 rounded-md">
+              <FaHeart className="text-red-500 mr-1" />
+              <span className="text-xs font-medium">Free Delivery</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <button
+        onClick={handleRegisterClick}
+        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium py-2 px-3 rounded-md transition duration-300 flex items-center justify-center text-sm"
+      >
+        Create Account & Enter Giveaway
+        <FaGift className="ml-2" />
+      </button>
+      
+      <p className="text-xs text-gray-500 mt-2 text-center">
+        Already have an account? You're automatically entered!
+      </p>
+    </div>
+  );
 
   return (
-    <div className="bg-gray-50 pb-4 pt-[calc(var(--navbar-height)+80px)] md:pt-[calc(var(--navbar-height-md)+var(--loyalty-banner-height-md)+1rem)]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex justify-center items-center mb-4">
-            <FaGift className="text-5xl text-blue-600 mr-3" />
-            <h1 className="text-4xl font-bold text-gray-800">Win a Free 55" Smart TV!</h1>
+    <div className="bg-gradient-to-b from-blue-50 to-gray-50 py-3 md:py-6 pt-[calc(var(--navbar-height)+16px)] md:pt-[calc(var(--navbar-height-md)+var(--loyalty-banner-height-md)+1rem)]">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
+        
+        {/* Header with Countdown */}
+        <div className="text-center mb-4 md:mb-6">
+          <div className="inline-flex items-center justify-center px-3 py-1 mb-2 bg-blue-100 text-blue-800 rounded-full text-xs md:text-sm">
+            <FaGift className="mr-1 text-xs md:text-sm" /> Website Launch Celebration
           </div>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Enter for a chance to win this amazing smart TV. Open to residents within 3 miles of Jackson Heights (ZIP 11372).
+          <h1 className="text-2xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 text-transparent bg-clip-text mb-1 md:mb-2">
+            Win a 55" 4K Smart TV!
+          </h1>
+          <h2 className="text-base md:text-xl font-medium text-gray-800 mb-1 md:mb-2">
+            Celebrating the Launch of <span className="font-bold text-blue-600">GoViVaNova.com</span>
+          </h2>
+          <p className="text-gray-600 max-w-2xl mx-auto text-xs md:text-base">
+            Join our celebration by creating a free account and be automatically entered to win! Open to residents in the Jackson Heights area.
           </p>
-        </div>
-
-        {/* TV Showcase with Static Image */}
-        <div className="mb-10 bg-white rounded-lg shadow-lg overflow-hidden">
-          <div className="mt-6 mb-6 flex justify-center">
-            <Image
-              src="/images/giveaway/fire-tv-giveaway.png"
-              alt="Smart TV Giveaway"
-              width={600} 
-              height={400} 
-              className="rounded-lg shadow-lg"
-              priority 
-            />
-          </div>
-
-          {/* TV Specifications */}
-          <div className="py-6 bg-white lg:px-0">
-            <h2 className="text-2xl font-semibold mb-4 text-center">Amazing TV Features</h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 px-3">
-              {tvSpecs.map((spec, idx) => (
-                <div key={idx} className="flex items-start p-2 bg-blue-50 rounded-lg lg:min-w-0">
-                  <div className="text-xl mr-2">{spec.icon}</div>
-                  <div className="text-sm text-gray-800 break-words">{spec.text}</div>
-                </div>
-              ))}
+          
+          {/* Countdown timer */}
+          {Object.keys(timeLeft).length > 0 && (
+            <div className="mt-2 md:mt-4">
+              <p className="text-xs text-gray-500 mb-1 md:mb-2">Giveaway Ends In:</p>
+              <div className="flex justify-center space-x-2 md:space-x-3">
+                <CountdownUnit value={timeLeft.days} label="Days" />
+                <CountdownUnit value={timeLeft.hours} label="Hours" />
+                <CountdownUnit value={timeLeft.minutes} label="Minutes" />
+                <CountdownUnit value={timeLeft.seconds} label="Seconds" />
+              </div>
             </div>
-          </div>
-        </div>
-
-        {/* Entry Form */}
-        <div className="bg-white p-6 rounded-lg shadow-lg">
-          {submitted ? (
-            <div className="text-center py-8">
-              <FaCheckCircle className="text-green-500 text-6xl mx-auto mb-4" />
-              <h2 className="text-3xl font-bold text-gray-800 mb-2">Thank You!</h2>
-              <p className="text-xl text-gray-600 mb-6">You're entered into our giveaway!</p>
-              <p className="text-gray-600">
-                Winner will be announced on May 25th.<br />
-                We'll contact you if you're selected.
-              </p>
-            </div>
-          ) : (
-            <>
-              <h2 className="text-2xl font-bold text-center mb-6">Enter the Giveaway</h2>
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                <div className="flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0">
-                  <div className="flex-1">
-                    <div className="flex items-center border rounded overflow-hidden">
-                      <div className="bg-gray-100 p-3">
-                        <FaCheckCircle className="text-gray-400" />
-                      </div>
-                      <input 
-                        {...register('name', { required: "Name is required" })} 
-                        placeholder="Your Full Name" 
-                        className="w-full p-2.5 md:p-3 focus:outline-none" 
-                      />
-                    </div>
-                    {errors.name && <p className="text-red-600 text-sm mt-1">{errors.name.message}</p>}
-                  </div>
-                  
-                  <div className="flex-1">
-                    <div className="flex items-center border rounded overflow-hidden">
-                      <div className="bg-gray-100 p-3">
-                        <FaEnvelope className="text-gray-400" />
-                      </div>
-                      <input 
-                        {...register('email', { 
-                          required: "Email is required",
-                          pattern: {
-                            value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                            message: "Please enter a valid email address"
-                          }
-                        })} 
-                        placeholder="Your Email Address" 
-                        className="w-full p-2.5 md:p-3 focus:outline-none" 
-                      />
-                    </div>
-                    {errors.email && <p className="text-red-600 text-sm mt-1">{errors.email.message}</p>}
-                  </div>
-                </div>
-                
-                <div className="flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0">
-                  <div className="flex-1">
-                    <div className="flex items-center border rounded overflow-hidden">
-                      <div className="bg-gray-100 p-3">
-                        <FaMobile className="text-gray-400" />
-                      </div>
-                      <input 
-                        {...register('phone', { 
-                          required: "Phone number is required",
-                          pattern: {
-                            value: /^[0-9]{10}$/,
-                            message: "Please enter a valid 10-digit phone number"
-                          }
-                        })} 
-                        placeholder="Mobile Number (10 digits)" 
-                        className="w-full p-2.5 md:p-3 focus:outline-none" 
-                      />
-                    </div>
-                    {errors.phone && <p className="text-red-600 text-sm mt-1">{errors.phone.message}</p>}
-                  </div>
-                  
-                  <div className="flex-1">
-                    <div className="flex items-center border rounded overflow-hidden">
-                      <div className="bg-gray-100 p-3">
-                        <FaMapMarkerAlt className="text-gray-400" />
-                      </div>
-                      <input 
-                        {...register('zip', { 
-                          required: "ZIP code is required",
-                          pattern: {
-                            value: /^[0-9]{5}$/,
-                            message: "Please enter a valid 5-digit ZIP code"
-                          }
-                        })} 
-                        placeholder="ZIP Code (5 digits)" 
-                        maxLength={5} 
-                        className="w-full p-2.5 md:p-3 focus:outline-none" 
-                      />
-                    </div>
-                    {errors.zip && <p className="text-red-600 text-sm mt-1">{errors.zip.message}</p>}
-                  </div>
-                </div>
-                
-                <div className="space-y-2 md:space-y-3">
-                  <label className="flex items-center space-x-3 py-1 md:py-2">
-                    <input type="checkbox" {...register('emailOptIn', { required: "Please agree to receive marketing emails" })} className="h-4 md:h-5 w-4 md:w-5 rounded text-blue-600" />
-                    <span className="text-sm md:text-base text-gray-700">I agree to receive marketing emails from Viva Pharmacy</span>
-                  </label>
-                  {errors.emailOptIn && <p className="text-red-600 text-sm">{errors.emailOptIn.message}</p>}
-                  
-                  <label className="flex items-center space-x-3 py-1 md:py-2">
-                    <input type="checkbox" {...register('smsOptIn', { required: "Please agree to receive SMS messages" })} className="h-4 md:h-5 w-4 md:w-5 rounded text-blue-600" />
-                    <span className="text-sm md:text-base text-gray-700">I agree to receive SMS messages from Viva Pharmacy</span>
-                  </label>
-                  {errors.smsOptIn && <p className="text-red-600 text-sm">{errors.smsOptIn.message}</p>}
-                </div>
-                
-                <button 
-                  type="submit" 
-                  disabled={loading}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded transition duration-300 flex items-center justify-center"
-                >
-                  {loading ? 'Submitting...' : 'Enter Giveaway'}
-                  {!loading && <FaGift className="ml-2" />}
-                </button>
-                
-                <p className="text-xs text-gray-500 mt-2">
-                  By entering, you agree to receive occasional emails and SMS messages from Viva Pharmacy. 
-                  Standard message rates may apply. You may unsubscribe at any time.
-                </p>
-              </form>
-            </>
           )}
         </div>
         
-        {/* Rules Section */}
-        <div className="mt-6 text-center text-gray-600 mb-4">
-          <h3 className="text-lg font-semibold mb-2">Giveaway Rules</h3>
-          <p className="text-sm max-w-3xl mx-auto">
-            Must be 18+ and live within 3 miles of our Jackson Heights location.
-            No purchase necessary. Winner will be selected randomly on May 25, 2025.
-            Employees and their immediate family members are not eligible.
-          </p>
+        {/* Main Content */}
+        <div className="md:flex md:space-x-4">
+          {/* Left Column (TV Carousel and Features) */}
+          <div className="md:w-3/5 mb-3 md:mb-0">
+            {/* TV Carousel */}
+            <div className="rounded-lg shadow-md overflow-hidden mb-3 md:mb-6">
+              <Carousel 
+                autoPlay 
+                infiniteLoop 
+                showStatus={false} 
+                showThumbs={false} 
+                showIndicators={false}
+                interval={5000}
+                className="tv-carousel"
+                renderIndicator={() => null}
+              >
+                {tvImages.map((image, idx) => (
+                  <div key={idx} className="carousel-item-container">
+                    <Image
+                      src={image.src}
+                      alt={image.alt}
+                      width={500}
+                      height={300}
+                      className="w-full h-full object-cover" 
+                      priority={idx === 0}
+                      style={{ objectFit: 'cover' }}
+                    />
+                  </div>
+                ))}
+              </Carousel>
+            </div>
+            
+            {/* Compact TV Feature Categories for Mobile */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-4 mb-3 md:mb-6">
+              {tvSpecs.map((category, idx) => (
+                <TVFeatureCard key={idx} {...category} />
+              ))}
+            </div>
+          </div>
+          
+          {/* Right Column (Account Creation CTA) */}
+          <div className="md:w-2/5">
+            {/* Account Benefits */}
+            <AccountBenefits />
+            
+            {/* Rules Section - Compact for Mobile */}
+            <div className="mt-2 md:mt-4 p-2 md:p-4 bg-white rounded-lg shadow-sm border border-gray-100">
+              <h3 className="text-sm md:text-md font-semibold mb-1 md:mb-2 flex items-center">
+                <FaCheckCircle className="text-blue-500 mr-1 md:mr-2" /> Giveaway Rules
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-1 gap-x-2">
+                <ul className="text-xs md:text-sm text-gray-600 space-y-0 md:space-y-1 list-disc pl-4 md:pl-5">
+                  <li>Must be 18+ years old</li>
+                  <li>One entry per person</li>
+                  <li>Local residents only</li>
+                </ul>
+                <ul className="text-xs md:text-sm text-gray-600 space-y-0 md:space-y-1 list-disc pl-4 md:pl-5">
+                  <li>No purchase needed</li>
+                  <li>Drawing: June 25th, 2025</li>
+                  <li>Employees not eligible</li>
+                </ul>
+              </div>
+              <div className="mt-1 md:mt-3 text-xs text-gray-500 border-t border-gray-100 pt-1 md:pt-2">
+                This giveaway celebrates the official launch of <span className="font-semibold">GoViVaNova.com</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
+      
+      {/* Custom Carousel Styling */}
+      <style jsx>{`
+        /* Legend styles removed */
+        
+        .tv-carousel .carousel .slide {
+          background: transparent !important;
+        }
+        
+        .carousel-item-container {
+          height: 200px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background-color: transparent;
+          overflow: hidden;
+        }
+        
+        @media (min-width: 768px) {
+          .carousel-item-container {
+            height: 350px;
+          }
+        }
+        
+        /* Hide control dots completely */
+        .tv-carousel .control-dots {
+          display: none !important;
+        }
+        
+        .tv-carousel .control-arrow {
+          background: rgba(0,0,0,0.2);
+          border-radius: 50%;
+          margin: 0 16px;
+          padding: 15px;
+          opacity: 0.8;
+          z-index: 2;
+        }
+        
+        @keyframes fade-in {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .animate-fade-in {
+          animation: fade-in 0.5s ease-out;
+        }
+      `}</style>
     </div>
   );
 }
