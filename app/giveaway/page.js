@@ -39,6 +39,12 @@ const tvSpecs = [
   }
 ];
 
+const categoryIcons = {
+  'Display': <FaTv className="mr-1.5 text-primary-light" />,
+  'Audio': <FaMicrophone className="mr-1.5 text-primary-light" />,
+  'Smart Features': <FaWifi className="mr-1.5 text-primary-light" />,
+};
+
 // Carousel images
 const tvImages = [
   { src: "/images/giveaway/fire-tv-1.jpg", alt: "Smart TV Front View", caption: "Sleek Design" },
@@ -47,7 +53,6 @@ const tvImages = [
   { src: "/images/giveaway/fire-tv-4.jpg", alt: "Smart TV Remote", caption: "Voice Remote" },
   { src: "/images/giveaway/fire-tv-5.jpg", alt: "Smart TV Features", caption: "Smart Features" }
 ];
-
 
 // Launch benefits
 const launchBenefits = [
@@ -111,10 +116,7 @@ export default function GiveawayPage() {
   const TVFeatureCard = ({ category, items }) => (
     <div className="bg-gradient-to-br from-white to-slate-50 rounded-lg shadow-sm p-2.5 md:p-4 h-full border border-gray-100">
       <h3 className="text-sm md:text-lg font-medium text-primary mb-1.5 md:mb-3 flex items-center">
-        {category === 'Display' && <FaTv className="mr-1.5 text-primary-light" />}
-        {category === 'Audio' && <FaMicrophone className="mr-1.5 text-primary-light" />}
-        {category === 'Smart Features' && <FaWifi className="mr-1.5 text-primary-light" />}
-        {category}
+        {categoryIcons[category] || <FaGift className="mr-1.5 text-primary-light" />} {category}
       </h3>
       <div className="space-y-1.5 md:space-y-2">
         {items.map((item, idx) => (
@@ -235,10 +237,25 @@ export default function GiveawayPage() {
               </Carousel>
             </div>
             
-            {/* Compact TV Feature Categories for Mobile */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-4 mb-3 md:mb-6">
-              {tvSpecs.map((category, idx) => (
-                <TVFeatureCard key={idx} {...category} />
+            {/* Desktop: Categorized TV Features Grid (md and up) */}
+            <div className="hidden md:grid md:grid-cols-3 gap-4 mb-6">
+              {tvSpecs.map((spec, idx) => (
+                <TVFeatureCard key={idx} category={spec.category} items={spec.items} />
+              ))}
+            </div>
+
+            {/* Mobile: Simple List of All TV Features (below md) */}
+            <div className="md:hidden space-y-2 mb-4">
+              <h3 className="text-md font-semibold text-gray-700 mb-2">TV Features</h3>
+              {tvSpecs.flatMap(categorySpec => categorySpec.items).map((item, idx) => (
+                <div key={idx} className="flex items-center p-2 bg-gray-50/80 rounded-md hover:bg-primary-light/10 transition-colors border-l-2 border-l-primary-light/30">
+                  <div className="mr-3 text-lg">
+                    {item.icon}
+                  </div>
+                  <div className="text-sm text-gray-700 font-medium">
+                    {item.text}
+                  </div>
+                </div>
               ))}
             </div>
           </div>
