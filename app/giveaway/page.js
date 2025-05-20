@@ -135,20 +135,20 @@ export default function GiveawayPage() {
       <div className="grid grid-cols-1 gap-2 mb-3">
         {/* Benefits List - Combined in a single section */}
         <div className="bg-gradient-to-br from-blue-50 to-indigo-50/60 p-2.5 rounded-lg">
-          <div className="flex flex-wrap gap-1 justify-center">
-            <div className="flex items-center bg-white/70 px-2 py-1 rounded-md">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex items-center bg-white/70 px-2 py-1.5 rounded-md">
               <FaGift className="text-primary-light mr-1" />
               <span className="text-xs font-medium">100 VivaBucks</span>
             </div>
-            <div className="flex items-center bg-white/70 px-2 py-1 rounded-md">
+            <div className="flex items-center bg-white/70 px-2 py-1.5 rounded-md">
               <FaStar className="text-amber-500 mr-1" />
               <span className="text-xs font-medium">Double Rewards</span>
             </div>
-            <div className="flex items-center bg-white/70 px-2 py-1 rounded-md">
+            <div className="flex items-center bg-white/70 px-2 py-1.5 rounded-md">
               <FaBolt className="text-blue-500 mr-1" />
               <span className="text-xs font-medium">Early Access</span>
             </div>
-            <div className="flex items-center bg-white/70 px-2 py-1 rounded-md">
+            <div className="flex items-center bg-white/70 px-2 py-1.5 rounded-md">
               <FaHeart className="text-red-500 mr-1" />
               <span className="text-xs font-medium">Free Delivery</span>
             </div>
@@ -308,6 +308,19 @@ export default function GiveawayPage() {
           padding: 15px;
           opacity: 0.8;
           z-index: 2;
+        }
+        
+        /* Benefits responsive styling */
+        @media (max-width: 640px) {
+          :global(.grid.grid-cols-2.gap-2) {
+            /* Already a grid with 2 columns, just adjust the gap for mobile */
+            gap: 0.5rem !important;
+          }
+          
+          :global(.flex.items-center.bg-white\/70) {
+            width: 100% !important;
+            justify-content: center !important;
+          }
         }
         
         @keyframes fade-in {
