@@ -62,8 +62,8 @@ export default function GiveawayPage() {
   
   // Countdown timer effect
   useEffect(() => {
-    // Giveaway end date - June 25, 2025
-    const endDate = new Date('2025-06-25T23:59:59');
+    // Giveaway end date - Memorial Day 2025 (May 26th at 5pm)
+    const endDate = new Date('2025-05-26T17:00:00');
     
     const calculateTimeLeft = () => {
       const difference = endDate - new Date();
@@ -226,9 +226,9 @@ export default function GiveawayPage() {
                       alt={image.alt}
                       width={500}
                       height={300}
-                      className="w-full h-full object-cover" 
+                      className="w-full h-auto" 
                       priority={idx === 0}
-                      style={{ objectFit: 'cover' }}
+                      style={{ objectFit: 'contain' }}
                     />
                   </div>
                 ))}
@@ -261,7 +261,7 @@ export default function GiveawayPage() {
                 </ul>
                 <ul className="text-xs md:text-sm text-gray-600 space-y-0 md:space-y-1 list-disc pl-4 md:pl-5">
                   <li>No purchase needed</li>
-                  <li>Drawing: June 25th, 2025</li>
+                  <li>Drawing: Memorial Day, May 26th at 5pm</li>
                   <li>Employees not eligible</li>
                 </ul>
               </div>
@@ -282,17 +282,18 @@ export default function GiveawayPage() {
         }
         
         .carousel-item-container {
-          height: 200px;
           display: flex;
           align-items: center;
           justify-content: center;
           background-color: transparent;
-          overflow: hidden;
+          overflow: visible;
+          aspect-ratio: 16 / 9;
         }
         
         @media (min-width: 768px) {
           .carousel-item-container {
-            height: 350px;
+            aspect-ratio: 16 / 9;
+            max-height: 350px;
           }
         }
         
