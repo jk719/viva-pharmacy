@@ -2,7 +2,7 @@
 
 import dbConnect from '@/lib/dbConnect';
 import User from '@/models/User';
-import { generateVerificationToken } from '@/lib/auth';
+import { generateVerificationToken, findUserByToken } from '@/lib/auth';
 import { emailService } from '@/lib/email/emailService';
 
 /**
@@ -17,6 +17,7 @@ export async function registerUser(formData) {
     const email = formData.get('email')?.toLowerCase();
     const password = formData.get('password');
     const phoneNumber = formData.get('phoneNumber');
+    const smsConsentString = formData.get('smsConsent'); // Get the consent string
 
     if (!email || !password || !name) {
       return { 
@@ -42,16 +43,31 @@ export async function registerUser(formData) {
     const verificationToken = generateVerificationToken();
     const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-    // Create new user
-    const newUser = new User({
+    // Prepare user fields
+    const newUserFields = {
       email,
       password, // Will be hashed by pre-save middleware
       name,
-      phoneNumber,
       verificationToken,
       verificationExpires,
       isVerified: false
-    });
+    };
+
+    if (phoneNumber) {
+      newUserFields.phoneNumber = phoneNumber;
+      // If consent is given (and it's a string 'true'), set default SMS preferences
+      if (smsConsentString === 'true') {
+        newUserFields.smsPreferences = {
+          orderUpdates: true,        // For order status changes
+          prescriptionStatus: true,  // For prescription verifications/rejections/uploads
+          accountActivity: true,     // For security alerts, important account changes
+          // promotions: false,      // Keep promotional SMS off by default unless explicitly opted into elsewhere
+        };
+      }
+    }
+
+    // Create new user
+    const newUser = new User(newUserFields);
 
     await newUser.save();
 
@@ -156,10 +172,7 @@ export async function resetPassword(formData) {
 
     await dbConnect();
 
-    const user = await User.findOne({
-      resetPasswordToken: token,
-      resetPasswordExpires: { $gt: Date.now() }
-    });
+    const user = await findUserByToken(token, 'resetPasswordToken', 'resetPasswordExpires');
 
     if (!user) {
       return { 
@@ -187,70 +200,6 @@ export async function resetPassword(formData) {
     return {
       success: false,
       message: 'Failed to reset password',
-      status: 500
-    };
-  }
-}
-
-/**
- * Server action for verifying an email
- * 
- * @param {FormData} formData - Form data containing the verification token
- * @returns {Object} Result of the operation
- */
-export async function verifyEmail(formData) {
-  try {
-    const token = formData.get('token');
-    
-    if (!token) {
-      return { 
-        success: false, 
-        message: 'No token provided',
-        status: 400
-      };
-    }
-
-    // Clean the token by decoding and removing any extra text
-    const cleanToken = decodeURIComponent(token.split(' ')[0]);
-
-    await dbConnect();
-
-    // Find user with matching token that hasn't expired
-    const user = await User.findOne({
-      verificationToken: cleanToken,
-      verificationExpires: { $gt: Date.now() }
-    });
-
-    if (!user) {
-      return { 
-        success: false, 
-        message: 'Invalid or expired verification token',
-        status: 400
-      };
-    }
-
-    // Update user verification status but preserve token for password reset if needed
-    user.isVerified = true;
-    if (!user.mustChangePassword) {
-      // Only clear tokens if not a manager needing password setup
-      user.verificationToken = undefined;
-      user.verificationExpires = undefined;
-    }
-    await user.save();
-
-    return {
-      success: true,
-      message: 'Email verified successfully',
-      email: user.email,
-      role: user.role,
-      mustChangePassword: user.mustChangePassword,
-      status: 200
-    };
-  } catch (error) {
-    console.error('Email verification error:', error);
-    return { 
-      success: false, 
-      message: 'Server error during verification',
       status: 500
     };
   }
@@ -341,10 +290,7 @@ export async function confirmPasswordReset(formData) {
     await dbConnect();
 
     // Find user with the token
-    const user = await User.findOne({
-      verificationToken: token,
-      verificationExpires: { $gt: Date.now() }
-    });
+    const user = await findUserByToken(token, 'verificationToken', 'verificationExpires');
 
     if (!user) {
       return { 

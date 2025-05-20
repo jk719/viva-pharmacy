@@ -1,101 +1,115 @@
 // src/app/verify-email/page.js
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { signIn } from 'next-auth/react';
-import toast from 'react-hot-toast';
-import { verifyEmail } from '@/app/actions/auth';
+import React, { Suspense, useEffect, useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation'; 
+import { verifyEmail } from '@/app/actions/verifyEmailAction'; 
+import toast from 'react-hot-toast'; 
+// import { trackEvent } from '@/lib/analytics';
+// import { useSession } from 'next-auth/react';
+// import Link from 'next/link';
+import { ArrowRightIcon, CheckCircleIcon, XCircleIcon, ClockIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline'; 
+// import LoadingSpinner from '@/components/ui/LoadingSpinner'; 
 
-export default function VerifyEmailPage() {
-  const [status, setStatus] = useState('verifying');
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const token = searchParams.get('token');
+function VerifyEmailPageContent() {
+  const searchParams = useSearchParams(); 
+  const router = useRouter(); 
+  const [status, setStatus] = useState('validating'); 
+  const [message, setMessage] = useState('Verifying your email address, please wait...'); 
+  // const { data: session, status: sessionStatus } = useSession(); 
 
-  useEffect(() => {
-    const handleVerification = async () => {
+  useEffect(() => { 
+    const token = searchParams ? searchParams.get('token') : null; 
+    console.log('Token from URL (verifyEmail active):', token); 
+
+    // trackEvent('Email Verification Page Visited', { token: token ? 'present' : 'missing' }); // Stays commented
+
+    if (!token) {
+      setStatus('error');
+      setMessage('Verification token is missing. Please check the link or request a new one.');
+      toast.error('Verification token is missing.'); 
+      // trackEvent('Email Verification Failed', { reason: 'Token Missing' }); // Stays commented
+      return;
+    }
+
+    const handleVerification = async () => { 
+      setStatus('validating');
+      setMessage('Verifying your email, please stand by...');
+      // trackEvent('Email Verification Started', { token }); // Stays commented
       try {
-        console.log('Starting verification with token:', token?.substring(0, 10) + '...');
-        
-        // Create form data
-        const formData = new FormData();
-        formData.append('token', token);
-        
-        const result = await verifyEmail(formData);
+        const result = await verifyEmail({ token }); 
+        // console.log('Verification result:', result); // Optional: for debugging the result object
 
-        if (!result.success) {
-          throw new Error(result.message || 'Verification failed');
+        if (result.success) {
+          setStatus('success');
+          setMessage(result.message || 'Your email has been successfully verified. You can now log in.');
+          toast.success(result.message || 'Email verified successfully!'); 
+          // trackEvent('Email Verification Succeeded', { token }); // Stays commented
+          // setTimeout(() => router.push('/auth/login?verified=true'), 3000); // Keep commented for now
+        } else {
+          // Determine specific error status based on result.errorType or message
+          if (result.errorType === 'ALREADY_VERIFIED') {
+            setStatus('already-verified');
+          } else if (result.errorType === 'EXPIRED_TOKEN' || result.errorType === 'INVALID_TOKEN') {
+            setStatus('expired'); // Or 'error' if you prefer a general error for invalid/expired
+          } else {
+            setStatus('error');
+          }
+          setMessage(result.message || 'An error occurred during verification.');
+          toast.error(result.message || 'Verification failed.'); 
+          // trackEvent('Email Verification Failed', { token, reason: result.message, errorType: result.errorType }); // Stays commented
         }
-
-        setStatus('success');
-        toast.success('Email verified successfully');
-
-        // For managers who need to set password
-        if (result.role === 'MANAGER' && result.mustChangePassword) {
-          console.log('Redirecting manager to password setup:', token);
-          router.replace(`/reset-password/${token}`);
-          return;
-        }
-
-        // For regular users, redirect home
-        console.log('Redirecting to home');
-        router.replace('/?verification=success');
-
       } catch (error) {
-        console.error('Verification error:', error);
+        // console.error('Verification process error:', error); // Optional for debugging
         setStatus('error');
-        toast.error(error.message || 'Verification failed');
+        setMessage('A critical error occurred. Please try again later or contact support.');
+        toast.error('A critical error occurred during email verification.'); 
+        // trackEvent('Email Verification Exception', { token, errorMessage: error.message }); // Stays commented
       }
     };
 
-    if (token) {
-      handleVerification();
-    } else {
-      setStatus('invalid');
-    }
-  }, [token, router]);
+    handleVerification(); 
+  }, [searchParams, router]); 
 
-  const renderContent = () => {
+  const Icon = () => { 
     switch (status) {
-      case 'verifying':
-        return (
-          <div className="text-center space-y-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent mx-auto" />
-            <p className="text-gray-600">Verifying your email...</p>
-          </div>
-        );
+      case 'validating':
+        return <ClockIcon className="h-12 w-12 text-blue-500 animate-spin" aria-hidden="true" />; 
       case 'success':
-        return (
-          <div className="text-center space-y-4 animate-fade-in">
-            <h2 className="text-2xl font-bold text-green-600">Email Verified!</h2>
-            <p className="text-gray-600">Redirecting you to login...</p>
-          </div>
-        );
+        return <CheckCircleIcon className="h-12 w-12 text-green-500" aria-hidden="true" />;
       case 'error':
-        return (
-          <div className="text-center space-y-4">
-            <h2 className="text-2xl font-bold text-red-600">Verification Failed</h2>
-            <p className="text-gray-600">Please try again or contact support.</p>
-          </div>
-        );
-      case 'invalid':
-        return (
-          <div className="text-center space-y-4">
-            <h2 className="text-2xl font-bold text-red-600">Invalid Token</h2>
-            <p className="text-gray-600">The verification link appears to be invalid.</p>
-          </div>
-        );
-      default:
-        return null;
+      case 'expired':
+        return <XCircleIcon className="h-12 w-12 text-red-500" aria-hidden="true" />;
+      case 'already-verified':
+        return <QuestionMarkCircleIcon className="h-12 w-12 text-yellow-500" aria-hidden="true" />;
+      default: 
+        return <ClockIcon className="h-12 w-12 text-gray-400" aria-hidden="true" />;
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-xl">
-        {renderContent()}
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-lg text-center">
+        <Icon /> 
+        <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
+          {status === 'validating' && 'Verifying Your Email...'}
+          {status === 'success' && 'Email Successfully Verified!'}
+          {status === 'error' && 'Verification Failed'}
+          {status === 'expired' && 'Token Invalid or Expired'}
+          {status === 'already-verified' && 'Email Already Verified'}
+        </h2>
+        <p className="mt-2 text-sm text-gray-600">{message}</p>
+        <p className="mt-2 text-xs text-gray-500">Debug: Server action & toast active. Analytics & session still disabled.</p>
+        {/* Link components & automatic redirect still commented */}
       </div>
     </div>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={<div className="flex justify-center items-center min-h-screen"><ClockIcon className="h-12 w-12 text-blue-500 animate-spin" /> Loading...</div>}> 
+      <VerifyEmailPageContent />
+    </Suspense> 
   );
 }

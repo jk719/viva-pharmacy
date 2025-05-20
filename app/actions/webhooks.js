@@ -10,10 +10,7 @@ import { emailService } from '@/lib/email/emailService';
 import mongoose from 'mongoose';
 import { paymentTracker } from '@/lib/stripe/paymentTracker';
 import eventEmitter, { Events } from '@/lib/eventEmitter';
-import { LoyaltyCheckoutService } from '@/lib/checkout/loyaltyCheckoutService';
-import loyaltyEventsService from '@/lib/loyalty/eventsService';
-import { calculateTierFromPoints, TIER_CONFIG } from '@/lib/loyalty/loyaltyService';
-import { twilioService } from '@/lib/sms/twilioService';
+import { executePostOrderTasks } from '@/lib/order/postOrderService';
 import { v4 as uuidv4 } from 'uuid';
 import getProductModel from '@/models/Product';
 
@@ -150,10 +147,8 @@ export async function processPaymentWebhook(formData) {
         status: 'completed'
       });
 
-      // Process post-order tasks in the background
-      processPostOrderTasks(order).catch(err => {
-        console.error("Error in background post-order tasks for order:", order?._id, err);
-      });
+      // Post-order tasks are now handled by the shared service
+      await executePostOrderTasks(order.toObject());
     } catch (orderCreationError) {
       console.error('Failed to create or retrieve order in webhook:', orderCreationError, { paymentIntentId: paymentIntent.id });
       return { 
@@ -166,7 +161,6 @@ export async function processPaymentWebhook(formData) {
     return {
       success: true,
       orderId: order._id,
-      status: order.loyaltyPointsProcessed ? 'processed' : 'processing_tasks',
       status: 200
     };
   } catch (error) {
@@ -321,148 +315,6 @@ async function emitEvent(type, data) {
     console.log(`✅ Successfully emitted ${type} event`);
   } catch (error) {
     console.error(`❌ Error emitting ${type} event:`, error);
-  }
-}
-
-async function processPostOrderTasks(order) {
-  if (!order.emailSent) {
-    try {
-      const user = await User.findById(order.userId).select('email name');
-      if (user && user.email) {
-        const freshOrder = await Order.findById(order._id);
-        if (freshOrder) {
-          // Use the emailService directly
-          await emailService.sendOrderConfirmationEmail(
-            { email: user.email, name: user.name || user.email },
-            {
-              orderNumber: freshOrder.orderNumber,
-              items: freshOrder.items,
-              subtotal: freshOrder.subtotal || (freshOrder.total * 0.93),
-              tax: freshOrder.tax || (freshOrder.total * 0.07),
-              total: freshOrder.total,
-              shippingAddress: freshOrder.shippingAddress,
-              deliveryMethod: freshOrder.deliveryMethod,
-              selectedTime: freshOrder.selectedTime,
-              vivaBucksEarned: Math.floor(freshOrder.total) // Simple approximation
-            }
-          );
-          
-          await Order.updateOne({ _id: order._id }, { $set: { emailSent: true } });
-          console.log('✉️ Order confirmation email sent to:', user.email);
-        } else {
-          console.error('❌ Order not found for sending email after creation:', order._id);
-        }
-      } else {
-        console.warn('⚠️ User email not found for order confirmation:', order.userId);
-      }
-    } catch (emailErr) {
-      console.error('❌ Error sending order confirmation email:', emailErr);
-    }
-  } else {
-    console.log('ℹ️ Email already marked as sent for order:', order._id);
-  }
-
-  // Send SMS notification if necessary
-  try {
-    const user = await User.findById(order.userId).select('phoneNumber smsPreferences');
-    if (user?.phoneNumber && user?.smsPreferences?.orderConfirmations) {
-      const message = `Your Viva Pharmacy order #${order.orderNumber} (Total: $${order.total.toFixed(2)}) has been confirmed!`;
-      await twilioService.sendSMS(user.phoneNumber, message);
-      console.log('📱 SMS notification sent for order:', order.orderNumber);
-    }
-  } catch (smsError) {
-    console.error('❌ Error sending SMS notification:', smsError);
-  }
-
-  // Process loyalty points
-  if (!order.loyaltyPointsProcessed && order.userId) {
-    try {
-      const user = await User.findById(order.userId);
-      if (!user) throw new Error(`User not found for loyalty processing: ${order.userId}`);
-
-      const amount = order.total;
-      const loyaltyBenefits = await LoyaltyCheckoutService.calculateLoyaltyBenefits(user, amount);
-
-      user.vivaBucks = user.vivaBucks || 0;
-      user.cumulativePoints = user.cumulativePoints || 0;
-      user.currentTier = user.currentTier || 'BRONZE';
-      user.pointsMultiplier = user.pointsMultiplier || TIER_CONFIG[user.currentTier]?.multiplier || 1;
-      user.rewardHistory = user.rewardHistory || [];
-
-      const oldPoints = user.vivaBucks;
-      const oldLifetimePoints = user.cumulativePoints;
-
-      console.log('📊 Calculating loyalty points:', {
-        orderId: order.orderNumber,
-        userId: user._id,
-        amount,
-        basePoints: loyaltyBenefits.basePoints,
-        tierMultiplier: loyaltyBenefits.tierMultiplier,
-        totalPoints: loyaltyBenefits.totalPoints,
-      });
-
-      user.vivaBucks += loyaltyBenefits.totalPoints;
-      user.cumulativePoints += loyaltyBenefits.totalPoints;
-      user.rewardHistory.push({
-        type: 'POINTS_EARNED',
-        points: loyaltyBenefits.basePoints,
-        adjustedPoints: loyaltyBenefits.totalPoints,
-        multiplier: loyaltyBenefits.tierMultiplier,
-        tier: user.currentTier,
-        source: 'purchase',
-        orderId: order._id,
-        appliedEvents: loyaltyBenefits.appliedEvents || [],
-        timestamp: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
-
-      const newTier = calculateTierFromPoints(user.cumulativePoints);
-      if (newTier !== user.currentTier) {
-        const oldTier = user.currentTier;
-        user.currentTier = newTier;
-        user.pointsMultiplier = TIER_CONFIG[newTier]?.multiplier || 1;
-        user.rewardHistory.push({
-          type: 'TIER_CHANGED',
-          oldTier: oldTier,
-          newTier: newTier,
-          orderId: order._id,
-          timestamp: new Date(),
-          createdAt: new Date(),
-          updatedAt: new Date()
-        });
-        console.log(`✨ Tier Change: ${oldTier} -> ${newTier} for user ${user._id}`);
-      }
-
-      await user.save();
-
-      await Order.updateOne({ _id: order._id }, { $set: { loyaltyPointsProcessed: true } });
-      console.log('💯 Loyalty points processed successfully for order:', order._id);
-
-      await loyaltyEventsService.emitLoyaltyUpdate(user._id, {
-        type: 'ORDER_COMPLETE',
-        orderId: order._id,
-        paymentIntentId: order.paymentIntentId,
-        amount: amount,
-        points: loyaltyBenefits.totalPoints,
-        vivaBucks: user.vivaBucks,
-        loyaltyBenefits: {
-          ...loyaltyBenefits,
-          currentPoints: user.vivaBucks,
-          lifetimePoints: user.cumulativePoints,
-          currentTier: user.currentTier,
-          oldPoints,
-          oldLifetimePoints,
-          tierChanged: newTier !== user.currentTier,
-          oldTier: user.currentTier,
-          newTier: newTier
-        }
-      });
-    } catch (loyaltyError) {
-      console.error('❌ Error processing loyalty benefits for order:', order._id, loyaltyError);
-    }
-  } else if (order.loyaltyPointsProcessed) {
-    console.log('ℹ️ Loyalty points already processed for order:', order._id);
   }
 }
 

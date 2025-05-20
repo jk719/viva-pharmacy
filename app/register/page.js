@@ -1,5 +1,5 @@
 'use client';
-import { useState, Suspense } from 'react';
+import { useState, Suspense, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import PasswordStrengthIndicator from '@/components/auth/PasswordStrengthIndicator';
@@ -17,8 +17,90 @@ function RegisterContent() {
     confirmPassword: '',
     phoneNumber: ''
   });
+  const [smsConsent, setSmsConsent] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  // Phone Verification State
+  const [otpCode, setOtpCode] = useState('');
+  const [verificationStatus, setVerificationStatus] = useState('idle'); // 'idle', 'sendingOtp', 'awaitingOtp', 'verifyingOtp', 'verified', 'error'
+  const [verificationMessage, setVerificationMessage] = useState('');
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    // If phone number is changed, reset verification status
+    if (name === 'phoneNumber') {
+      setVerificationStatus('idle');
+      setVerificationMessage('');
+      setOtpCode('');
+    }
+  };
+
+  const handleSendOtp = async () => {
+    if (!formData.phoneNumber) {
+      setVerificationMessage('Please enter a phone number.');
+      setVerificationStatus('error');
+      return;
+    }
+    setVerificationStatus('sendingOtp');
+    setVerificationMessage(''); // Clear previous messages
+    try {
+      const response = await fetch('/api/auth/verify/phone/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phoneNumber: formData.phoneNumber }),
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setVerificationStatus('awaitingOtp');
+        setVerificationMessage('OTP sent successfully! Check your phone.');
+        toast.success('OTP sent to your phone!');
+      } else {
+        setVerificationStatus('error');
+        setVerificationMessage(data.message || 'Failed to send OTP. Please try again.');
+        toast.error(data.message || 'Failed to send OTP.');
+      }
+    } catch (err) {
+      setVerificationStatus('error');
+      setVerificationMessage('An network error occurred. Please try again.');
+      toast.error('Network error sending OTP.');
+      console.error('Send OTP error:', err);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!otpCode || otpCode.length < 4) { // Basic validation for OTP length
+      setVerificationMessage('Please enter a valid OTP.');
+      setVerificationStatus('error'); // Or keep 'awaitingOtp' and show message
+      return;
+    }
+    setVerificationStatus('verifyingOtp');
+    setVerificationMessage('');
+    try {
+      const response = await fetch('/api/auth/verify/phone/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phoneNumber: formData.phoneNumber, code: otpCode }),
+      });
+      const data = await response.json();
+      if (response.ok && data.success && data.status === 'approved') {
+        setVerificationStatus('verified');
+        setVerificationMessage('Phone number verified successfully!');
+        toast.success('Phone number verified!');
+        setError(''); // Clear main form error if it was due to phone verification
+      } else {
+        setVerificationStatus('error'); // Or 'awaitingOtp' to allow retry with same OTP or resend
+        setVerificationMessage(data.message || 'Invalid OTP or verification failed. Please try again.');
+        toast.error(data.message || 'Invalid OTP.');
+        setOtpCode(''); // Clear OTP input on failure
+      }
+    } catch (err) {
+      setVerificationStatus('error');
+      setVerificationMessage('A network error occurred. Please try again.');
+      toast.error('Network error verifying OTP.');
+      console.error('Verify OTP error:', err);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -31,6 +113,13 @@ function RegisterContent() {
       return;
     }
 
+    if (formData.phoneNumber && smsConsent && verificationStatus !== 'verified') {
+      setError('Please verify your phone number before creating an account.');
+      toast.error('Please verify your phone number.');
+      setLoading(false);
+      return;
+    }
+
     try {
       // Create form data for the server action
       const formDataObj = new FormData();
@@ -39,6 +128,10 @@ function RegisterContent() {
       formDataObj.append('password', formData.password);
       if (formData.phoneNumber) {
         formDataObj.append('phoneNumber', formData.phoneNumber);
+        // Pass SMS consent only if phone number is provided
+        if (smsConsent) {
+          formDataObj.append('smsConsent', smsConsent.toString());
+        }
       }
       
       // Call server action instead of API
@@ -59,7 +152,7 @@ function RegisterContent() {
             },
           }
         );
-        router.push('/login?registration=success');
+        router.push('/api/auth/signin?registration=success');
       } else {
         toast.error(result.message || 'Something went wrong');
         setError(result.message || 'Something went wrong');
@@ -107,7 +200,7 @@ function RegisterContent() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                           d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  {error}
+                  <span>{error}</span>
                 </div>
               </motion.div>
             )}
@@ -123,6 +216,7 @@ function RegisterContent() {
                   </div>
                   <input
                     id="name"
+                    name="name"
                     type="text"
                     required
                     className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl
@@ -131,7 +225,7 @@ function RegisterContent() {
                              bg-gray-50/30 focus:bg-white sm:text-sm"
                     placeholder="Your full name"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={handleInputChange}
                   />
                 </div>
               </div>
@@ -146,6 +240,7 @@ function RegisterContent() {
                   </div>
                   <input
                     id="email"
+                    name="email"
                     type="email"
                     required
                     className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl
@@ -154,7 +249,7 @@ function RegisterContent() {
                              bg-gray-50/30 focus:bg-white sm:text-sm"
                     placeholder="you@example.com"
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onChange={handleInputChange}
                   />
                 </div>
               </div>
@@ -169,6 +264,7 @@ function RegisterContent() {
                   </div>
                   <input
                     id="password"
+                    name="password"
                     type="password"
                     required
                     className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl
@@ -177,7 +273,7 @@ function RegisterContent() {
                              bg-gray-50/30 focus:bg-white sm:text-sm"
                     placeholder="Create a strong password"
                     value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    onChange={handleInputChange}
                   />
                 </div>
                 <PasswordStrengthIndicator password={formData.password} />
@@ -193,6 +289,7 @@ function RegisterContent() {
                   </div>
                   <input
                     id="confirmPassword"
+                    name="confirmPassword"
                     type="password"
                     required
                     className={`block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl
@@ -204,7 +301,7 @@ function RegisterContent() {
                                : ''}`}
                     placeholder="Confirm your password"
                     value={formData.confirmPassword}
-                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                    onChange={handleInputChange}
                   />
                 </div>
                 {formData.confirmPassword && formData.password !== formData.confirmPassword && (
@@ -227,19 +324,108 @@ function RegisterContent() {
                     <FaPhone className="text-gray-400" />
                   </div>
                   <input
-                    id="phone"
+                    id="phoneNumber"
+                    name="phoneNumber"
                     type="tel"
                     className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl
                              text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-orange-500
                              focus:border-orange-500 transition duration-150
                              bg-gray-50/30 focus:bg-white sm:text-sm"
-                    placeholder="(Optional)"
+                    placeholder="Phone Number"
                     value={formData.phoneNumber}
-                    onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                    onChange={handleInputChange}
+                    disabled={verificationStatus === 'verified' || verificationStatus === 'sendingOtp' || verificationStatus === 'verifyingOtp'}
                   />
                 </div>
               </div>
             </div>
+
+            {/* SMS Consent Checkbox */}
+            {formData.phoneNumber && ( // Only show consent if a phone number is being entered
+              <div className="mt-4">
+                <div className="flex items-start">
+                  <div className="flex items-center h-5">
+                    <input
+                      id="sms-consent"
+                      name="sms-consent"
+                      type="checkbox"
+                      className="focus:ring-orange-500 h-4 w-4 text-orange-600 border-gray-300 rounded"
+                      checked={smsConsent}
+                      onChange={(e) => setSmsConsent(e.target.checked)}
+                      disabled={verificationStatus === 'verified'}
+                    />
+                  </div>
+                  <div className="ml-3 text-sm">
+                    <label htmlFor="sms-consent" className="font-medium text-gray-700">
+                      Receive SMS updates
+                    </label>
+                    <p className="text-gray-500 text-xs mt-1">
+                      I agree to receive transactional SMS messages from Viva Pharmacy for order updates, prescription alerts, and account verification. Message and data rates may apply. Reply STOP to unsubscribe.
+                      View our <Link href="/terms-of-service" className="underline hover:text-orange-500">Terms of Service</Link> and <Link href="/privacy-policy" className="underline hover:text-orange-500">Privacy Policy</Link>.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* OTP Verification Section (only if phone number and SMS consent are provided) */}
+            {formData.phoneNumber && smsConsent && verificationStatus !== 'verified' && (
+              <div className="space-y-4 pt-2 border-t border-gray-200 mt-4">
+                <h3 className="text-md font-medium text-gray-800">Phone Verification</h3>
+                {verificationStatus === 'idle' || verificationStatus === 'error' || verificationStatus === 'awaitingOtp' && (
+                  <button
+                    type="button"
+                    onClick={handleSendOtp}
+                    disabled={verificationStatus === 'sendingOtp' || verificationStatus === 'verified' || !formData.phoneNumber.trim()}
+                    className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                  >
+                    {verificationStatus === 'sendingOtp' ? 'Sending OTP...' : (verificationStatus === 'awaitingOtp' ? 'Resend OTP' : 'Send OTP')}
+                  </button>
+                )}
+
+                {(verificationStatus === 'awaitingOtp' || verificationStatus === 'verifyingOtp' || verificationStatus === 'error') && (
+                  <div className="relative">
+                    <FaStar className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" /> {/* Placeholder icon */}
+                    <input
+                      id="otpCode"
+                      name="otpCode"
+                      type="text"
+                      maxLength="6"
+                      className="appearance-none rounded-xl relative block w-full px-12 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
+                      placeholder="Enter OTP Code"
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value)}
+                      disabled={verificationStatus === 'verifyingOtp' || verificationStatus === 'verified'}
+                    />
+                  </div>
+                )}
+                
+                {verificationStatus === 'awaitingOtp' && (
+                  <button
+                    type="button"
+                    onClick={handleVerifyOtp}
+                    disabled={!otpCode || otpCode.length < 4 || verificationStatus === 'verifyingOtp' || verificationStatus === 'verified'}
+                    className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+                  >
+                    {verificationStatus === 'verifyingOtp' ? 'Verifying...' : 'Verify OTP'}
+                  </button>
+                )}
+
+                {verificationMessage && (
+                  <p className={`text-sm ${verificationStatus === 'error' ? 'text-red-600' : 'text-green-600'}`}>
+                    {verificationMessage}
+                  </p>
+                )}
+              </div>
+            )}
+            {formData.phoneNumber && verificationStatus === 'verified' && (
+              <div className="pt-2 mt-4 text-center">
+                <p className="text-sm text-green-600 font-medium flex items-center justify-center">
+                  <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path></svg>
+                  Phone Number Verified Successfully!
+                </p>
+              </div>
+            )}
 
             <button
               type="submit"
