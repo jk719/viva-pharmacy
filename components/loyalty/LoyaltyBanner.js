@@ -4,15 +4,14 @@ import { useSession } from "next-auth/react";
 import { FaSpinner, FaChartLine, FaTrophy } from 'react-icons/fa';
 import { useState, useEffect, memo } from 'react';
 import eventEmitter, { Events } from '@/lib/eventEmitter';
+import { useImprovedLoyaltyStore } from '@/lib/loyalty/improvedLoyaltyStore';
+import { TIMING } from '@/constants/timing';
 
 // Import components
 import LoyaltyProgressBar from './LoyaltyProgressBar';
 import ImprovedVivaBucksDisplay from './components/ImprovedVivaBucksDisplay';
 import TierPointsDisplay from './components/TierPointsDisplay';
 import { FaSync } from 'react-icons/fa';
-
-// Import improved Zustand store  
-import useImprovedLoyaltyStore from '@/lib/loyalty/improvedLoyaltyStore';
 
 // Import hooks and constants
 import { getProgressBarData } from '@/lib/loyalty/loyaltyCalculator';
@@ -153,7 +152,7 @@ function LoyaltyBanner({
         setShouldAnimate(true);
         setLastAnimatedPoints(userData.cumulativeVivaBucks);
         setAnimationCompleted(false);
-      }, 100);
+      }, TIMING.LOYALTY.DEBOUNCE);
       
       setAnimationDebounce(newDebounce);
     }

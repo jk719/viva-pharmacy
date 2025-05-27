@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { Elements } from '@stripe/react-stripe-js';
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import stripePromise from '@/lib/stripe/client';
 import { useSession } from "next-auth/react";
 import { useCart } from '@/context/CartContext';
 import toast from 'react-hot-toast';
 import CheckoutForm from './CheckoutForm';
+import { TIMING } from '@/constants/timing';
 
 export default function PaymentForm({ amount, amountDetails, items, shippingAddress, deliveryMethod, selectedTime }) {
   console.log('PaymentForm RENDER', { 
@@ -118,7 +119,8 @@ export default function PaymentForm({ amount, amountDetails, items, shippingAddr
       }
     };
 
-    const timeoutId = setTimeout(initializePayment, 100);
+    // Small delay to ensure Stripe is fully loaded
+    const timeoutId = setTimeout(initializePayment, TIMING.API.DEBOUNCE);
     return () => clearTimeout(timeoutId);
   }, [amount, amountDetails, getFormattedItems, deliveryMethod, selectedTime, shippingAddress, paymentInitialized, requestId]);
 

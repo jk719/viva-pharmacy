@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { TIER_CONFIG } from '@/lib/loyalty/tierConfig';
 import { TIER_ICONS } from '@/components/loyalty/constants/tierConfig';
 import { calculateProgressToNextTier } from '@/lib/loyalty/loyaltyCalculator';
@@ -10,9 +11,12 @@ import {
   FaTrophy,
   FaArrowUp,
   FaCreditCard,
-  FaTags
+  FaTags,
+  FaStar,
+  FaChartLine
 } from 'react-icons/fa';
 import { motion } from 'framer-motion';
+import { TIMING } from '@/constants/timing';
 
 export default function LoyaltyProgram({ user }) {
   const [progressData, setProgressData] = useState(null);
@@ -32,7 +36,7 @@ export default function LoyaltyProgram({ user }) {
     
     // Trigger animation when component mounts
     setIsAnimating(true);
-    const timer = setTimeout(() => setIsAnimating(false), 1500);
+    const timer = setTimeout(() => setIsAnimating(false), TIMING.LOYALTY.ANIMATION);
     
     return () => clearTimeout(timer);
   }, [user]);
@@ -52,6 +56,13 @@ export default function LoyaltyProgram({ user }) {
   
   // Get available coupons
   const availableCoupons = user.coupons?.filter(coupon => !coupon.isUsed) || [];
+
+  useEffect(() => {
+    if (isAnimating) {
+      const timer = setTimeout(() => setIsAnimating(false), TIMING.LOYALTY.ANIMATION);
+      return () => clearTimeout(timer);
+    }
+  }, [isAnimating]);
 
   return (
     <div className="space-y-8">

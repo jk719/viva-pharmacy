@@ -54,12 +54,6 @@ export function CartProvider({ children }) {
         showTimeError: false
     });
 
-    const [paymentStatus, setPaymentStatus] = useState({
-        processing: false,
-        paymentIntentId: null,
-        error: null
-    });
-
     // Add new state for loyalty redemption
     const [loyaltyState, setLoyaltyState] = useState({
         redemptionApplied: false,
@@ -264,13 +258,6 @@ export function CartProvider({ children }) {
             deliverySpeed: '',
             showTimeError: false
         });
-        
-        // Reset payment status
-        setPaymentStatus({
-            processing: false,
-            paymentIntentId: null,
-            error: null
-        });
     }, []);
 
     const getCartSize = useCallback(() => {
@@ -288,57 +275,6 @@ export function CartProvider({ children }) {
             subtotal: parseFloat(item.price) * parseInt(item.quantity)
         }));
     }, [cartState.items, getProductId]);
-
-    const startPaymentProcessing = useCallback((paymentIntentId) => {
-        setPaymentStatus({
-            processing: true,
-            paymentIntentId,
-            error: null
-        });
-    }, []);
-
-    const completePaymentProcessing = useCallback(() => {
-        setPaymentStatus({
-            processing: false,
-            paymentIntentId: null,
-            error: null
-        });
-        clearCart();
-    }, []);
-
-    const handlePaymentError = useCallback((error) => {
-        setPaymentStatus({
-            processing: false,
-            paymentIntentId: null,
-            error
-        });
-    }, []);
-
-    const handlePaymentSuccess = async (paymentIntentId) => {
-        try {
-            console.log('🎉 Payment successful, processing...');
-            
-            // Add a small delay to ensure webhook has processed
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            // Clear cart
-            setCartState(prev => ({
-                ...prev,
-                items: [],
-                total: 0,
-                subtotal: 0,
-                tax: 0
-            }));
-            localStorage.removeItem('cart');
-            
-            console.log('✅ Cart cleared successfully');
-            
-            return true;
-        } catch (error) {
-            console.error('❌ Error in handlePaymentSuccess:', error);
-            throw error;
-        }
-    };
 
     // Add the new updateItemQuantity function
     const updateItemQuantity = useCallback((productId, newQuantity) => {
@@ -432,11 +368,6 @@ export function CartProvider({ children }) {
         setShowTimeError: (error) => setDeliveryState(prev => ({ ...prev, showTimeError: error })),
         getCartSize,
         getFormattedItems,
-        paymentStatus,
-        startPaymentProcessing,
-        completePaymentProcessing,
-        handlePaymentError,
-        handlePaymentSuccess,
         deliverySpeed: deliveryState.deliverySpeed,
         setDeliverySpeed: (speed) => setDeliveryState(prev => ({ 
             ...prev, 

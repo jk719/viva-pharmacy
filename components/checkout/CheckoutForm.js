@@ -8,6 +8,8 @@ import { trackBeginCheckout, trackPurchase, triggerLocalWebhook } from '@/utils/
 import eventEmitter, { Events } from '@/lib/eventEmitter';
 import { useRouter } from 'next/navigation';
 import { useModal, ModalType } from '@/context/ModalContext';
+import { paymentStorage } from '@/utils/paymentStorage';
+import { normalizePaymentData } from '@/utils/dataNormalization';
 
 export default function CheckoutForm({ amount, amountDetails, items, shippingAddress, deliveryMethod, selectedTime }) {
   console.log('CheckoutForm RENDER', { amount, deliveryMethod, hasItems: !!items?.length });
@@ -79,13 +81,11 @@ export default function CheckoutForm({ amount, amountDetails, items, shippingAdd
         
         let orderDetailsObj = {
           orderId: paymentIntent.id,
-          // Include both field names for consistency
           total: amount,
           amount: amount,
           deliveryMethod,
           selectedTime,
           items: items,
-          // Store points with both field names for consistency
           pointsEarned: calculatedPoints,
           loyaltyPointsEarned: calculatedPoints,
         };
@@ -103,14 +103,10 @@ export default function CheckoutForm({ amount, amountDetails, items, shippingAdd
             );
             
             if (webhookResponse && webhookResponse.success) {
-              // Ensure both field names are present
               orderDetailsObj = {
                 ...webhookResponse,
-                // Ensure amount field is present (use total if available, or the original amount)
                 amount: webhookResponse.amount || webhookResponse.total || amount,
-                // Ensure total field is present (use amount if available, or the original total)
                 total: webhookResponse.total || webhookResponse.amount || amount,
-                // Ensure points fields are present
                 pointsEarned: webhookResponse.pointsEarned || calculatedPoints,
                 loyaltyPointsEarned: webhookResponse.loyaltyPointsEarned || webhookResponse.pointsEarned || calculatedPoints
               };
@@ -124,8 +120,8 @@ export default function CheckoutForm({ amount, amountDetails, items, shippingAdd
         // Clear the shopping cart
         clearCart();
         
-        // Emit the payment completed event with all relevant data
-        eventEmitter.emit(Events.PAYMENT_COMPLETED, {
+        // Prepare payment data for event emission
+        const rawPaymentData = {
           type: Events.PAYMENT_COMPLETED,
           paymentIntentId: paymentIntent.id,
           orderId: orderDetailsObj.orderId,
@@ -134,34 +130,20 @@ export default function CheckoutForm({ amount, amountDetails, items, shippingAdd
           total: amount,
           deliveryMethod,
           selectedTime,
-          // Include both field names
           loyaltyPointsEarned: orderDetailsObj.loyaltyPointsEarned,
           pointsEarned: orderDetailsObj.pointsEarned,
           items: items,
           timestamp: new Date().toISOString()
-        });
+        };
+
+        // Normalize the payment data using centralized utility
+        const normalizedPaymentData = normalizePaymentData(rawPaymentData);
         
-        // Store the orderDetails in localStorage for recovery if needed
-        if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
-          try {
-            localStorage.setItem('viva_payment_completed', JSON.stringify({
-              timestamp: Date.now(),
-              data: {
-                orderId: orderDetailsObj.orderId,
-                total: amount,
-                amount: amount,
-                deliveryMethod,
-                selectedTime,
-                items: items,
-                // Include both field names for maximum compatibility
-                loyaltyPointsEarned: orderDetailsObj.loyaltyPointsEarned,
-                pointsEarned: orderDetailsObj.pointsEarned
-              }
-            }));
-          } catch (err) {
-            console.error('Error storing payment data in localStorage:', err);
-          }
-        }
+        // Store payment data using centralized utility
+        paymentStorage.store(normalizedPaymentData);
+        
+        // Emit the payment completed event with normalized data
+        eventEmitter.emit(Events.PAYMENT_COMPLETED, normalizedPaymentData);
         
         // Redirect to success page instead of showing modal directly
         // The success page will handle showing the appropriate modals
@@ -202,10 +184,10 @@ export default function CheckoutForm({ amount, amountDetails, items, shippingAdd
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              Processing Payment...
+              Processing...
             </span>
           ) : (
-            'Pay Now'
+            `Pay $${amount.toFixed(2)}`
           )}
         </button>
       </form>

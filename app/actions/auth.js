@@ -1,9 +1,12 @@
 "use server";
 
+import bcrypt from 'bcryptjs';
 import dbConnect from '@/lib/dbConnect';
 import User from '@/models/User';
 import { generateVerificationToken, findUserByToken } from '@/lib/auth';
 import { emailService } from '@/lib/email/emailService';
+import crypto from 'crypto';
+import { TIMING } from '@/constants/timing';
 
 /**
  * Server action for user registration
@@ -320,5 +323,43 @@ export async function confirmPasswordReset(formData) {
       message: 'Server error during password reset',
       status: 500
     };
+  }
+}
+
+export async function sendVerificationEmail(email) {
+  try {
+    await dbConnect();
+    
+    const user = await User.findOne({ email });
+    if (!user) {
+      return { success: false, message: 'User not found' };
+    }
+
+    // Generate verification token
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const verificationExpires = new Date(Date.now() + TIMING.AUTH.VERIFICATION_EXPIRE); // 24 hours
+
+    // ... existing code ...
+  } catch (error) {
+    // ... existing code ...
+  }
+}
+
+export async function forgotPassword(email) {
+  try {
+    await dbConnect();
+    
+    const user = await User.findOne({ email });
+    if (!user) {
+      return { success: true, message: 'If an account exists, a reset email has been sent.' };
+    }
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetExpires = new Date(Date.now() + TIMING.AUTH.RESET_EXPIRE); // 1 hour
+
+    // ... existing code ...
+  } catch (error) {
+    // ... existing code ...
   }
 } 
