@@ -3,15 +3,16 @@
 import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
 import LoyaltyBanner from "@/components/loyalty/LoyaltyBanner";
+import { LoyaltyProvider } from "@/components/loyalty/LoyaltyProvider";
 import DebugPanel from "./debug-panel";
 import { useRouter } from "next/navigation";
-import useLoyaltyStore from "@/lib/loyalty/loyaltyStore";
+import useImprovedLoyaltyStore from "@/lib/loyalty/improvedLoyaltyStore";
 
 export default function TestVivaBucksPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [animateEarnedVivaBucks, setAnimateEarnedVivaBucks] = useState(0);
-  const { userData, progressInfo, isLoading } = useLoyaltyStore();
+  const { userData, progressInfo, isLoading } = useImprovedLoyaltyStore();
   
   // Redirect to login if not authenticated
   useEffect(() => {

@@ -1,5 +1,8 @@
 require('dotenv').config({ path: '.env.local' });
 const { MongoClient } = require('mongodb');
+import dbConnect from '../lib/dbConnect.js';
+import User from '../models/User.js';
+import { getTierFromPoints, TIER_CONFIG, LEGACY_TIER_MAPPING } from '../lib/loyalty/tierConfig.js';
 
 /**
  * Migration Script: Upgrade to 3-Tier VivaBucks System
@@ -19,21 +22,9 @@ const TIER_MIGRATION_MAP = {
   LEGEND: 'CHAMPION'
 };
 
-// New tier configuration
-const NEW_TIER_CONFIG = {
-  EXPLORER: { points: 0, multiplier: 1, couponAmount: 0 },
-  ADVENTURER: { points: 1000, multiplier: 1.5, couponAmount: 15 },
-  CHAMPION: { points: 5000, multiplier: 2, couponAmount: 50 }
-};
+console.log('🚀 Starting 3-Tier System Migration...');
 
-// Helper function to determine correct tier from points
-function getTierFromPoints(points) {
-  if (points >= NEW_TIER_CONFIG.CHAMPION.points) return 'CHAMPION';
-  if (points >= NEW_TIER_CONFIG.ADVENTURER.points) return 'ADVENTURER';
-  return 'EXPLORER';
-}
-
-async function migrateTo3TierSystem() {
+async function migrate3TierSystem() {
   const client = new MongoClient(process.env.MONGODB_URI);
   
   try {
@@ -73,7 +64,7 @@ async function migrateTo3TierSystem() {
         const migratedTier = TIER_MIGRATION_MAP[oldTier] || 'EXPLORER';
         
         // Use the higher tier (either calculated or migrated)
-        const finalTier = cumulativePoints >= NEW_TIER_CONFIG[correctTier].points ? correctTier : migratedTier;
+        const finalTier = cumulativePoints >= TIER_CONFIG[correctTier].points ? correctTier : migratedTier;
         
         // Prepare unified data structure
         const updateData = {
@@ -84,8 +75,8 @@ async function migrateTo3TierSystem() {
           
           // New tier system
           currentTier: finalTier,
-          pointsMultiplier: NEW_TIER_CONFIG[finalTier].multiplier,
-          vivaBucksMultiplier: NEW_TIER_CONFIG[finalTier].multiplier, // For compatibility
+          pointsMultiplier: TIER_CONFIG[finalTier].multiplier,
+          vivaBucksMultiplier: TIER_CONFIG[finalTier].multiplier, // For compatibility
           
           // Migration metadata
           migrationDate: new Date(),
@@ -100,8 +91,8 @@ async function migrateTo3TierSystem() {
         
         // Check if user qualifies for tier upgrade bonus
         let tierUpgradeBonus = 0;
-        if (finalTier !== migratedTier && NEW_TIER_CONFIG[finalTier].couponAmount > 0) {
-          tierUpgradeBonus = NEW_TIER_CONFIG[finalTier].couponAmount;
+        if (finalTier !== migratedTier && TIER_CONFIG[finalTier].couponAmount > 0) {
+          tierUpgradeBonus = TIER_CONFIG[finalTier].couponAmount;
           
           // Add tier upgrade coupon to user's account
           if (!updateData.coupons) updateData.coupons = user.coupons || [];
@@ -197,7 +188,7 @@ async function migrateTo3TierSystem() {
         totalUsers: users.length
       },
       tierMapping: TIER_MIGRATION_MAP,
-      newTierConfig: NEW_TIER_CONFIG
+      newTierConfig: TIER_CONFIG
     });
     
     console.log('\n💡 Next steps:');
@@ -279,7 +270,7 @@ async function verifyMigration() {
 
 // Run migration if called directly
 if (require.main === module) {
-  migrateTo3TierSystem()
+  migrate3TierSystem()
     .then(() => verifyMigration())
     .then(() => {
       console.log('\n🎉 Migration and verification completed successfully!');
@@ -291,4 +282,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { migrateTo3TierSystem, verifyMigration }; 
+module.exports = { migrate3TierSystem, verifyMigration }; 

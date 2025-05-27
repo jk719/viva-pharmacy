@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 // Import our new improved Zustand store
 import useImprovedLoyaltyStore from '@/lib/loyalty/improvedLoyaltyStore';

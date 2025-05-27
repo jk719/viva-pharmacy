@@ -1,8 +1,8 @@
 // src/app/verify-email/page.js
 'use client';
 
-import React, { Suspense, useEffect, useState } from 'react'; 
-import { useSearchParams } from 'next/navigation'; 
+import { Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useRouter } from 'next/navigation'; 
 // import { verifyEmail } from '@/app/actions/verifyEmailAction';
 // import toast from 'react-hot-toast';

@@ -17,7 +17,6 @@ import useImprovedLoyaltyStore from '@/lib/loyalty/improvedLoyaltyStore';
 // Import hooks and constants
 import { getProgressBarData } from '@/lib/loyalty/loyaltyCalculator';
 import { TIER_CONFIG } from '@/lib/loyalty/tierConfig';
-import { EXTENDED_TIER_BASE_VIVABUCKS, EXTENDED_TIER_STEP_VIVABUCKS } from '@/lib/loyalty/loyaltyConstants';
 
 /**
  * Loading state component for loyalty banner

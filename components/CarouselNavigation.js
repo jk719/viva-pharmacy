@@ -1,4 +1,4 @@
-import React from 'react';
+// REMOVED: import React from 'react'; - Not needed in Next.js 13+ with automatic JSX transform
 import { motion } from 'framer-motion';
 
 export default function CarouselNavigation({ 

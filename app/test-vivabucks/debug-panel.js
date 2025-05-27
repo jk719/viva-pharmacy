@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
-import useLoyaltyStore from '@/lib/loyalty/loyaltyStore';
+import { toast } from 'react-hot-toast';
+import useImprovedLoyaltyStore from '@/lib/loyalty/improvedLoyaltyStore';
 import eventEmitter, { Events } from '@/lib/eventEmitter';
 
 /**
@@ -10,12 +11,13 @@ import eventEmitter, { Events } from '@/lib/eventEmitter';
  */
 export default function LoyaltyDebugPanel() {
   const { data: session } = useSession();
-  const { userData, progressInfo, pendingTransactions, fetchUserData } = useLoyaltyStore();
+  const [amount, setAmount] = useState('100');
+  const [isProcessing, setIsProcessing] = useState(false);
   
-  const [amount, setAmount] = useState(100);
+  const { userData, progressInfo, pendingTransactions, fetchUserData } = useImprovedLoyaltyStore();
+  
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [transactionHistory, setTransactionHistory] = useState([]);
   const [showTransactions, setShowTransactions] = useState(false);
 
@@ -24,7 +26,7 @@ export default function LoyaltyDebugPanel() {
     if (!session?.user?.id) return;
     
     try {
-      setIsLoading(true);
+      setIsProcessing(true);
       setError('');
       
       const response = await fetch(`/api/loyalty/transactions?userId=${session.user.id}`);
@@ -38,7 +40,7 @@ export default function LoyaltyDebugPanel() {
     } catch (err) {
       setError(`Error loading transactions: ${err.message}`);
     } finally {
-      setIsLoading(false);
+      setIsProcessing(false);
     }
   };
 
@@ -51,7 +53,7 @@ export default function LoyaltyDebugPanel() {
     }
     
     try {
-      setIsLoading(true);
+      setIsProcessing(true);
       setError('');
       setStatus('');
       
@@ -83,7 +85,7 @@ export default function LoyaltyDebugPanel() {
     } catch (err) {
       setError(`Error: ${err.message}`);
     } finally {
-      setIsLoading(false);
+      setIsProcessing(false);
     }
   };
 
@@ -100,13 +102,13 @@ export default function LoyaltyDebugPanel() {
       setStatus('');
       
       // Use the store's optimistic update function
-      const txId = useLoyaltyStore.getState().addVivaBucksOptimistic(parseInt(amount));
+      const txId = useImprovedLoyaltyStore.getState().addVivaBucksOptimistic(parseInt(amount));
       
       setStatus(`Optimistic update added ${amount} VivaBucks. Transaction ID: ${txId}`);
       
       // After a delay, simulate server confirmation
       setTimeout(() => {
-        useLoyaltyStore.getState().confirmTransaction(txId, true);
+        useImprovedLoyaltyStore.getState().confirmTransaction(txId, true);
         setStatus(prev => `${prev}\nTransaction confirmed successfully!`);
       }, 3000);
     } catch (err) {
@@ -144,7 +146,7 @@ export default function LoyaltyDebugPanel() {
   // Force refresh loyalty data
   const forceRefresh = async () => {
     try {
-      setIsLoading(true);
+      setIsProcessing(true);
       setError('');
       setStatus('');
       
@@ -154,7 +156,7 @@ export default function LoyaltyDebugPanel() {
     } catch (err) {
       setError(`Error refreshing data: ${err.message}`);
     } finally {
-      setIsLoading(false);
+      setIsProcessing(false);
     }
   };
 
@@ -217,7 +219,7 @@ export default function LoyaltyDebugPanel() {
         <div className="flex flex-wrap gap-2 mt-4">
           <button
             onClick={addTestVivaBucks}
-            disabled={isLoading}
+            disabled={isProcessing}
             className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded"
           >
             Add VivaBucks via API
@@ -239,7 +241,7 @@ export default function LoyaltyDebugPanel() {
           
           <button
             onClick={forceRefresh}
-            disabled={isLoading}
+            disabled={isProcessing}
             className="bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded"
           >
             Force Refresh Data
@@ -247,7 +249,7 @@ export default function LoyaltyDebugPanel() {
           
           <button
             onClick={loadTransactionHistory}
-            disabled={isLoading}
+            disabled={isProcessing}
             className="bg-amber-500 hover:bg-amber-600 text-white py-2 px-4 rounded"
           >
             {showTransactions ? 'Refresh Transactions' : 'Load Transaction History'}
