@@ -28,6 +28,18 @@ export default function CheckoutSuccessPage() {
         if (isRecent && data) {
           console.log('Found recent payment data on success page:', data);
           
+          // Check if we've already processed this payment on this page load
+          const processedKey = `viva_success_processed_${data.paymentIntentId || data.orderId || timestamp}`;
+          if (sessionStorage.getItem(processedKey)) {
+            console.log('Payment already processed on this session, skipping modals');
+            setTimeout(() => router.push('/'), 500);
+            setIsProcessed(true);
+            return;
+          }
+          
+          // Mark as processed for this session
+          sessionStorage.setItem(processedKey, 'true');
+          
           // Normalize data to ensure all field names are consistent
           const normalizedData = {
             ...data,

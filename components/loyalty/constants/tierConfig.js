@@ -1,73 +1,101 @@
-import { FaGem, FaCrown, FaCar } from 'react-icons/fa';
-import { IoMdRibbon, IoMdStar, IoMdTrophy, IoIosFlash, IoIosRocket } from 'react-icons/io';
+// UPDATED: Tier configuration for the new simplified 3-tier system
+// This file exports the new tier colors and icons for the improved loyalty system
 
+// Re-export from the central config to avoid duplication
+export { TIER_CONFIG, getTierFromPoints, migrateLegacyTier } from '@/lib/loyalty/tierConfig';
+
+// Tier colors for the new simplified system (with legacy support)
 export const TIER_COLORS = {
-  BRONZE: {
+  // New 3-tier system
+  EXPLORER: {
+    bg: 'from-amber-400 to-amber-600',
+    text: 'text-amber-700',
     icon: 'text-amber-600',
-    bg: 'from-amber-100 to-amber-300',
-    background: 'bg-amber-100',
-    text: 'text-amber-800',
-    border: 'border-amber-200',
-    progress: 'bg-amber-500'
+    accent: 'bg-amber-50',
+    border: 'border-amber-200'
+  },
+  ADVENTURER: {
+    bg: 'from-blue-400 to-blue-600',
+    text: 'text-blue-700',
+    icon: 'text-blue-600',
+    accent: 'bg-blue-50',
+    border: 'border-blue-200'
+  },
+  CHAMPION: {
+    bg: 'from-purple-400 to-purple-600',
+    text: 'text-purple-700',
+    icon: 'text-purple-600',
+    accent: 'bg-purple-50',
+    border: 'border-purple-200'
+  },
+  
+  // Legacy tier support (mapped to new colors)
+  BRONZE: {
+    bg: 'from-amber-400 to-amber-600',
+    text: 'text-amber-700',
+    icon: 'text-amber-600',
+    accent: 'bg-amber-50',
+    border: 'border-amber-200'
   },
   SILVER: {
-    icon: 'text-slate-500',
-    bg: 'from-slate-100 to-slate-300',
-    background: 'bg-gray-100',
-    text: 'text-gray-700',
-    border: 'border-gray-300',
-    progress: 'bg-gray-400'
+    bg: 'from-blue-400 to-blue-600',
+    text: 'text-blue-700',
+    icon: 'text-blue-600',
+    accent: 'bg-blue-50',
+    border: 'border-blue-200'
   },
   GOLD: {
-    icon: 'text-yellow-500',
-    bg: 'from-yellow-100 to-yellow-300',
-    background: 'bg-yellow-50',
-    text: 'text-yellow-800',
-    border: 'border-yellow-200',
-    progress: 'bg-yellow-400'
+    bg: 'from-blue-400 to-blue-600',
+    text: 'text-blue-700',
+    icon: 'text-blue-600',
+    accent: 'bg-blue-50',
+    border: 'border-blue-200'
   },
   PLATINUM: {
-    icon: 'text-cyan-600',
-    bg: 'from-cyan-100 to-cyan-300',
-    background: 'bg-slate-100',
-    text: 'text-slate-800',
-    border: 'border-slate-300',
-    progress: 'bg-slate-400'
+    bg: 'from-purple-400 to-purple-600',
+    text: 'text-purple-700',
+    icon: 'text-purple-600',
+    accent: 'bg-purple-50',
+    border: 'border-purple-200'
   },
   SAPPHIRE: {
-    icon: 'text-blue-600',
-    bg: 'from-blue-100 to-blue-300',
-    background: 'bg-blue-100',
-    text: 'text-blue-800',
-    border: 'border-blue-200',
-    progress: 'bg-blue-500'
+    bg: 'from-purple-400 to-purple-600',
+    text: 'text-purple-700',
+    icon: 'text-purple-600',
+    accent: 'bg-purple-50',
+    border: 'border-purple-200'
   },
   DIAMOND: {
-    icon: 'text-indigo-600',
-    bg: 'from-indigo-100 to-indigo-300',
-    background: 'bg-purple-100',
-    text: 'text-purple-800',
-    border: 'border-purple-200',
-    progress: 'bg-purple-500'
+    bg: 'from-purple-400 to-purple-600',
+    text: 'text-purple-700',
+    icon: 'text-purple-600',
+    accent: 'bg-purple-50',
+    border: 'border-purple-200'
   },
   LEGEND: {
-    icon: 'text-violet-600',
-    bg: 'from-violet-100 to-violet-300',
-    background: 'bg-red-100',
-    text: 'text-red-800',
-    border: 'border-red-200',
-    progress: 'bg-red-500'
+    bg: 'from-purple-400 to-purple-600',
+    text: 'text-purple-700',
+    icon: 'text-purple-600',
+    accent: 'bg-purple-50',
+    border: 'border-purple-200'
   }
 };
 
-export const TIER_ICONS = {
-  BRONZE: <IoMdRibbon />,
-  SILVER: <IoMdStar />,
-  GOLD: <IoMdTrophy />,
-  PLATINUM: <IoIosFlash />,
-  SAPPHIRE: <IoIosRocket />,
-  DIAMOND: <FaGem />,
-  LEGEND: <FaCrown />
-};
+// Tier icons for the system
+import { FaCoins, FaStar, FaTrophy, FaCrown, FaGem } from 'react-icons/fa';
 
-export { TIER_CONFIG } from '@/lib/loyalty/tierConfig'; 
+export const TIER_ICONS = {
+  // New 3-tier system
+  EXPLORER: FaCoins,
+  ADVENTURER: FaStar,
+  CHAMPION: FaTrophy,
+  
+  // Legacy tier support
+  BRONZE: FaCoins,
+  SILVER: FaStar,
+  GOLD: FaStar,
+  PLATINUM: FaTrophy,
+  SAPPHIRE: FaTrophy,
+  DIAMOND: FaTrophy,
+  LEGEND: FaTrophy
+}; 

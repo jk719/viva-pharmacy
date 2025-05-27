@@ -53,15 +53,15 @@ export async function POST(request) {
     
     // Current VivaBucks value (default to 0 if not set)
     const currentVivaBucks = user.vivaBucks || 0;
-    const currentCumulativeVivaBucks = user.cumulativeVivaBucks || 0;
+    const currentCumulativePoints = user.cumulativePoints || 0;
     
     // Calculate new values
     const newVivaBucks = currentVivaBucks + vivaBucks;
-    const newCumulativeVivaBucks = currentCumulativeVivaBucks + (vivaBucks > 0 ? vivaBucks : 0);
+    const newCumulativePoints = currentCumulativePoints + (vivaBucks > 0 ? vivaBucks : 0);
     
     // Update user in database
     user.vivaBucks = newVivaBucks;
-    user.cumulativeVivaBucks = newCumulativeVivaBucks;
+    user.cumulativePoints = newCumulativePoints;
     
     // Add timestamp for tracking
     user.lastLoyaltyUpdate = new Date();
@@ -92,7 +92,8 @@ export async function POST(request) {
       previousVivaBucks: currentVivaBucks,
       currentVivaBucks: newVivaBucks,
       change: vivaBucks,
-      cumulativeVivaBucks: newCumulativeVivaBucks,
+      cumulativePoints: newCumulativePoints,
+      cumulativeVivaBucks: newCumulativePoints, // Include both for compatibility
       transactionId: transaction._id
     });
   } catch (error) {

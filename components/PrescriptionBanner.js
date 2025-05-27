@@ -78,12 +78,13 @@ export default function PrescriptionBanner() {
     >
       {/* Decorative elements (matching LoyaltyBanner style) */}
       <div className="absolute top-0 right-0 w-20 md:w-32 h-20 md:h-32 opacity-10 
-                    transform rotate-45 translate-x-12 -translate-y-12 z-0">
+                    transform rotate-45 translate-x-12 -translate-y-12" 
+                    style={{ zIndex: 'var(--z-banner-decorative)' }}>
         <div className="w-full h-full bg-gradient-to-br from-primary to-primary-light"></div>
       </div>
       
       <div className="max-w-[1400px] mx-auto px-4 py-2 md:py-3">
-        <div className="flex items-center justify-between gap-3 z-10 relative">
+        <div className="flex items-center justify-between gap-3 relative" style={{ zIndex: 'var(--z-banner-content)' }}>
           {/* Services Grid */}
           <div className="flex items-center gap-3 md:gap-6">
             {BANNER_ITEMS.map((item) => (

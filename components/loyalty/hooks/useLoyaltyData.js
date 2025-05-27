@@ -10,7 +10,7 @@ import eventEmitter, { Events } from '@/lib/eventEmitter';
  * Custom hook to fetch and manage user loyalty data
  */
 export default function useLoyaltyData() {
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   const [userData, setUserData] = useState(null);
   const [progressInfo, setProgressInfo] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -25,9 +25,22 @@ export default function useLoyaltyData() {
   const updateQueueRef = useRef([]);
   const isProcessingRef = useRef(false);
 
+  // Immediately set loading to false if user is not authenticated
+  useEffect(() => {
+    if (sessionStatus === 'unauthenticated') {
+      setIsLoading(false);
+      setIsInitialized(true);
+    } else if (sessionStatus === 'loading') {
+      setIsLoading(true);
+    }
+  }, [sessionStatus]);
+
   // Fetch user data with cache control - CHANGED to use /api/user/profile endpoint
   const fetchUserDataFresh = useCallback(async () => {
-    if (!session?.user?.id) return null;
+    if (!session?.user?.id) {
+      setIsLoading(false);
+      return null;
+    }
     
     try {
       const timestamp = Date.now();
@@ -116,7 +129,7 @@ export default function useLoyaltyData() {
 
   // Handle connection status changes and visibility changes
   useEffect(() => {
-    if (!session?.user?.id) return;
+    if (!session?.user?.id || sessionStatus !== 'authenticated') return;
 
     // Handle connection status updates
     const handleConnectionStatus = (data) => {
@@ -165,7 +178,7 @@ export default function useLoyaltyData() {
       eventEmitter.off(Events.CONNECTION_STATUS, handleConnectionStatus);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [session, queueUpdate, connectionStatus]);
+  }, [session, queueUpdate, connectionStatus, sessionStatus]);
 
   // Return values and functions needed by components
   return {

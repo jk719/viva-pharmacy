@@ -24,6 +24,7 @@ export const ModalProvider = ({ children }) => {
   const [activeModal, setActiveModal] = useState(null);
   const [modalData, setModalData] = useState(null);
   const [modalQueue, setModalQueue] = useState([]);
+  const [processedPayments, setProcessedPayments] = useState(new Set());
   const router = useRouter();
 
   // Process the next modal in queue when the current one closes
@@ -97,6 +98,26 @@ export const ModalProvider = ({ children }) => {
         console.log('ModalContext: Ignoring payment completed event on non-checkout page');
         return;
       }
+
+      // Deduplicate payment events using paymentIntentId or orderId
+      const paymentId = data.paymentIntentId || data.orderId || data.payment_intent_id || `${Date.now()}-${Math.random()}`;
+      
+      if (processedPayments.has(paymentId)) {
+        console.log('ModalContext: Ignoring duplicate payment completed event for:', paymentId);
+        return;
+      }
+      
+      // Mark this payment as processed
+      setProcessedPayments(prev => new Set([...prev, paymentId]));
+      
+      // Clean up old processed payments (keep only last 10)
+      setProcessedPayments(prev => {
+        const arr = Array.from(prev);
+        if (arr.length > 10) {
+          return new Set(arr.slice(-10));
+        }
+        return prev;
+      });
       
       // Check for loyalty points using either field name
       const hasLoyaltyPoints = (data.loyaltyPointsEarned > 0 || data.pointsEarned > 0);
@@ -161,7 +182,17 @@ export const ModalProvider = ({ children }) => {
       eventEmitter.off(Events.LOYALTY_ANIMATION_COMPLETE, handleLoyaltyAnimationComplete);
       eventEmitter.off(Events.SHOW_LOYALTY_ANIMATION, handleShowLoyaltyAnimation);
     };
-  }, [activeModal, showModal, hideModal]);
+  }, [activeModal, showModal, hideModal, processedPayments]);
+
+  // Clean up processed payments every 5 minutes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProcessedPayments(new Set()); // Clear all processed payments
+      console.log('ModalContext: Cleared processed payments cache');
+    }, 5 * 60 * 1000); // 5 minutes
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Debug logging for modal state changes
   useEffect(() => {

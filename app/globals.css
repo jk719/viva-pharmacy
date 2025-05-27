@@ -3,10 +3,10 @@
 @tailwind utilities;
 
 /* Reduce header heights for mobile to minimize whitespace */
-@media (max-width: 767px) {
+@media (max-width: 768px) {
   :root {
     --navbar-height: 56px;
-    --loyalty-banner-height: 48px;
+    --loyalty-banner-height: 60px;
   }
 }
 
@@ -24,10 +24,17 @@
   --placeholder-color: #6b7280;
   --navbar-height: 64px;
   --navbar-height-md: 84px;
-  --loyalty-banner-height: 160px;
+  --loyalty-banner-height: 80px;
   --loyalty-banner-height-md: 80px;
   --total-header-height: calc(var(--navbar-height) + var(--loyalty-banner-height));
   --total-header-height-md: calc(var(--navbar-height-md) + var(--loyalty-banner-height-md));
+  
+  /* Z-Index Hierarchy */
+  --z-header: 50;
+  --z-banner-content: 40;
+  --z-banner-decorative: 30;
+  --z-progress-animations: 60;
+  --z-modals: 9999;
 }
 
 /* Base Styles */
@@ -390,23 +397,23 @@ body {
 /* Toast Styling */
 .Toaster {
   position: fixed;
-  z-index: 50;
+  z-index: var(--z-modals);
 }
 
 .toast {
   position: relative;
-  z-index: 50;
+  z-index: var(--z-modals);
 }
 
-/* Update navbar-specific styles */
+/* Navbar styles - consolidated */
 .viva-navbar {
   background-color: var(--primary-color);
   width: 100%;
   position: relative;
-  z-index: 50;
+  z-index: var(--z-header);
+  padding: 0;
 }
 
-/* Remove the container styles from navbar */
 .viva-navbar .container {
   width: 100%;
   max-width: 1400px;
@@ -415,25 +422,13 @@ body {
 }
 
 /* Mobile-specific navbar styles */
-@media (max-width: 767px) {
-  .viva-navbar {
-    padding: 0;
-  }
-  
-  /* Add mobile-specific auth navbar styles */
+@media (max-width: 768px) {
   .auth-nav-container {
     padding: 0.5rem;
   }
 
   .auth-nav-buttons {
     gap: 0.5rem;
-  }
-}
-
-/* Desktop navbar styles */
-@media (min-width: 768px) {
-  .viva-navbar {
-    padding: 0;
   }
 }
 
@@ -560,7 +555,7 @@ body {
     rgba(255, 255, 255, 0.3) 50%,
     rgba(255, 255, 255, 0) 100%
   );
-  animation: shimmer 1.5s infinite;
+  animation: shimmer 2s infinite;
 }
 
 /* Add these new animations */
@@ -573,30 +568,9 @@ body {
   animation: bounce 1s infinite;
 }
 
-@keyframes pulse-slow {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.8;
-    transform: scale(1.02);
-  }
-}
+/* pulse-slow animation already defined above */
 
-.animate-pulse-slow {
-  animation: pulse-slow 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-/* Update the shimmer animation */
-@keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
-}
-
-.animate-shimmer {
-  animation: shimmer 2s infinite linear;
-}
+/* Shimmer animation updated to 2s duration - applied to existing .animate-shimmer class above */
 
 /* Optional debug styles */
 .loyalty-banner {
@@ -607,6 +581,33 @@ body {
   .loyalty-banner {
     min-height: var(--loyalty-banner-height-md);
   }
+}
+
+/* Loyalty Progress Bar Fixes */
+.loyalty-progress-container {
+  /* Ensure progress bar animations aren't clipped */
+  overflow: visible !important;
+  position: relative;
+  z-index: var(--z-banner-content);
+}
+
+.loyalty-progress-bar {
+  /* Override any conflicting styles */
+  position: relative !important;
+  overflow: visible !important;
+}
+
+.loyalty-progress-fill {
+  /* Ensure smooth animations */
+  transition-property: width !important;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.loyalty-earned-label {
+  /* Ensure earned labels appear above everything */
+  z-index: var(--z-progress-animations) !important;
+  pointer-events: none !important;
+  position: absolute !important;
 }
 
 /* Add this to the bottom of your globals.css file */

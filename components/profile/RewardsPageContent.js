@@ -4,7 +4,7 @@ import { FaUser, FaCoins, FaShoppingBag, FaGift, FaTrophy, FaChartLine, FaArrowR
 import { TIER_CONFIG } from '@/lib/loyalty/tierConfig';
 import { TIER_COLORS } from '@/components/loyalty/constants/tierConfig';
 import TierPointsDisplay from '@/components/loyalty/components/TierPointsDisplay';
-import ProgressBar from '@/components/loyalty/components/ProgressBar';
+import LoyaltyProgressBar from '@/components/loyalty/LoyaltyProgressBar';
 import useLoyaltyData from '@/components/loyalty/hooks/useLoyaltyData';
 
 export default function RewardsPageContent() {
@@ -228,12 +228,13 @@ export default function RewardsPageContent() {
                         </span>
                       </div>
                       
-                      <ProgressBar
-                        progress={progressPercentage}
+                      <LoyaltyProgressBar
                         currentPoints={cumulativePoints}
                         startPoints={startPoints}
                         endPoints={endPoints}
                         animate={false}
+                        variant="compact"
+                        label={`Progress to ${nextTierKey}`}
                       />
                     </div>
                   )}

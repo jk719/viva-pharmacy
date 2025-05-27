@@ -135,14 +135,65 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  // Phase 3 VivaBucks fields
+  availableVivaBucks: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  totalVivaBucksEarned: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
   currentTier: {
     type: String,
-    enum: ['BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'SAPPHIRE', 'DIAMOND', 'LEGEND'],
-    default: 'BRONZE'
+    enum: ['EXPLORER', 'ADVENTURER', 'CHAMPION', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'SAPPHIRE', 'DIAMOND', 'LEGEND'],
+    default: 'EXPLORER'
   },
   pointsMultiplier: {
     type: Number,
     default: 1
+  },
+  // Phase 3 behavioral and contextual data
+  behaviorProfile: {
+    type: {
+      type: String,
+      enum: ['CONSERVATIVE', 'BALANCED', 'AGGRESSIVE'],
+      default: 'BALANCED'
+    },
+    confidence: {
+      type: Number,
+      default: 0.5,
+      min: 0,
+      max: 1
+    },
+    lastUpdated: {
+      type: Date,
+      default: Date.now
+    }
+  },
+  redemptionHistory: [{
+    timestamp: Date,
+    orderTotal: Number,
+    vivaBucksUsed: Number,
+    vivaBucksAvailable: Number,
+    userChoice: {
+      type: String,
+      enum: ['ACCEPTED_PRIMARY', 'SELECTED_ALTERNATIVE', 'DECLINED_ALL', 'CUSTOM_AMOUNT']
+    }
+  }],
+  preferredRedemptionAmount: {
+    type: Number,
+    default: null
+  },
+  lastOrderDate: {
+    type: Date,
+    default: null
+  },
+  dateOfBirth: {
+    type: Date,
+    default: null
   },
   rewardHistory: [{
     type: {

@@ -6,12 +6,13 @@ import { useState, useEffect, memo } from 'react';
 import eventEmitter, { Events } from '@/lib/eventEmitter';
 
 // Import components
-import TierProgressBar from './components/TierProgressBar';
-import VivaBucksDisplay from './components/VivaBucksDisplay';
+import LoyaltyProgressBar from './LoyaltyProgressBar';
+import ImprovedVivaBucksDisplay from './components/ImprovedVivaBucksDisplay';
 import TierPointsDisplay from './components/TierPointsDisplay';
+import { FaSync } from 'react-icons/fa';
 
-// Import Zustand store
-import useLoyaltyStore from '@/lib/loyalty/loyaltyStore';
+// Import improved Zustand store  
+import useImprovedLoyaltyStore from '@/lib/loyalty/improvedLoyaltyStore';
 
 // Import hooks and constants
 import { getProgressBarData } from '@/lib/loyalty/loyaltyCalculator';
@@ -22,11 +23,13 @@ import { EXTENDED_TIER_BASE_VIVABUCKS, EXTENDED_TIER_STEP_VIVABUCKS } from '@/li
  * Loading state component for loyalty banner
  */
 const LoadingState = () => (
-  <div className="text-center w-full py-1 flex justify-center items-center">
-    <div className="animate-spin mr-2">
-      <FaSpinner className="text-[#FF6B00]" size={20} />
+  <div className="w-full py-2 px-4 bg-white border-b" style={{ minHeight: "var(--loyalty-banner-height)" }}>
+    <div className="flex items-center justify-center h-full">
+      <div className="animate-pulse flex items-center space-x-2">
+        <div className="w-4 h-4 bg-gray-300 rounded-full"></div>
+        <div className="w-24 h-3 bg-gray-300 rounded"></div>
+      </div>
     </div>
-    <span className="text-xs text-gray-500">Loading rewards...</span>
   </div>
 );
 
@@ -50,8 +53,9 @@ function LoyaltyBanner({
     progressInfo, 
     isLoading, 
     fetchUserData,
-    pendingTransactions
-  } = useLoyaltyStore();
+    pendingTransactions,
+    forceRefresh
+  } = useImprovedLoyaltyStore();
   
   const { data: session, status } = useSession();
   const [animationCompleted, setAnimationCompleted] = useState(false);
@@ -59,6 +63,7 @@ function LoyaltyBanner({
   const [lastAnimatedVivaBucks, setLastAnimatedPoints] = useState(null);
   const [shouldAnimate, setShouldAnimate] = useState(false);
   const [pendingAnimation, setPendingAnimation] = useState(null);
+  const [animationDebounce, setAnimationDebounce] = useState(null);
 
   // Initial data fetch when component mounts 
   useEffect(() => {
@@ -124,7 +129,7 @@ function LoyaltyBanner({
     }
   };
 
-  // Only trigger animation when cumulativeVivaBucks actually changes
+  // Only trigger animation when cumulativeVivaBucks actually changes (with debouncing)
   useEffect(() => {
     if (!userData) return;
     
@@ -134,20 +139,48 @@ function LoyaltyBanner({
     }
     
     if (userData.cumulativeVivaBucks !== lastAnimatedVivaBucks) {
-      console.log('[LoyaltyBanner] cumulativeVivaBucks changed, triggering animation', {
-        previous: lastAnimatedVivaBucks,
-        current: userData.cumulativeVivaBucks
-      });
+      // Clear existing debounce
+      if (animationDebounce) {
+        clearTimeout(animationDebounce);
+      }
       
-      setShouldAnimate(true);
-      setLastAnimatedPoints(userData.cumulativeVivaBucks);
-      setAnimationCompleted(false);
+      // Debounce animation trigger to prevent conflicts
+      const newDebounce = setTimeout(() => {
+        console.log('[LoyaltyBanner] cumulativeVivaBucks changed, triggering animation', {
+          previous: lastAnimatedVivaBucks,
+          current: userData.cumulativeVivaBucks
+        });
+        
+        setShouldAnimate(true);
+        setLastAnimatedPoints(userData.cumulativeVivaBucks);
+        setAnimationCompleted(false);
+      }, 100);
+      
+      setAnimationDebounce(newDebounce);
     }
-  }, [userData?.cumulativeVivaBucks, lastAnimatedVivaBucks]);
+  }, [userData?.cumulativeVivaBucks, lastAnimatedVivaBucks, animationDebounce]);
+
+  // Cleanup animation debounce on unmount
+  useEffect(() => {
+    return () => {
+      if (animationDebounce) {
+        clearTimeout(animationDebounce);
+      }
+    };
+  }, [animationDebounce]);
 
   // Don't render for unauthenticated users
-  if (status === "loading" || !session) return null;
-  if (isLoading || !userData) return <LoadingState />;
+  if (status === "loading") return null;
+  if (!session) return null;
+  
+  // Show loading state only if we're loading AND don't have any cached data
+  if (isLoading && !userData) return <LoadingState />;
+  
+  // If we don't have userData but we're not loading, try to fetch it
+  if (!userData && !isLoading) {
+    fetchUserData();
+    return <LoadingState />;
+  }
 
   // Extract user data
   const currentVivaBucks = userData?.vivaBucks || 0;
@@ -161,24 +194,26 @@ function LoyaltyBanner({
 
   return (
     <div 
-      className="loyalty-banner w-full py-3 px-4 relative overflow-hidden border-b bg-white"
+      className="loyalty-banner w-full py-3 px-4 relative border-b bg-white"
       style={{
         boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-        minHeight: "75px"
+        minHeight: "var(--loyalty-banner-height)"
       }}
     >
       {/* Decorative background */}
       <div 
-        className="absolute top-0 right-0 w-20 h-20 opacity-10 transform rotate-45 translate-x-10 -translate-y-10 z-0"
+        className="absolute top-0 right-0 w-20 h-20 opacity-10 transform rotate-45 translate-x-10 -translate-y-10"
+        style={{ zIndex: 'var(--z-banner-decorative)' }}
         aria-hidden="true"
       >
         <div className="w-full h-full bg-gradient-to-br from-[#FF9F43] to-[#FF6B00]"></div>
       </div>
 
-      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 z-10">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3" style={{ zIndex: 'var(--z-banner-content)' }}>
         {/* Current VivaBucks display */}
-        <VivaBucksDisplay 
+        <ImprovedVivaBucksDisplay 
           currentVivaBucks={currentVivaBucks}
+          lifetimeVivaBucks={lifetimeVivaBucks}
           currentTier={currentTier}
           multiplier={multiplier}
         />
@@ -192,19 +227,26 @@ function LoyaltyBanner({
                 <span>Progress to {progressData.nextTierName || 'next tier'}</span>
               </div>
               
-              <div className="flex items-center">
-                <FaTrophy className="h-3 w-3 text-amber-500 mr-1" />
-                <span>{lifetimeVivaBucks.toLocaleString()} Lifetime VivaBucks</span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    console.log('🔄 Force refreshing loyalty data...');
+                    forceRefresh();
+                  }}
+                  className="text-gray-400 hover:text-amber-500 transition-colors"
+                  title="Refresh loyalty data"
+                >
+                  <FaSync className="h-3 w-3" />
+                </button>
               </div>
             </div>
             
-            <TierProgressBar 
-              progress={progressData.progress}
-              earnedPoints={pendingAnimation || animateEarnedVivaBucks}
+            <LoyaltyProgressBar 
               currentPoints={lifetimeVivaBucks}
+              earnedPoints={pendingAnimation || animateEarnedVivaBucks}
               startPoints={progressData.startVivaBucks}
               endPoints={progressData.endVivaBucks}
-              label={progressData.extendedLabel}
+              label={progressData.extendedLabel || 'Progress to next tier'}
               animate={shouldAnimate}
               forceAnimation={forceAnimation}
               onAnimationComplete={handleAnimationComplete}

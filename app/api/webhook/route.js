@@ -10,6 +10,8 @@ import { paymentTracker } from '@/lib/stripe/paymentTracker';
 import eventEmitter, { Events } from '@/lib/eventEmitter';
 import { executePostOrderTasks } from '@/lib/order/postOrderService';
 
+
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const WEBHOOK_SECRET = process.env.STRIPE_SIGNING_SECRET || process.env.STRIPE_WEBHOOK_SECRET;
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
@@ -200,6 +202,10 @@ export async function POST(req) {
               paymentIntentId: paymentIntent.id,
               orderId: order._id,
               amount: amount,
+              total: amount,
+              vivaBucksEarned: Math.floor(amount), // Simple 1:1 ratio for now
+              loyaltyPointsEarned: Math.floor(amount),
+              pointsEarned: Math.floor(amount),
               status: 'completed'
           });
 

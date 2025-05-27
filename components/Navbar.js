@@ -100,7 +100,7 @@ export default function Navbar() {
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
       >
         <div className="max-w-[1400px] mx-auto">
-          <div className="flex md:hidden flex-col w-full px-2">
+          <div className="flex lg:hidden flex-col w-full px-2">
             <div className="flex items-center justify-between py-2">
               <Link href="/" className="flex-shrink-0">
                 <div className="relative w-[160px] h-[45px]">
@@ -131,7 +131,7 @@ export default function Navbar() {
             </div>
           </div>
 
-          <div className="hidden md:flex items-center justify-between py-3 px-6">
+          <div className="hidden lg:flex items-center justify-between py-3 px-6">
             <Link href="/" className="flex-shrink-0">
               <div className="relative w-[320px] h-[90px]">
                 <Image

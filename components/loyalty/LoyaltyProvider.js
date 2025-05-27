@@ -2,19 +2,20 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-// Import our new Zustand store
-import useLoyaltyStore from '@/lib/loyalty/loyaltyStore';
+// Import our new improved Zustand store
+import useImprovedLoyaltyStore from '@/lib/loyalty/improvedLoyaltyStore';
 
 const LoyaltyContext = createContext();
 
 /**
  * Compatibility wrapper for the LoyaltyProvider
- * This ensures backwards compatibility while using the new Zustand store internally
+ * This ensures backwards compatibility while using the new improved Zustand store internally
+ * Updated to use the Phase 1 improved store for better reliability
  */
 export function LoyaltyProvider({ children }) {
   const { data: session } = useSession();
   
-  // Get state from the Zustand store
+  // Get state from the improved Zustand store
   const {
     userData,
     progressInfo,
@@ -22,7 +23,7 @@ export function LoyaltyProvider({ children }) {
     isInitialized,
     fetchUserData,
     pendingTransactions,
-  } = useLoyaltyStore();
+  } = useImprovedLoyaltyStore();
 
   // Compatibility flag for connection status
   const [connectionStatus, setConnectionStatus] = useState("connected");
@@ -30,7 +31,7 @@ export function LoyaltyProvider({ children }) {
   // Initialize data when session is available
   useEffect(() => {
     if (session?.user?.id && !isInitialized && !isLoading) {
-      console.log('[LoyaltyProvider] Initializing with session:', session.user.email);
+      console.log('[LoyaltyProvider] Initializing with improved store for session:', session.user.email);
       fetchUserData();
     }
   }, [session, isInitialized, isLoading, fetchUserData]);
@@ -42,9 +43,9 @@ export function LoyaltyProvider({ children }) {
     isLoading,
     isInitialized,
     connectionStatus,
-    // Forward the fetchUserData function from the store
+    // Forward the fetchUserData function from the improved store
     refresh: () => {
-      console.log('[LoyaltyProvider] Refresh requested via compatibility layer');
+      console.log('[LoyaltyProvider] Refresh requested via compatibility layer (using improved store)');
       return fetchUserData();
     }
   };
@@ -60,9 +61,9 @@ export function LoyaltyProvider({ children }) {
 export function useLoyaltyData() {
   const ctx = useContext(LoyaltyContext);
   if (!ctx) {
-    console.warn("useLoyaltyData must be used within a LoyaltyProvider, falling back to direct store access");
-    // Fallback to direct store access if used outside provider
-    return useLoyaltyStore();
+    console.warn("useLoyaltyData must be used within a LoyaltyProvider, falling back to direct improved store access");
+    // Fallback to direct improved store access if used outside provider
+    return useImprovedLoyaltyStore();
   }
   return ctx;
 }
