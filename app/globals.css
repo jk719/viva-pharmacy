@@ -6,7 +6,8 @@
 @media (max-width: 768px) {
   :root {
     --navbar-height: 56px;
-    --loyalty-banner-height: 60px;
+    --loyalty-banner-height: 48px;
+    --prescription-banner-height: 40px;
   }
 }
 
@@ -24,16 +25,30 @@
   --placeholder-color: #6b7280;
   --navbar-height: 64px;
   --navbar-height-md: 84px;
-  --loyalty-banner-height: 80px;
-  --loyalty-banner-height-md: 80px;
-  --total-header-height: calc(var(--navbar-height) + var(--loyalty-banner-height));
-  --total-header-height-md: calc(var(--navbar-height-md) + var(--loyalty-banner-height-md));
+  --loyalty-banner-height: 60px;
+  --loyalty-banner-height-md: 60px;
+  --prescription-banner-height: 48px;
+  --prescription-banner-height-md: 48px;
+  --total-header-height: calc(var(--navbar-height) + var(--loyalty-banner-height) + var(--prescription-banner-height));
+  --total-header-height-md: calc(var(--navbar-height-md) + var(--loyalty-banner-height-md) + var(--prescription-banner-height-md));
   
   /* Z-Index Hierarchy */
-  --z-header: 50;
-  --z-banner-content: 40;
-  --z-banner-decorative: 30;
-  --z-progress-animations: 60;
+  --z-base: 0;
+  --z-dropdown: 10;
+  --z-sticky: 20;
+  --z-fixed: 30;
+  --z-modal-backdrop: 40;
+  --z-modal: 50;
+  --z-popover: 60;
+  --z-tooltip: 70;
+  --z-loyalty-banner: 90;
+  --z-prescription-banner: 90;
+  --z-navbar: 100;
+  --z-header: 100;
+  --z-progress-animation: 95;
+  --z-floating-widget: 45;
+  --z-notification: 110;
+  --z-overlay: 1000;
   --z-modals: 9999;
 }
 
@@ -452,21 +467,28 @@ body {
 @media (max-width: 640px) {
   button, 
   [role="button"],
-  .clickable {
+  .clickable,
+  a {
     min-height: 44px;
     min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   input,
   select,
   textarea {
     font-size: 16px !important; /* Prevents iOS zoom */
+    min-height: 44px;
   }
 
   /* Improve modal touch targets */
   .modal-close-button {
     padding: 12px;
     margin: -12px;
+    min-width: 44px;
+    min-height: 44px;
   }
 
   /* Better spacing for mobile forms */
@@ -477,6 +499,12 @@ body {
   .form-label {
     margin-bottom: 0.5rem;
     display: block;
+  }
+
+  /* Reduce vertical spacing on mobile */
+  .section-spacing {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
   }
 }
 
@@ -507,6 +535,7 @@ body {
 /* Add this class for the main content adjustment */
 .main-content-with-banner {
   padding-top: var(--total-header-height);
+  transition: padding-top 0.3s ease;
 }
 
 @media (min-width: 768px) {
@@ -588,7 +617,7 @@ body {
   /* Ensure progress bar animations aren't clipped */
   overflow: visible !important;
   position: relative;
-  z-index: var(--z-banner-content);
+  z-index: var(--z-progress-animation);
 }
 
 .loyalty-progress-bar {
@@ -601,11 +630,12 @@ body {
   /* Ensure smooth animations */
   transition-property: width !important;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1) !important;
+  will-change: width;
 }
 
 .loyalty-earned-label {
   /* Ensure earned labels appear above everything */
-  z-index: var(--z-progress-animations) !important;
+  z-index: calc(var(--z-progress-animation) + 5) !important;
   pointer-events: none !important;
   position: absolute !important;
 }
@@ -716,4 +746,52 @@ body {
 /* Optimize delivery options grid */
 .delivery-options-grid {
   @apply grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4;
+}
+
+/* Performance optimizations */
+.will-change-transform {
+  will-change: transform;
+}
+
+.will-change-opacity {
+  will-change: opacity;
+}
+
+.contain-layout {
+  contain: layout;
+}
+
+.contain-paint {
+  contain: paint;
+}
+
+/* Smooth scrolling for better UX */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Fix for sticky elements on iOS */
+.sticky-top {
+  position: -webkit-sticky;
+  position: sticky;
+  top: var(--total-header-height);
+}
+
+@media (min-width: 768px) {
+  .sticky-top {
+    top: var(--total-header-height-md);
+  }
+}
+
+/* Prevent content jump on load */
+.min-h-header {
+  min-height: var(--total-header-height);
+}
+
+@media (min-width: 768px) {
+  .min-h-header {
+    min-height: var(--total-header-height-md);
+  }
 }

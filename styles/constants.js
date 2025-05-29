@@ -67,7 +67,7 @@ export const HEIGHTS = {
   }
 };
 
-// Z-index scale
+// Z-index scale - Updated with comprehensive hierarchy
 export const Z_INDEX = {
   base: 0,
   dropdown: 10,
@@ -78,7 +78,14 @@ export const Z_INDEX = {
   popover: 60,
   tooltip: 70,
   header: 100,
-  notification: 110
+  notification: 110,
+  // Additional specific values
+  loyaltyBanner: 90,
+  prescriptionBanner: 90,
+  navbar: 100,
+  progressAnimation: 95,
+  floatingWidget: 45,
+  overlay: 1000
 };
 
 // Animation durations (matching TIMING constants)

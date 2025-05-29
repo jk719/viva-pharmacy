@@ -8,7 +8,7 @@ import {
   FaTimes, 
   FaCheckCircle,
   FaArrowRight,
-  FaSparkles,
+  FaMagic as FaSparkles,
   FaGift,
   FaTrophy,
   FaChartLine
@@ -132,8 +132,9 @@ const SmartSuggestionToast = ({
         className={`
           ${getPositionClasses(position)}
           ${className}
-          fixed z-50 max-w-sm w-full mx-4
+          fixed max-w-sm w-full mx-4
         `}
+        style={{ zIndex: 'var(--z-notification)' }}
       >
         <div className={`
           bg-white rounded-lg shadow-2xl border border-gray-200 overflow-hidden

@@ -9,7 +9,7 @@ import {
   FaEye,
   FaArrowUp,
   FaTrophy,
-  FaSparkles,
+  FaMagic as FaSparkles,
   FaInfoCircle
 } from 'react-icons/fa';
 import useImprovedLoyaltyStore from '@/lib/loyalty/improvedLoyaltyStore';
@@ -112,8 +112,10 @@ const UniversalVivaBucksWidget = ({
           ${className}
           bg-white rounded-lg shadow-lg border border-gray-200 
           hover:shadow-xl transition-all duration-300
-          ${position === 'floating' ? 'z-40' : ''}
         `}
+        style={{
+          zIndex: position === 'floating' ? 'var(--z-floating-widget)' : 'auto'
+        }}
       >
         {/* Main Widget Content */}
         <div 

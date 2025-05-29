@@ -3,16 +3,16 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  FaGift, 
-  FaTrophy, 
   FaBirthdayCake, 
+  FaCoins, 
+  FaCrown, 
+  FaFire, 
+  FaGift, 
+  FaHeart, 
   FaRocket, 
-  FaStar,
-  FaCoins,
-  FaSparkles,
-  FaHeart,
-  FaCrown,
-  FaFire
+  FaMagic as FaSparkles,
+  FaStar, 
+  FaTrophy
 } from 'react-icons/fa';
 
 /**

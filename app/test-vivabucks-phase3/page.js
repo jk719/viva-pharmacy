@@ -4,8 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   FaBrain, 
-  FaSparkles, 
-  FaMagic, 
+  FaMagic as FaSparkles,
   FaRobot,
   FaCog,
   FaEye,

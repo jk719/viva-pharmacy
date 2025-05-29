@@ -192,22 +192,23 @@ function LoyaltyBanner({
 
   return (
     <div 
-      className="loyalty-banner w-full py-3 px-4 relative border-b bg-white"
+      className="loyalty-banner w-full py-2 md:py-3 px-4 relative border-b bg-white"
       style={{
         boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-        minHeight: "var(--loyalty-banner-height)"
+        minHeight: "var(--loyalty-banner-height)",
+        zIndex: "var(--z-loyalty-banner)"
       }}
     >
       {/* Decorative background */}
       <div 
-        className="absolute top-0 right-0 w-20 h-20 opacity-10 transform rotate-45 translate-x-10 -translate-y-10"
-        style={{ zIndex: 'var(--z-banner-decorative)' }}
+        className="absolute top-0 right-0 w-20 h-20 opacity-10 transform rotate-45 translate-x-10 -translate-y-10 pointer-events-none"
+        style={{ zIndex: 1 }}
         aria-hidden="true"
       >
         <div className="w-full h-full bg-gradient-to-br from-[#FF9F43] to-[#FF6B00]"></div>
       </div>
 
-      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3" style={{ zIndex: 'var(--z-banner-content)' }}>
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2 md:gap-3" style={{ zIndex: 2, position: 'relative' }}>
         {/* Current VivaBucks display */}
         <ImprovedVivaBucksDisplay 
           currentVivaBucks={currentVivaBucks}

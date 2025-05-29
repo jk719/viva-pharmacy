@@ -199,7 +199,10 @@ function TableLoader({ text = 'Loading data...', ...props }) {
 // Overlay loading spinner (for modals, etc.)
 function OverlayLoader({ text = 'Please wait...', ...props }) {
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
+      style={{ zIndex: 'var(--z-overlay)' }}
+    >
       <div className="bg-white rounded-lg p-6 shadow-xl">
         <LoadingSpinner
           size="xl"

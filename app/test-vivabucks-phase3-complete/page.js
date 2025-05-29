@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FaStar, 
   FaBrain, 
-  FaSparkles, 
+  FaMagic as FaSparkles,
   FaRobot,
   FaTrophy,
   FaCheckCircle,
@@ -14,7 +14,6 @@ import {
   FaLightbulb,
   FaCoins,
   FaChartLine,
-  FaMagic,
   FaGift
 } from 'react-icons/fa';
 

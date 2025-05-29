@@ -3,16 +3,16 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  FaLightbulb, 
-  FaCrystalBall, 
-  FaChartLine, 
-  FaTrophy, 
-  FaCalendarAlt,
   FaArrowUp,
+  FaCalendarAlt,
+  FaChartLine,
+  FaEye as FaCrystalBall,
   FaInfoCircle,
-  FaSparkles,
+  FaLightbulb,
   FaPrescriptionBottle,
-  FaShoppingCart
+  FaShoppingCart,
+  FaMagic as FaSparkles,
+  FaTrophy
 } from 'react-icons/fa';
 import { 
   generateEarningForecasts, 
@@ -283,7 +283,7 @@ const CompactView = ({ insights, className }) => {
   return (
     <div className={`bg-white rounded-lg shadow p-4 ${className}`}>
       <div className="flex items-center space-x-3 mb-3">
-        <FaLightbulb className="text-yellow-500" />
+        <FaCrystalBall className="text-yellow-500" />
         <span className="font-medium text-gray-900 text-sm">Smart Insight</span>
       </div>
       

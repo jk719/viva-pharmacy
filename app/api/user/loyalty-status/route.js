@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import User from '@/models/User';
 import connectDB from '@/lib/db';
 import { migrateUserToVivaBucksPhase3, userNeedsMigration } from '@/lib/migrations/vivaBucksMigration';

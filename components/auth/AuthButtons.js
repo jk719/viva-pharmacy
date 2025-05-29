@@ -256,7 +256,7 @@ const AuthButtons = ({ isMobile = false }) => {
 
   if (session) {
     return (
-      <div className="relative z-50" ref={dropdownRef}>
+      <div className="relative" style={{ zIndex: 'var(--z-dropdown)' }} ref={dropdownRef}>
         <button
           onClick={() => setShowLogin(!showLogin)}
           aria-expanded={showLogin}
@@ -275,13 +275,14 @@ const AuthButtons = ({ isMobile = false }) => {
         {showLogin && (
           <div 
             className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-2xl 
-                     border border-gray-100 overflow-hidden z-50
+                     border border-gray-100 overflow-hidden
                      animate-scaleSpring backdrop-blur-sm
                      transform origin-top-right transition-all duration-200"
             style={{
               maxWidth: 'calc(100vw - 2rem)',
               maxHeight: 'calc(100vh - 100px)',
               right: isMobile ? '0' : '0',
+              zIndex: 'var(--z-popover)'
             }}
             role="menu"
             aria-orientation="vertical"
@@ -328,7 +329,7 @@ const AuthButtons = ({ isMobile = false }) => {
   }
 
   return (
-    <div className="relative z-50" ref={dropdownRef}>
+    <div className="relative" style={{ zIndex: 'var(--z-dropdown)' }} ref={dropdownRef}>
       <button
         onClick={() => setShowLogin(!showLogin)}
         className={`
@@ -348,7 +349,8 @@ const AuthButtons = ({ isMobile = false }) => {
 
       {showLogin && (
         <div 
-          className="fixed inset-0 z-50 overflow-y-auto"
+          className="fixed inset-0 overflow-y-auto"
+          style={{ zIndex: 'var(--z-modal)' }}
           aria-labelledby="modal-title"
           role="dialog"
           aria-modal="true"
