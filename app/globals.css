@@ -23,14 +23,18 @@
   --button-red: #dc3545;
   --button-green: #28a745;
   --placeholder-color: #6b7280;
+  
+  /* Unified header height variables */
   --navbar-height: 64px;
   --navbar-height-md: 84px;
   --loyalty-banner-height: 60px;
   --loyalty-banner-height-md: 60px;
   --prescription-banner-height: 48px;
   --prescription-banner-height-md: 48px;
-  --total-header-height: calc(var(--navbar-height) + var(--loyalty-banner-height) + var(--prescription-banner-height));
-  --total-header-height-md: calc(var(--navbar-height-md) + var(--loyalty-banner-height-md) + var(--prescription-banner-height-md));
+  
+  /* Calculate total header heights properly */
+  --total-header-height: calc(var(--navbar-height) + var(--prescription-banner-height) + var(--loyalty-banner-height));
+  --total-header-height-md: calc(var(--navbar-height-md) + var(--prescription-banner-height-md) + var(--loyalty-banner-height-md));
   
   /* Z-Index Hierarchy */
   --z-base: 0;
@@ -50,6 +54,7 @@
   --z-notification: 110;
   --z-overlay: 1000;
   --z-modals: 9999;
+  --z-carousel: 10; /* Add specific z-index for carousel */
 }
 
 /* Base Styles */
@@ -87,6 +92,16 @@ body {
     max-width: calc(100vw - 2rem) !important;
     right: 0 !important;
   }
+
+  .modal-backdrop {
+    padding: 0.5rem !important;
+  }
+
+  .modal-container {
+    max-width: calc(100vw - 1rem) !important;
+    max-height: calc(100vh - 1rem) !important;
+    margin: 0.5rem !important;
+  }
 }
 
 /* Modal and Animation Styles */
@@ -112,6 +127,51 @@ body {
   transition: opacity 200ms, transform 200ms;
 }
 
+/* Ensure modals are properly positioned */
+.modal-backdrop {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: var(--z-modals);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+.modal-container {
+  position: relative;
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  max-width: 90vw;
+  max-height: 90vh;
+  width: 100%;
+  overflow-y: auto;
+  z-index: calc(var(--z-modals) + 1);
+  margin: auto;
+}
+
+/* Fix for iOS viewport issues */
+@supports (-webkit-touch-callout: none) {
+  .modal-backdrop {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    height: 100vh !important;
+    height: -webkit-fill-available !important;
+  }
+}
+
 /* CSS Animations to replace framer-motion */
 @keyframes fadeIn {
   from { opacity: 0; }
@@ -134,6 +194,28 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes modalAppear {
+  from { 
+    opacity: 0; 
+    transform: scale(0.9) translateY(-10px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: scale(1) translateY(0); 
+  }
+}
+
+@keyframes scaleSpring {
+  from { 
+    opacity: 0; 
+    transform: scale(0.95) translateY(-5px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: scale(1) translateY(0); 
+  }
+}
+
 .animate-fadeIn {
   animation: fadeIn 0.3s ease-in-out forwards;
 }
@@ -151,6 +233,14 @@ body {
 
 .animate-slideUp {
   animation: slideUp 0.5s ease-out forwards;
+}
+
+.animate-modalAppear {
+  animation: modalAppear 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-scaleSpring {
+  animation: scaleSpring 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 /* Hover/Active Button Styles */
@@ -532,7 +622,7 @@ body {
   }
 }
 
-/* Add this class for the main content adjustment */
+/* Fix main content spacing to work properly with fixed header */
 .main-content-with-banner {
   padding-top: var(--total-header-height);
   transition: padding-top 0.3s ease;
@@ -542,6 +632,99 @@ body {
   .main-content-with-banner {
     padding-top: var(--total-header-height-md);
   }
+}
+
+/* Ensure carousel doesn't conflict with main content spacing */
+.carousel-container {
+  position: relative;
+  z-index: var(--z-carousel);
+  margin-top: 0 !important; /* Remove any margin-top calculations */
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Remove conflicting carousel spacing on homepage */
+.homepage-carousel {
+  position: relative;
+  padding-top: 1rem;
+}
+
+@media (min-width: 768px) {
+  .homepage-carousel {
+    padding-top: 1.5rem;
+  }
+}
+
+/* Ensure proper spacing for mobile */
+@media (max-width: 768px) {
+  :root {
+    --navbar-height: 56px;
+    --loyalty-banner-height: 48px;
+    --prescription-banner-height: 40px;
+    --total-header-height: calc(var(--navbar-height) + var(--prescription-banner-height) + var(--loyalty-banner-height));
+  }
+  
+  .main-content-with-banner {
+    padding-top: var(--total-header-height);
+  }
+  
+  /* Mobile-specific carousel adjustments */
+  .homepage-carousel {
+    padding-top: 0.5rem;
+    padding-left: 0;
+    padding-right: 0;
+  }
+  
+  .carousel-container {
+    border-radius: 0;
+    margin-left: -1rem;
+    margin-right: -1rem;
+  }
+}
+
+/* Smooth transitions for header height changes */
+.main-content-with-banner,
+.homepage-carousel {
+  transition: padding-top 0.3s ease, margin-top 0.3s ease;
+}
+
+/* Prevent layout shift during loading */
+.carousel-container {
+  min-height: 360px;
+  position: relative;
+  isolation: isolate; /* Create new stacking context */
+}
+
+@media (min-width: 640px) {
+  .carousel-container {
+    min-height: 400px;
+  }
+}
+
+/* Fix any potential scrolling issues */
+html {
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+}
+
+body {
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Ensure header stays above everything */
+header {
+  will-change: transform;
+  backface-visibility: hidden;
+  isolation: isolate; /* Create new stacking context */
+}
+
+/* Optimize carousel performance */
+.carousel-container {
+  will-change: transform;
+  transform: translateZ(0);
+  isolation: isolate; /* Create new stacking context */
 }
 
 /* Add this to your existing CSS */

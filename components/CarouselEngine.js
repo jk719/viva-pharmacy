@@ -96,8 +96,9 @@ export default function CarouselEngine({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       style={{ 
-        height: isMobile ? '480px' : 'auto',
-        maxHeight: isMobile ? '85vh' : 'none'
+        minHeight: isMobile ? '360px' : '400px',
+        maxHeight: isMobile ? '500px' : '600px',
+        height: 'auto'
       }}
     >
       {/* Background with blur effect and pattern overlay */}

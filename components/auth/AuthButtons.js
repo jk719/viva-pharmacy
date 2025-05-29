@@ -70,6 +70,25 @@ const AuthButtons = ({ isMobile = false }) => {
     return () => document.removeEventListener('keydown', handleEscape);
   }, []);
 
+  // Add body scroll lock effect
+  useEffect(() => {
+    if (showLogin) {
+      // Lock body scroll when modal is open
+      document.body.style.overflow = 'hidden';
+      document.body.style.paddingRight = '0px'; // Prevent layout shift
+    } else {
+      // Restore body scroll when modal is closed
+      document.body.style.overflow = 'unset';
+      document.body.style.paddingRight = '0px';
+    }
+
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = 'unset';
+      document.body.style.paddingRight = '0px';
+    };
+  }, [showLogin]);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('verification') === 'success' || 
@@ -349,168 +368,158 @@ const AuthButtons = ({ isMobile = false }) => {
 
       {showLogin && (
         <div 
-          className="fixed inset-0 overflow-y-auto"
-          style={{ zIndex: 'var(--z-modal)' }}
+          className="modal-backdrop"
           aria-labelledby="modal-title"
           role="dialog"
           aria-modal="true"
+          onClick={() => setShowLogin(false)}
         >
-          {/* Backdrop with fade-in */}
-          <div 
-            className="fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity animate-fadeIn"
-            aria-hidden="true"
-            onClick={() => setShowLogin(false)}
-          />
-
           {/* Modal container with centered positioning */}
-          <div className="fixed inset-0 flex items-center justify-center p-4">
-            <div 
-              className="relative w-full max-w-md transform rounded-2xl bg-white
-                       shadow-2xl transition-all
-                       animate-modalAppear origin-center"
-              id="login-form"
-            >
-              <div className="absolute right-4 top-4">
-                <button
-                  onClick={() => setShowLogin(false)}
-                  className="rounded-full p-2 text-gray-400 hover:text-gray-500
-                           hover:bg-gray-100 focus:outline-none focus:ring-2
-                           focus:ring-primary-color"
-                  aria-label="Close"
-                >
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
+          <div 
+            className="modal-container w-full md:w-1/2 max-w-md animate-modalAppear"
+            id="login-form"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="absolute right-4 top-4 z-10">
+              <button
+                onClick={() => setShowLogin(false)}
+                className="rounded-full p-2 text-gray-400 hover:text-gray-500
+                         hover:bg-gray-100 focus:outline-none focus:ring-2
+                         focus:ring-primary-color transition-colors"
+                aria-label="Close"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-6">
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold text-gray-900" id="modal-title">
+                  Welcome back
+                </h2>
+                <p className="mt-1.5 text-sm text-gray-500">
+                  Please sign in to your account
+                </p>
               </div>
 
-              <div className="p-6">
-                <div className="mb-8">
-                  <h2 className="text-2xl font-bold text-gray-900" id="modal-title">
-                    Welcome back
-                  </h2>
-                  <p className="mt-1.5 text-sm text-gray-500">
-                    Please sign in to your account
-                  </p>
-                </div>
-
-                <form onSubmit={handleSubmit} className="space-y-5">
-                  {error && (
-                    <div 
-                      className="rounded-lg bg-red-50 p-4 text-sm text-red-600"
-                      role="alert"
-                    >
-                      <div className="flex items-center gap-2">
-                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        {error}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="space-y-4">
-                    <div>
-                      <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                        Email address
-                      </label>
-                      <input
-                        id="email"
-                        type="email"
-                        autoComplete="email"
-                        required
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        className="mt-1 block w-full rounded-xl border border-gray-200 px-4 py-3
-                                 text-gray-800 placeholder-gray-400
-                                 focus:border-primary focus:ring-primary
-                                 transition-all duration-200
-                                 bg-blue-50/30 hover:bg-blue-50/50
-                                 focus:bg-white focus:shadow-inner
-                                 transform hover:scale-[1.01]"
-                        placeholder="Enter your email"
-                      />
-                    </div>
-
-                    <div>
-                      <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                        Password
-                      </label>
-                      <input
-                        id="password"
-                        type="password"
-                        autoComplete="current-password"
-                        required
-                        value={formData.password}
-                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        className="mt-1 block w-full rounded-xl border border-gray-200 px-4 py-3
-                                 text-gray-800 placeholder-gray-400
-                                 focus:border-primary focus:ring-primary
-                                 transition-all duration-200
-                                 bg-blue-50/30 hover:bg-blue-50/50
-                                 focus:bg-white focus:shadow-inner
-                                 transform hover:scale-[1.01]"
-                        placeholder="Enter your password"
-                      />
+              <form onSubmit={handleSubmit} className="space-y-5">
+                {error && (
+                  <div 
+                    className="rounded-lg bg-red-50 p-4 text-sm text-red-600"
+                    role="alert"
+                  >
+                    <div className="flex items-center gap-2">
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      {error}
                     </div>
                   </div>
+                )}
 
-                  <div className="flex items-center justify-between">
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                      Email address
+                    </label>
+                    <input
+                      id="email"
+                      type="email"
+                      autoComplete="email"
+                      required
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      className="mt-1 block w-full rounded-xl border border-gray-200 px-4 py-3
+                               text-gray-800 placeholder-gray-400
+                               focus:border-primary focus:ring-primary
+                               transition-all duration-200
+                               bg-blue-50/30 hover:bg-blue-50/50
+                               focus:bg-white focus:shadow-inner
+                               transform hover:scale-[1.01]"
+                      placeholder="Enter your email"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                      Password
+                    </label>
+                    <input
+                      id="password"
+                      type="password"
+                      autoComplete="current-password"
+                      required
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      className="mt-1 block w-full rounded-xl border border-gray-200 px-4 py-3
+                               text-gray-800 placeholder-gray-400
+                               focus:border-primary focus:ring-primary
+                               transition-all duration-200
+                               bg-blue-50/30 hover:bg-blue-50/50
+                               focus:bg-white focus:shadow-inner
+                               transform hover:scale-[1.01]"
+                      placeholder="Enter your password"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <Link 
+                    href="/forgot-password"
+                    onClick={handleNavigation}
+                    className="font-medium text-primary hover:text-primary-light
+                             transition-all duration-200 hover:scale-105 inline-block
+                             hover:underline decoration-2 underline-offset-4
+                             transform"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex w-full items-center justify-center rounded-xl
+                           bg-primary px-5 py-3.5 text-sm font-medium text-white
+                           hover:bg-primary-light focus:outline-none focus:ring-2
+                           focus:ring-primary focus:ring-offset-2
+                           disabled:opacity-50 disabled:cursor-not-allowed
+                           transition-all duration-200 transform hover:scale-[1.02]
+                           shadow-lg shadow-primary/20 hover:shadow-xl
+                           active:scale-95"
+                >
+                  {loading ? (
+                    <>
+                      <svg className="mr-2 h-4 w-4 animate-spin" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Signing in...
+                    </>
+                  ) : (
+                    'Sign in'
+                  )}
+                </button>
+
+                <div className="mt-6 text-center">
+                  <p className="text-sm text-gray-500">
+                    Don't have an account?{' '}
                     <Link 
-                      href="/forgot-password"
+                      href="/register"
                       onClick={handleNavigation}
                       className="font-medium text-primary hover:text-primary-light
                                transition-all duration-200 hover:scale-105 inline-block
                                hover:underline decoration-2 underline-offset-4
                                transform"
                     >
-                      Forgot password?
+                      Sign up
                     </Link>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="flex w-full items-center justify-center rounded-xl
-                             bg-primary px-5 py-3.5 text-sm font-medium text-white
-                             hover:bg-primary-light focus:outline-none focus:ring-2
-                             focus:ring-primary focus:ring-offset-2
-                             disabled:opacity-50 disabled:cursor-not-allowed
-                             transition-all duration-200 transform hover:scale-[1.02]
-                             shadow-lg shadow-primary/20 hover:shadow-xl
-                             active:scale-95"
-                  >
-                    {loading ? (
-                      <>
-                        <svg className="mr-2 h-4 w-4 animate-spin" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                        </svg>
-                        Signing in...
-                      </>
-                    ) : (
-                      'Sign in'
-                    )}
-                  </button>
-
-                  <div className="mt-6 text-center">
-                    <p className="text-sm text-gray-500">
-                      Don't have an account?{' '}
-                      <Link 
-                        href="/register"
-                        onClick={handleNavigation}
-                        className="font-medium text-primary hover:text-primary-light
-                                 transition-all duration-200 hover:scale-105 inline-block
-                                 hover:underline decoration-2 underline-offset-4
-                                 transform"
-                      >
-                        Sign up
-                      </Link>
-                    </p>
-                  </div>
-                </form>
-              </div>
+                  </p>
+                </div>
+              </form>
             </div>
           </div>
         </div>

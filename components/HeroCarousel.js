@@ -494,16 +494,7 @@ export default function HeroCarousel() {
   }, []);
 
   return (
-    <div className="mx-auto max-w-[1000px]">
-      <div 
-        className="header-carousel-spacing w-full"
-        style={{ 
-          height: isMobile ? '8px' : '12px',
-          background: 'transparent' 
-        }}
-        aria-hidden="true"
-      ></div>
-      
+    <div className="homepage-carousel">
       <CarouselEngine 
         slides={slides}
         interval={6000}
@@ -515,40 +506,6 @@ export default function HeroCarousel() {
           maxHeight: isMobile ? '420px' : 'none'
         }}
       />
-      
-      {/* Add global styles to fix positioning */}
-      <style jsx global>{`
-        /* Reset main content padding */
-        main {
-          padding-top: 0 !important;
-        }
-        
-        /* Position carousel with correct spacing */
-        .carousel-container {
-          position: relative;
-          margin-top: ${isAuthenticated ? 
-            `calc(var(--navbar-height${isMobile ? '' : '-md'}) + var(--loyalty-banner-height${isMobile ? '' : '-md'}))` : 
-            `var(--navbar-height${isMobile ? '' : '-md'})`};
-          z-index: 10;
-        }
-        
-        /* Ensure consistency across browsers */
-        @media (max-width: 768px) {
-          .carousel-container {
-            margin-top: ${isAuthenticated ? 
-              'calc(var(--navbar-height) + var(--loyalty-banner-height))' : 
-              'var(--navbar-height)'};
-          }
-        }
-        
-        @media (min-width: 769px) {
-          .carousel-container {
-            margin-top: ${isAuthenticated ? 
-              'calc(var(--navbar-height-md) + var(--loyalty-banner-height-md))' : 
-              'var(--navbar-height-md)'};
-          }
-        }
-      `}</style>
     </div>
   );
 } 

@@ -128,12 +128,14 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* New Hero Carousel - replacing the old hero section */}
-      <HeroCarousel />
+      {/* Hero Carousel with proper spacing */}
+      <div className="mx-auto max-w-[1000px] px-4 sm:px-6 lg:px-8">
+        <HeroCarousel />
+      </div>
 
       {/* Category Filter Buttons with Horizontal Scroll */}
       <div 
-        className="bg-white border-y border-gray-100"
+        className="bg-white border-y border-gray-100 mt-6"
       >
         <div className="container mx-auto">
           <div className="relative flex items-center overflow-x-auto scrollbar-hide">
@@ -191,7 +193,9 @@ export default function Home() {
       </div>
 
       {/* Featured Products */}
-      <FeaturedProducts categoryFilter={selectedCategory} />
+      <div className="px-4 sm:px-6 lg:px-8">
+        <FeaturedProducts categoryFilter={selectedCategory} />
+      </div>
     </div>
   );
 }

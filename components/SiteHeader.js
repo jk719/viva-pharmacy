@@ -13,7 +13,13 @@ export default function SiteHeader() {
   const isCheckoutPage = pathname === '/checkout' || pathname?.startsWith('/checkout/');
 
   return (
-    <header className="fixed top-0 left-0 right-0 w-full bg-white shadow-sm" style={{ zIndex: 'var(--z-header)' }}>
+    <header 
+      className="fixed top-0 left-0 right-0 w-full bg-white shadow-sm" 
+      style={{ 
+        zIndex: 'var(--z-header)',
+        borderBottom: '1px solid rgba(0, 0, 0, 0.05)'
+      }}
+    >
       <div className="w-full flex flex-col">
         <Navbar />
         <PrescriptionBanner />
