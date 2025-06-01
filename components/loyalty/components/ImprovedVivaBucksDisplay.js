@@ -2,7 +2,6 @@
 
 import { FaCoins, FaStar, FaTrophy, FaArrowUp, FaInfoCircle } from 'react-icons/fa';
 import { memo, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 
 /**
  * Improved VivaBucks Display - Phase 1 Implementation
@@ -255,11 +254,9 @@ function ImprovedVivaBucksDisplay({
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
-                  <motion.div
-                    className={`h-2 bg-gradient-to-r ${tierColors.bg} rounded-full`}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${nextTierInfo.progress}%` }}
-                    transition={{ duration: 1, ease: "easeOut" }}
+                  <div
+                    className={`h-2 bg-gradient-to-r ${tierColors.bg} rounded-full transition-all duration-1000 ease-out`}
+                    style={{ width: `${nextTierInfo.progress}%` }}
                   />
                 </div>
               </div>
@@ -327,115 +324,37 @@ function ImprovedVivaBucksDisplay({
 
     default: // banner variant (includes legacy "default")
       return (
-        <div className={`bg-white rounded-lg border shadow-sm ${className}`}>
-          <div className="p-4">
-            {/* Main display - Level 1 */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                {/* Tier icon */}
-                <div className={`flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br ${tierColors.bg} shadow-sm`}>
-                  <span className="text-white text-lg">{TierIcon}</span>
+        <div className={`${className}`}>
+          {/* Main display - More compact for mobile */}
+          <div className="flex items-center">
+            <div className="flex items-center space-x-2 md:space-x-4">
+              {/* Tier icon - smaller on mobile */}
+              <div className={`flex items-center justify-center w-8 h-8 md:w-12 md:h-12 rounded-full bg-gradient-to-br ${tierColors.bg} shadow-sm`}>
+                <span className="text-white text-sm md:text-lg">{TierIcon}</span>
+              </div>
+              
+              {/* VivaBucks info - compact mobile layout */}
+              <div>
+                <div className="flex items-center space-x-1 md:space-x-2">
+                  <span className="text-sm md:text-xl font-bold text-gray-900">
+                    {formatNumber(availableVivaBucks)}
+                  </span>
+                  <span className="hidden md:inline text-sm text-gray-500">VivaBucks available</span>
+                  <span className={`text-xs px-1.5 md:px-2 py-0.5 md:py-1 rounded-full text-white bg-gradient-to-r ${tierColors.bg}`}>
+                    {pointsMultiplier}x
+                  </span>
                 </div>
                 
-                {/* VivaBucks info */}
-                <div>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-xl font-bold text-gray-900">
-                      {formatNumber(availableVivaBucks)}
-                    </span>
-                    <span className="text-sm text-gray-500">VivaBucks available</span>
-                    <span className={`text-xs px-2 py-1 rounded-full text-white bg-gradient-to-r ${tierColors.bg}`}>
-                      {pointsMultiplier}x earning
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center space-x-3 mt-1">
-                    <span className={`text-sm font-medium ${tierColors.text}`}>
-                      {userTier} Member
-                    </span>
-                    <span className="text-sm text-gray-500">
-                      ${(availableVivaBucks * 0.1).toFixed(2)} redemption value
-                    </span>
-                  </div>
+                <div className="flex items-center space-x-2 md:space-x-3 mt-0.5 md:mt-1">
+                  <span className={`text-xs md:text-sm font-medium ${tierColors.text}`}>
+                    {userTier}
+                  </span>
+                  <span className="text-xs md:text-sm text-gray-500">
+                    ${(availableVivaBucks * 0.1).toFixed(2)}
+                  </span>
                 </div>
               </div>
-
-              {/* Details toggle */}
-              <button
-                onClick={() => setShowDetails(!showDetails)}
-                className="flex items-center space-x-1 text-sm text-gray-500 hover:text-gray-700 transition-colors"
-              >
-                <FaInfoCircle className="w-4 h-4" />
-                <span>{showDetails ? 'Less' : 'More'}</span>
-              </button>
             </div>
-
-            {/* Expanded details - Level 2 */}
-            <AnimatePresence>
-              {showDetails && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="overflow-hidden"
-                >
-                  <div className="pt-4 border-t border-gray-100 mt-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Lifetime stats */}
-                      <div className={`${tierColors.accent} rounded-lg p-3`}>
-                        <h4 className={`text-sm font-medium ${tierColors.text} mb-2`}>
-                          Lifetime Stats
-                        </h4>
-                        <div className="space-y-1 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Total earned:</span>
-                            <span className="font-medium">{formatNumber(totalVivaBucksEarned)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Total value:</span>
-                            <span className="font-medium">${(totalVivaBucksEarned * 0.1).toFixed(2)}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Next tier progress */}
-                      {nextTierInfo ? (
-                        <div className="bg-gray-50 rounded-lg p-3">
-                          <h4 className="text-sm font-medium text-gray-700 mb-2">
-                            Next Tier Progress
-                          </h4>
-                          <div className="space-y-2">
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-600">To {nextTierInfo.nextTier}:</span>
-                              <span className="font-medium">{formatNumber(nextTierInfo.pointsNeeded)} more</span>
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div
-                                className={`h-2 bg-gradient-to-r ${tierColors.bg} rounded-full transition-all duration-1000`}
-                                style={{ width: `${nextTierInfo.progress}%` }}
-                              />
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {Math.round(nextTierInfo.progress)}% complete
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-3">
-                          <h4 className="text-sm font-medium text-purple-700 mb-1">
-                            🏆 Maximum Tier Reached!
-                          </h4>
-                          <p className="text-xs text-purple-600">
-                            You're at the highest tier with the best benefits
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
         </div>
       );

@@ -37,6 +37,131 @@ This report documents all style conflicts and responsive design issues found in 
 
 ## ✅ Fixes Implemented
 
+### **Loyalty Banner Specific Conflicts & Fixes** ✓
+
+#### **Problem 1: Z-Index Hierarchy Issues**
+- **Issue**: Multiple conflicting z-index values within loyalty banner children
+- **Impact**: Progress animations, earned labels, and decorative elements overlapping incorrectly
+- **Fix**: Implemented hierarchical CSS variables:
+  ```css
+  --z-loyalty-banner: 90;
+  --z-loyalty-content: 92;
+  --z-loyalty-decorative: 88;
+  --z-loyalty-earned-label: 96;
+  ```
+
+#### **Problem 2: Container Overflow Conflicts**
+- **Issue**: Parent `overflow: visible` allowing child animations to escape bounds
+- **Impact**: Progress bar earned labels and framer-motion animations causing layout shifts
+- **Fix**: Changed to `overflow: hidden` with proper isolation:
+  ```javascript
+  style={{
+    overflow: "hidden",
+    contain: "layout style",
+    isolation: "isolate"
+  }}
+  ```
+
+#### **Problem 3: Animation Height Conflicts**
+- **Issue**: Framer Motion animations in ImprovedVivaBucksDisplay causing unlimited height expansion
+- **Impact**: Loyalty banner growing beyond intended bounds, affecting header calculations
+- **Fix**: Added max-height constraints:
+  ```css
+  max-height: calc(var(--loyalty-banner-height) * 2)
+  ```
+
+#### **Problem 3.1: Whitespace During Height Animations** ✓
+- **Issue**: Framer Motion `height: 'auto'` and `marginTop` animations creating temporary whitespace during transitions
+- **Impact**: Visible white gaps when toggling details section, poor user experience
+- **Fix**: Replaced Framer Motion with CSS-only animations:
+  ```javascript
+  // Before: Complex Framer Motion height animation
+  <motion.div
+    initial={{ height: 0, opacity: 0, marginTop: 0 }}
+    animate={{ height: 'auto', opacity: 1, marginTop: 16 }}
+    exit={{ height: 0, opacity: 0, marginTop: 0 }}
+  >
+  
+  // After: CSS-only max-height transition
+  <div className={`transition-all duration-300 ease-in-out overflow-hidden ${
+    showDetails ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+  }`}>
+  ```
+
+#### **Problem 4: Progress Bar Animation Overflow**
+- **Issue**: Earned labels positioning outside container bounds on mobile
+- **Impact**: Labels cut off or interfering with other UI elements
+- **Fix**: Added responsive constraints:
+  ```css
+  .loyalty-earned-label {
+    max-width: calc(100vw - 2rem);
+    white-space: nowrap;
+  }
+  ```
+
+#### **Problem 5: Touch Target Inconsistencies**
+- **Issue**: Mobile touch targets smaller than 44px recommendation
+- **Impact**: Poor mobile user experience, especially for details toggle button
+- **Fix**: Standardized button dimensions:
+  ```javascript
+  className="...min-h-[44px] min-w-[44px]...shrink-0"
+  ```
+
+#### **Problem 6: Excessive Whitespace in Layout** ✓
+- **Issue**: Too much padding-top from header height calculations causing large white gaps
+- **Impact**: Poor space utilization, content pushed too far down the page
+- **Fixes Applied**:
+  
+  **6.1: Reduced Header Height Variables**
+  ```css
+  /* Mobile (max-width: 768px) */
+  --navbar-height: 50px; /* was 56px */
+  --loyalty-banner-height: 28px; /* was 36px */
+  --prescription-banner-height: 28px; /* was 36px */
+  
+  /* Desktop */
+  --navbar-height: 56px; /* was 60px */
+  --navbar-height-md: 64px; /* was 72px */
+  --loyalty-banner-height: 40px; /* was 50px */
+  --loyalty-banner-height-md: 42px; /* was 50px */
+  --prescription-banner-height: 36px; /* was 44px */
+  --prescription-banner-height-md: 38px; /* was 44px */
+  ```
+  
+  **6.2: Optimized Main Content Spacing**
+  ```css
+  .main-content-with-banner {
+    padding-top: calc(var(--total-header-height) - 8px); /* Mobile: -6px offset */
+  }
+  
+  @media (min-width: 768px) {
+    .main-content-with-banner {
+      padding-top: calc(var(--total-header-height-md) - 6px); /* Desktop: -6px offset */
+    }
+  }
+  ```
+  
+  **6.3: Reduced Component Padding**
+  ```javascript
+  // LoyaltyBanner: Reduced internal padding
+  className="loyalty-banner w-full py-0.5 md:py-2 px-3 md:px-4..."  // was py-1 md:py-3
+  
+  // Homepage: Reduced container spacing
+  <div className="...pt-1 sm:pt-2"> // was pt-2 sm:pt-4
+  <div className="...mt-2 sm:mt-4"> // was mt-4 sm:mt-6
+  ```
+  
+  **6.4: Compact Carousel Heights**
+  ```css
+  .carousel-container {
+    min-height: 320px; /* Mobile: was 360px */
+  }
+  
+  .homepage-carousel {
+    padding-top: 0.25rem; /* Desktop: was 0.5rem */
+  }
+  ```
+
 ### 1. **Centralized Z-Index System** ✓
 Created a consistent z-index hierarchy using CSS variables:
 

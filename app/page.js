@@ -128,14 +128,14 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Hero Carousel with proper spacing */}
-      <div className="mx-auto max-w-[1000px] px-4 sm:px-6 lg:px-8">
+      {/* Hero Carousel with minimal spacing */}
+      <div className="mx-auto max-w-[1000px] px-4 sm:px-6 lg:px-8 pt-1 sm:pt-2">
         <HeroCarousel />
       </div>
 
       {/* Category Filter Buttons with Horizontal Scroll */}
       <div 
-        className="bg-white border-y border-gray-100 mt-6"
+        className="bg-white border-y border-gray-100 mt-2 sm:mt-4"
       >
         <div className="container mx-auto">
           <div className="relative flex items-center overflow-x-auto scrollbar-hide">

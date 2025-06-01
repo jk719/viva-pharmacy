@@ -5,9 +5,9 @@
 /* Reduce header heights for mobile to minimize whitespace */
 @media (max-width: 768px) {
   :root {
-    --navbar-height: 56px;
-    --loyalty-banner-height: 48px;
-    --prescription-banner-height: 40px;
+    --navbar-height: 50px; /* Reduced from 56px */
+    --loyalty-banner-height: 28px; /* Reduced from 36px - more compact */
+    --prescription-banner-height: 28px; /* Reduced from 36px - more compact */
   }
 }
 
@@ -24,15 +24,15 @@
   --button-green: #28a745;
   --placeholder-color: #6b7280;
   
-  /* Unified header height variables */
-  --navbar-height: 64px;
-  --navbar-height-md: 84px;
-  --loyalty-banner-height: 60px;
-  --loyalty-banner-height-md: 60px;
-  --prescription-banner-height: 48px;
-  --prescription-banner-height-md: 48px;
+  /* Unified header height variables - optimized for better mobile experience */
+  --navbar-height: 56px; /* Reduced from 60px */
+  --navbar-height-md: 64px; /* Reduced from 72px */
+  --loyalty-banner-height: 40px; /* Reduced from 50px */
+  --loyalty-banner-height-md: 42px; /* Reduced from 50px */
+  --prescription-banner-height: 36px; /* Reduced from 44px */
+  --prescription-banner-height-md: 38px; /* Reduced from 44px */
   
-  /* Calculate total header heights properly */
+  /* Calculate total header heights properly with optimized values */
   --total-header-height: calc(var(--navbar-height) + var(--prescription-banner-height) + var(--loyalty-banner-height));
   --total-header-height-md: calc(var(--navbar-height-md) + var(--prescription-banner-height-md) + var(--loyalty-banner-height-md));
   
@@ -55,6 +55,9 @@
   --z-overlay: 1000;
   --z-modals: 9999;
   --z-carousel: 10; /* Add specific z-index for carousel */
+  --z-loyalty-content: 92;
+  --z-loyalty-decorative: 88;
+  --z-loyalty-earned-label: 96;
 }
 
 /* Base Styles */
@@ -624,13 +627,13 @@ body {
 
 /* Fix main content spacing to work properly with fixed header */
 .main-content-with-banner {
-  padding-top: var(--total-header-height);
+  padding-top: calc(var(--total-header-height) - 8px); /* Reduced by 8px for tighter spacing */
   transition: padding-top 0.3s ease;
 }
 
 @media (min-width: 768px) {
   .main-content-with-banner {
-    padding-top: var(--total-header-height-md);
+    padding-top: calc(var(--total-header-height-md) - 6px); /* Reduced by 6px for desktop */
   }
 }
 
@@ -647,39 +650,47 @@ body {
 /* Remove conflicting carousel spacing on homepage */
 .homepage-carousel {
   position: relative;
-  padding-top: 1rem;
+  padding-top: 0; /* Remove all padding to minimize whitespace */
 }
 
 @media (min-width: 768px) {
   .homepage-carousel {
-    padding-top: 1.5rem;
+    padding-top: 0.25rem; /* Minimal padding on desktop - reduced from 0.5rem */
   }
 }
 
-/* Ensure proper spacing for mobile */
+/* Ensure proper spacing for mobile - override any conflicting calculations */
 @media (max-width: 768px) {
-  :root {
-    --navbar-height: 56px;
-    --loyalty-banner-height: 48px;
-    --prescription-banner-height: 40px;
-    --total-header-height: calc(var(--navbar-height) + var(--prescription-banner-height) + var(--loyalty-banner-height));
-  }
-  
   .main-content-with-banner {
-    padding-top: var(--total-header-height);
+    /* Use a more precise calculation that accounts for dynamic banner height */
+    padding-top: calc(var(--navbar-height) + var(--prescription-banner-height) + var(--loyalty-banner-height) - 6px);
+    /* Remove debug background */
+    transition: padding-top 0.3s ease;
   }
   
-  /* Mobile-specific carousel adjustments */
   .homepage-carousel {
-    padding-top: 0.5rem;
-    padding-left: 0;
-    padding-right: 0;
+    /* Remove debug styles */
+    margin-top: 0 !important;
+    padding-top: 0 !important;
   }
   
   .carousel-container {
-    border-radius: 0;
-    margin-left: -1rem;
-    margin-right: -1rem;
+    /* Remove debug styles */
+    margin-top: 0 !important;
+    min-height: 320px; /* Reduced from 360px for more compact mobile view */
+  }
+  
+  /* Improve banner dynamic height handling */
+  .loyalty-banner {
+    /* Use a more flexible approach that allows content expansion */
+    min-height: var(--loyalty-banner-height);
+    max-height: calc(var(--loyalty-banner-height) * 2.5); /* Reduced multiplier */
+  }
+  
+  /* Better mobile touch targets */
+  .loyalty-banner button {
+    min-height: 44px;
+    min-width: 44px;
   }
 }
 
@@ -787,12 +798,51 @@ header {
 /* Optional debug styles */
 .loyalty-banner {
   min-height: var(--loyalty-banner-height);
+  max-height: calc(var(--loyalty-banner-height) * 2.5); /* Prevent excessive expansion */
+  transition: all 0.2s ease-in-out;
+  /* Ensure container can expand without layout shifts */
+  overflow: hidden; /* Changed from visible to prevent child overflow */
+  contain: layout style;
+  isolation: isolate; /* Create new stacking context */
+  /* Prevent layout jumping during animations */
+  will-change: auto;
 }
 
 @media (min-width: 768px) {
   .loyalty-banner {
     min-height: var(--loyalty-banner-height-md);
+    max-height: calc(var(--loyalty-banner-height-md) * 2.5);
   }
+}
+
+/* Fix dropdown animation whitespace issues */
+.loyalty-banner .overflow-hidden {
+  /* Ensure proper overflow handling during animations */
+  overflow: hidden !important;
+  /* Prevent content from affecting parent layout during animation */
+  isolation: isolate;
+}
+
+/* Ensure framer-motion animations don't cause layout issues */
+.loyalty-banner [data-framer-motion] {
+  will-change: height, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  /* Ensure animations stay within bounds */
+  max-height: calc(var(--loyalty-banner-height) * 2);
+  /* Prevent whitespace during height animations */
+  overflow: hidden;
+}
+
+/* Specific fixes for VivaBucks display animations */
+.loyalty-banner .overflow-hidden[data-framer-motion] {
+  /* Ensure smooth height transitions without whitespace */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  overflow: hidden !important;
+  /* Prevent margin collapse issues */
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
 }
 
 /* Loyalty Progress Bar Fixes */
@@ -801,6 +851,8 @@ header {
   overflow: visible !important;
   position: relative;
   z-index: var(--z-progress-animation);
+  /* Create isolation for child animations */
+  isolation: isolate;
 }
 
 .loyalty-progress-bar {
@@ -818,9 +870,12 @@ header {
 
 .loyalty-earned-label {
   /* Ensure earned labels appear above everything */
-  z-index: calc(var(--z-progress-animation) + 5) !important;
+  z-index: var(--z-loyalty-earned-label) !important;
   pointer-events: none !important;
   position: absolute !important;
+  /* Ensure label doesn't overflow parent bounds on mobile */
+  max-width: calc(100vw - 2rem);
+  white-space: nowrap;
 }
 
 /* Add this to the bottom of your globals.css file */

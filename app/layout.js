@@ -47,7 +47,7 @@ export default async function RootLayout({ children }) {
           <SiteHeader />
           <ClientLayout>
             <main className="md:min-h-screen w-full flex-grow main-content-with-banner">
-              <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
+              <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
                 <Suspense fallback={<LoadingSpinner />}>
                   {children}
                 </Suspense>

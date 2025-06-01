@@ -192,23 +192,31 @@ function LoyaltyBanner({
 
   return (
     <div 
-      className="loyalty-banner w-full py-2 md:py-3 px-4 relative border-b bg-white"
+      className="loyalty-banner w-full py-0.5 md:py-2 px-3 md:px-4 relative border-b bg-white"
       style={{
         boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
         minHeight: "var(--loyalty-banner-height)",
-        zIndex: "var(--z-loyalty-banner)"
+        maxHeight: "calc(var(--loyalty-banner-height) * 2.5)", // Limit maximum expansion
+        zIndex: "var(--z-loyalty-banner)",
+        overflow: "hidden",
+        contain: "layout style",
+        isolation: "isolate",
+        transition: "max-height 0.3s ease-in-out" // Smooth height transitions
       }}
     >
       {/* Decorative background */}
       <div 
-        className="absolute top-0 right-0 w-20 h-20 opacity-10 transform rotate-45 translate-x-10 -translate-y-10 pointer-events-none"
-        style={{ zIndex: 1 }}
+        className="absolute top-0 right-0 w-16 md:w-20 h-16 md:h-20 opacity-10 transform rotate-45 translate-x-10 -translate-y-10 pointer-events-none"
+        style={{ zIndex: "var(--z-loyalty-decorative)" }}
         aria-hidden="true"
       >
         <div className="w-full h-full bg-gradient-to-br from-[#FF9F43] to-[#FF6B00]"></div>
       </div>
 
-      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2 md:gap-3" style={{ zIndex: 2, position: 'relative' }}>
+      <div 
+        className="flex flex-col md:flex-row md:justify-between md:items-center gap-1 md:gap-3" 
+        style={{ zIndex: "var(--z-loyalty-content)", position: 'relative' }}
+      >
         {/* Current VivaBucks display */}
         <ImprovedVivaBucksDisplay 
           currentVivaBucks={currentVivaBucks}
@@ -220,10 +228,10 @@ function LoyaltyBanner({
         {/* Progress bar */}
         {progressInfo && !hideProgressBar && progressData && (
           <div className="w-full md:w-1/2 lg:w-3/5 flex-grow">
-            <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
+            <div className="flex items-center justify-between text-xs text-gray-600 mb-0.5 md:mb-1">
               <div className="flex items-center">
-                <FaChartLine className="h-3 w-3 text-blue-500 mr-1" />
-                <span>Progress to {progressData.nextTierName || 'next tier'}</span>
+                <FaChartLine className="h-2.5 md:h-3 w-2.5 md:w-3 text-blue-500 mr-1" />
+                <span className="text-xs md:text-sm">Progress to {progressData.nextTierName || 'next tier'}</span>
               </div>
               
               <div className="flex items-center gap-2">
@@ -235,7 +243,7 @@ function LoyaltyBanner({
                   className="text-gray-400 hover:text-amber-500 transition-colors"
                   title="Refresh loyalty data"
                 >
-                  <FaSync className="h-3 w-3" />
+                  <FaSync className="h-2.5 md:h-3 w-2.5 md:w-3" />
                 </button>
               </div>
             </div>

@@ -45,27 +45,33 @@ export default function LoyaltyProgressBar({
     switch (variant) {
       case 'compact':
         return {
-          height: 'h-2',
+          height: 'h-1.5 md:h-2',
           containerPadding: 'p-0',
           labelSize: 'text-xs',
           earnedLabelStyle: 'text-xs px-2 py-1',
-          showLabels: true
+          showLabels: true,
+          coinSize: 'h-2 w-2 md:h-2.5 md:w-2.5',
+          textSize: 'text-xs'
         };
       case 'modal':
         return {
-          height: 'h-4',
+          height: 'h-3 md:h-4',
           containerPadding: 'p-4',
           labelSize: 'text-sm',
           earnedLabelStyle: 'text-sm px-3 py-2',
-          showLabels: true
+          showLabels: true,
+          coinSize: 'h-3 w-3',
+          textSize: 'text-sm'
         };
       default:
         return {
-          height: 'h-3',
+          height: 'h-2 md:h-3',
           containerPadding: 'p-2',
           labelSize: 'text-sm',
           earnedLabelStyle: 'text-sm px-3 py-2',
-          showLabels: true
+          showLabels: true,
+          coinSize: 'h-2.5 w-2.5',
+          textSize: 'text-xs md:text-sm'
         };
     }
   };
@@ -175,10 +181,10 @@ export default function LoyaltyProgressBar({
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent rounded-full" />
             
             {/* Lifetime VivaBucks display within progress bar */}
-            <div className="absolute right-2 top-1/2 -translate-y-1/2">
-              <span className="text-white text-xs font-bold drop-shadow flex items-center">
-                <FaCoins className="h-2.5 w-2.5 mr-1" />
-                {currentPoints.toLocaleString()}
+            <div className="absolute right-1 md:right-2 top-1/2 -translate-y-1/2">
+              <span className={`text-white font-bold drop-shadow flex items-center space-x-0.5 md:space-x-1 ${styles.textSize}`}>
+                <FaCoins className={`${styles.coinSize} text-yellow-300`} />
+                <span>{currentPoints.toLocaleString()}</span>
               </span>
             </div>
           </motion.div>
@@ -211,6 +217,7 @@ export default function LoyaltyProgressBar({
                 loyalty-earned-label absolute left-1/2 top-0 -translate-x-1/2 -translate-y-full
                 pointer-events-none
               "
+              style={{ zIndex: "var(--z-loyalty-earned-label)" }}
             >
               <div className={`
                 ${styles.earnedLabelStyle} 
@@ -219,8 +226,8 @@ export default function LoyaltyProgressBar({
                 shadow-lg border-2 border-white
                 flex items-center gap-1
               `}>
-                <FaCoins className="text-yellow-300" />
-                <span>+{earnedPoints} VivaBucks!</span>
+                <FaCoins className={`${styles.coinSize} text-yellow-300`} />
+                <span className={styles.textSize}>+{earnedPoints} VivaBucks!</span>
               </div>
             </motion.div>
           )}

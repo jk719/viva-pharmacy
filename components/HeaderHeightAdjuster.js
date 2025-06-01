@@ -57,11 +57,15 @@ export default function HeaderHeightAdjuster() {
         mutation.target.closest?.('header') || 
         mutation.target.classList?.contains('loyalty-banner') ||
         mutation.target.classList?.contains('prescription-banner') ||
-        mutation.target.classList?.contains('viva-navbar')
+        mutation.target.classList?.contains('viva-navbar') ||
+        // Also detect framer-motion changes
+        mutation.target.hasAttribute?.('data-framer-motion') ||
+        mutation.target.querySelector?.('[data-framer-motion]')
       );
       
       if (headerMutation) {
-        setTimeout(updateHeaderHeights, 50); // Small delay to ensure DOM is settled
+        // Longer delay to account for framer-motion animations (300ms)
+        setTimeout(updateHeaderHeights, 350);
       }
     });
     
@@ -72,7 +76,7 @@ export default function HeaderHeightAdjuster() {
         childList: true, 
         subtree: true, 
         attributes: true,
-        attributeFilter: ['class', 'style']
+        attributeFilter: ['class', 'style', 'data-framer-motion']
       });
     }
     
@@ -82,8 +86,20 @@ export default function HeaderHeightAdjuster() {
       subtree: true 
     });
     
+    // Listen for transitionend events to catch framer-motion animations
+    const handleTransitionEnd = (event) => {
+      if (event.target.closest('.loyalty-banner')) {
+        setTimeout(updateHeaderHeights, 50);
+      }
+    };
+    
+    document.addEventListener('transitionend', handleTransitionEnd);
+    document.addEventListener('animationend', handleTransitionEnd);
+    
     return () => {
       window.removeEventListener('resize', handleResize);
+      document.removeEventListener('transitionend', handleTransitionEnd);
+      document.removeEventListener('animationend', handleTransitionEnd);
       observer.disconnect();
     };
   }, [isAuthenticated]);
