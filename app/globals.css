@@ -6,7 +6,7 @@
 @media (max-width: 768px) {
   :root {
     --navbar-height: 50px; /* Reduced from 56px */
-    --loyalty-banner-height: 28px; /* Reduced from 36px - more compact */
+    --loyalty-banner-height: 22px; /* Reduced from 28px - more compact */
     --prescription-banner-height: 28px; /* Reduced from 36px - more compact */
   }
 }

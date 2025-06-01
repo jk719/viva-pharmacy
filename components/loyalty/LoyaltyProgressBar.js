@@ -45,7 +45,7 @@ export default function LoyaltyProgressBar({
     switch (variant) {
       case 'compact':
         return {
-          height: 'h-1.5 md:h-2',
+          height: 'h-2.5 md:h-3',
           containerPadding: 'p-0',
           labelSize: 'text-xs',
           earnedLabelStyle: 'text-xs px-2 py-1',
@@ -65,7 +65,7 @@ export default function LoyaltyProgressBar({
         };
       default:
         return {
-          height: 'h-2 md:h-3',
+          height: 'h-3 md:h-4',
           containerPadding: 'p-2',
           labelSize: 'text-sm',
           earnedLabelStyle: 'text-sm px-3 py-2',
@@ -235,7 +235,7 @@ export default function LoyaltyProgressBar({
       </div>
       
       {/* Bottom labels - showing start and end tier values */}
-      {styles.showLabels && (
+      {styles.showLabels && variant !== 'compact' && (
         <div className="flex justify-between items-center mt-2">
           <span className={`${styles.labelSize} text-gray-500 font-medium`}>
             {startPoints.toLocaleString()}

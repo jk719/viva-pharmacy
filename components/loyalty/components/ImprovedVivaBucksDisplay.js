@@ -333,14 +333,14 @@ function ImprovedVivaBucksDisplay({
                 <span className="text-white text-sm md:text-lg">{TierIcon}</span>
               </div>
               
-              {/* VivaBucks info - compact mobile layout */}
-              <div>
-                <div className="flex items-center space-x-1 md:space-x-2">
-                  <span className="text-sm md:text-xl font-bold text-gray-900">
+              {/* VivaBucks info - improved mobile layout */}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 md:gap-3">
+                  <span className="text-sm md:text-xl font-bold text-gray-900 shrink-0">
                     {formatNumber(availableVivaBucks)}
                   </span>
-                  <span className="hidden md:inline text-sm text-gray-500">VivaBucks available</span>
-                  <span className={`text-xs px-1.5 md:px-2 py-0.5 md:py-1 rounded-full text-white bg-gradient-to-r ${tierColors.bg}`}>
+                  <span className="hidden md:inline text-sm text-gray-500 shrink-0">VivaBucks available</span>
+                  <span className={`text-xs px-1.5 md:px-2 py-0.5 md:py-1 rounded-full text-white bg-gradient-to-r ${tierColors.bg} shrink-0`}>
                     {pointsMultiplier}x
                   </span>
                 </div>

@@ -235,6 +235,9 @@ function LoyaltyBanner({
               </div>
               
               <div className="flex items-center gap-2">
+                <span className="text-xs md:text-sm text-gray-500">
+                  {progressData.endVivaBucks - lifetimeVivaBucks} more needed
+                </span>
                 <button
                   onClick={() => {
                     console.log('🔄 Force refreshing loyalty data...');
