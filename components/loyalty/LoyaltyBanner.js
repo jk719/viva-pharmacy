@@ -156,7 +156,7 @@ function LoyaltyBanner({
       
       setAnimationDebounce(newDebounce);
     }
-  }, [userData?.cumulativeVivaBucks, lastAnimatedVivaBucks, animationDebounce]);
+  }, [userData?.cumulativeVivaBucks, lastAnimatedVivaBucks]);
 
   // Cleanup animation debounce on unmount
   useEffect(() => {
@@ -165,7 +165,7 @@ function LoyaltyBanner({
         clearTimeout(animationDebounce);
       }
     };
-  }, [animationDebounce]);
+  }, []); // Empty dependency array - cleanup only on unmount
 
   // Don't render for unauthenticated users
   if (status === "loading") return null;

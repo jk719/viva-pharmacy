@@ -99,12 +99,12 @@ export async function middleware(req) {
     return NextResponse.next();
   }
 
-  // Protected API Routes (POST/PUT/DELETE /api/products, /api/prescriptions/*, /api/user/*)
+  // Protected API Routes (POST/PUT/DELETE /api/products, /api/user/*)
   const isProtectedApiMethod = pathname.startsWith('/api/products') && !['GET'].includes(req.method);
   const isUserApi = pathname.startsWith('/api/user');
-  const isPrescriptionApi = pathname.startsWith('/api/prescriptions');
+  // Note: Prescription APIs are currently disabled (Coming Soon)
 
-  if (isProtectedApiMethod || isUserApi || isPrescriptionApi) {
+  if (isProtectedApiMethod || isUserApi) {
       // All these require at least a logged-in user (token check already passed)
       
       // Product modifications require ADMIN/MANAGER
@@ -113,15 +113,7 @@ export async function middleware(req) {
           return new NextResponse(JSON.stringify({ message: "Forbidden" }), { status: 403 });
       }
       
-      // Prescription verify/process requires ADMIN/PHARMACIST
-      if (isPrescriptionApi && (pathname.includes('/verify') || pathname.includes('/process'))) {
-          if (!['ADMIN', 'PHARMACIST'].includes(token.role)) {
-             console.warn(`Middleware: User ${token.email} role ${token.role} denied access to ${pathname}`);
-             return new NextResponse(JSON.stringify({ message: "Forbidden" }), { status: 403 });
-          }
-      }
-      
-      // Manager restrictions for product APIs (redundant check? Ensure manager can only hit product api)
+      // Manager restrictions for product APIs
       if (isProtectedApiMethod && token.role === 'MANAGER' && !pathname.startsWith('/api/products')) {
            console.warn(`Middleware: Manager ${token.email} denied access to non-product API ${pathname}`);
            return new NextResponse(JSON.stringify({ message: "Forbidden" }), { status: 403 });

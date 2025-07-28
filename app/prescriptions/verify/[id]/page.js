@@ -1,88 +1,66 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { FaSpinner, FaCheck, FaTimes } from 'react-icons/fa';
+import { FaRocket, FaArrowLeft } from 'react-icons/fa';
+import { useEffect } from 'react';
 
 export default function VerificationPage() {
   const { id } = useParams();
-  const [status, setStatus] = useState('pending');
-  const [prescription, setPrescription] = useState(null);
+  const router = useRouter();
 
+  // Redirect to main prescriptions page after a short delay
   useEffect(() => {
-    const checkStatus = async () => {
-      try {
-        const response = await fetch(`/api/prescriptions/${id}/status`);
-        const data = await response.json();
-        
-        if (data.success) {
-          setStatus(data.status);
-          setPrescription(data.prescription);
-          
-          if (data.status === 'verified') {
-            // Redirect to checkout after short delay
-            setTimeout(() => {
-              router.push(`/prescriptions/checkout/${id}`);
-            }, 2000);
-          }
-        }
-      } catch (error) {
-        console.error('Error checking status:', error);
-      }
-    };
+    const timer = setTimeout(() => {
+      router.push('/prescriptions');
+    }, 3000);
 
-    const interval = setInterval(checkStatus, 5000);
-    return () => clearInterval(interval);
-  }, [id]);
+    return () => clearTimeout(timer);
+  }, [router]);
 
   return (
     <div className="container mx-auto px-4 py-8">
       <motion.div
-        className="max-w-lg mx-auto bg-white rounded-xl shadow-lg p-6"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
+        className="max-w-2xl mx-auto text-center"
       >
-        <div className="text-center">
-          {status === 'pending' && (
-            <>
-              <FaSpinner className="animate-spin text-4xl text-primary mx-auto mb-4" />
-              <h2 className="text-xl font-semibold mb-2">
-                Verifying Your Prescription
-              </h2>
-              <p className="text-gray-600">
-                Our pharmacist is reviewing your prescription. 
-                This usually takes 5-10 minutes.
-              </p>
-            </>
-          )}
-
-          {status === 'verified' && (
-            <>
-              <FaCheck className="text-4xl text-green-500 mx-auto mb-4" />
-              <h2 className="text-xl font-semibold mb-2">
-                Prescription Verified!
-              </h2>
-              <p className="text-gray-600">
-                Redirecting you to checkout...
-              </p>
-            </>
-          )}
-
-          {status === 'rejected' && (
-            <>
-              <FaTimes className="text-4xl text-red-500 mx-auto mb-4" />
-              <h2 className="text-xl font-semibold mb-2">
-                Verification Failed
-              </h2>
-              <p className="text-gray-600">
-                {prescription?.verificationNotes || 
-                  'Please contact our pharmacy for assistance.'}
-              </p>
-            </>
-          )}
+        <div className="flex justify-center mb-6">
+          <div className="bg-gradient-to-r from-primary to-primary/80 text-white p-4 rounded-full">
+            <FaRocket className="text-4xl" />
+          </div>
         </div>
+        
+        <h1 className="text-3xl font-bold text-gray-800 mb-4">
+          Prescription Verification Coming Soon!
+        </h1>
+        
+        <p className="text-lg text-gray-600 mb-6">
+          This prescription verification feature is currently under development.
+        </p>
+        
+        <div className="bg-primary/10 border border-primary/20 rounded-lg p-6 mb-8">
+          <p className="text-primary font-semibold">
+            🚧 Prescription ID: {id}
+          </p>
+          <p className="text-gray-600 mt-2">
+            Our verification system will be available when prescription services launch!
+          </p>
+        </div>
+
+        <button
+          onClick={() => router.push('/prescriptions')}
+          className="bg-primary hover:bg-primary/90 text-white font-semibold py-3 px-6 rounded-lg
+                   transition-all duration-200 flex items-center justify-center gap-2 mx-auto"
+        >
+          <FaArrowLeft />
+          <span>Back to Prescriptions</span>
+        </button>
+
+        <p className="text-sm text-gray-500 mt-4">
+          Redirecting automatically in 3 seconds...
+        </p>
       </motion.div>
     </div>
   );
-} 
+}
